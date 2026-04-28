@@ -1,0 +1,1 @@
+worker: cd backend && python -m bot.main
