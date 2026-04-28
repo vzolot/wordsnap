@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.git
+.gitignore
+.python-version
+.vscode
+.devcontainer
+README.md
+test_*.py
