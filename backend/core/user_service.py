@@ -2,7 +2,7 @@
 Сервіс роботи з юзерами в БД.
 """
 import logging
-from datetime import date
+from datetime import date, datetime, timezone, timedelta
 from sqlalchemy import select
 
 from .models import User
@@ -18,10 +18,7 @@ async def get_or_create_user(
     last_name: str | None = None,
     language_code: str | None = None,
 ) -> User:
-    """
-    Отримує юзера або створює нового.
-    Скидає денний лічильник якщо новий день.
-    """
+    """Отримує юзера або створює нового. Скидає денний лічильник якщо новий день."""
     async with SessionLocal() as session:
         result = await session.execute(
             select(User).where(User.telegram_id == telegram_id)
@@ -60,23 +57,15 @@ async def get_or_create_user(
 
 
 async def can_add_word(user: User) -> tuple[bool, str]:
-    """
-    Перевіряє чи може юзер додати ще одне слово.
-    Логіка:
-    - Pro юзер → 100/день
-    - Перші 7 днів від реєстрації (trial) → 100/день, як Pro
-    - Free після trial → 10/день
-    """
-    from datetime import datetime, timezone, timedelta
-    
-    # Pro юзер з активною підпискою
+    """Перевіряє чи може юзер додати ще одне слово."""
+    # Pro з активною підпискою
     if user.plan == "pro":
         if user.plan_expires_at and user.plan_expires_at > datetime.now(timezone.utc):
             if user.words_added_today >= 100:
                 return False, "Ти досяг ліміту 100 слів/день навіть для Pro 😱"
             return True, ""
     
-    # Перевірка trial: перші 7 днів від реєстрації
+    # Trial: перші 7 днів
     trial_active = False
     if user.created_at:
         trial_end = user.created_at + timedelta(days=7)
@@ -84,7 +73,6 @@ async def can_add_word(user: User) -> tuple[bool, str]:
             trial_active = True
     
     if trial_active:
-        # Trial = повний доступ, як Pro
         if user.words_added_today >= 100:
             return False, "Ти досяг ліміту 100 слів/день. Завтра можна знову!"
         return True, ""
@@ -93,23 +81,15 @@ async def can_add_word(user: User) -> tuple[bool, str]:
     if user.words_added_today >= 10:
         return False, (
             "⛔️ Денний ліміт 10 слів вичерпано.\n\n"
-            "💎 Купи <b>Pro</b> за $1.49/міс і отримай:\n"
-            "• 100 слів на день\n"
-            "• Тематичні набори (Travel, Business, Songs)\n"
-            "• Розширена статистика\n\n"
-            "Команда /premium для оформлення"
+            "💎 Купи <b>Pro</b> за $1.49/міс і отримай 100 слів/день.\n"
+            "Команда /buy для оформлення."
         )
     
     return True, ""
 
 
 async def get_user_status(user: User) -> dict:
-    """
-    Повертає поточний статус юзера для відображення.
-    Returns: {plan, is_trial, trial_days_left, daily_limit, used_today}
-    """
-    from datetime import datetime, timezone, timedelta
-    
+    """Повертає поточний статус юзера для відображення."""
     is_trial = False
     trial_days_left = 0
     
@@ -138,7 +118,8 @@ async def get_user_status(user: User) -> dict:
         "daily_limit": daily_limit,
         "used_today": user.words_added_today,
     }
-    
+
+
 async def increment_word_counter(telegram_id: int) -> None:
     """Інкрементує лічильник слів за сьогодні"""
     async with SessionLocal() as session:
@@ -150,3 +131,110 @@ async def increment_word_counter(telegram_id: int) -> None:
             user.words_added_today += 1
             user.total_words += 1
             await session.commit()
+
+
+# === Day 7: Pro subscription with recurring ===
+
+async def activate_pro_subscription(
+    telegram_id: int,
+    rec_token: str | None = None,
+    duration_days: int = 30,
+) -> User | None:
+    """
+    Активує Pro підписку для юзера.
+    Викликається після успішного платежу WayForPay.
+    
+    Args:
+        telegram_id: Telegram ID юзера
+        rec_token: Токен картки для майбутніх auto-charge (опціонально)
+        duration_days: На скільки днів активувати
+    """
+    async with SessionLocal() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            logger.error(f"User {telegram_id} not found for Pro activation")
+            return None
+        
+        now = datetime.now(timezone.utc)
+        
+        # Якщо вже Pro і підписка не закінчилась — додаємо до існуючої дати
+        if user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now:
+            new_expires = user.plan_expires_at + timedelta(days=duration_days)
+        else:
+            new_expires = now + timedelta(days=duration_days)
+        
+        user.plan = "pro"
+        user.plan_expires_at = new_expires
+        user.last_payment_date = now
+        user.subscription_status = "active"
+        
+        # Списуємо за день до закінчення
+        user.next_charge_date = new_expires - timedelta(days=1)
+        
+        # Зберігаємо токен якщо отримали — це для майбутніх auto-charge
+        if rec_token:
+            user.payment_rec_token = rec_token
+            user.auto_renew = True
+            logger.info(f"Saved recToken for user {telegram_id}, auto-renew enabled")
+        
+        await session.commit()
+        await session.refresh(user)
+        
+        logger.info(
+            f"Activated Pro for user {telegram_id}, "
+            f"expires at {user.plan_expires_at}, auto_renew={user.auto_renew}"
+        )
+        return user
+
+
+async def cancel_subscription(telegram_id: int) -> User | None:
+    """
+    Скасовує auto-renew. Pro залишається активним до plan_expires_at.
+    """
+    async with SessionLocal() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            return None
+        
+        user.auto_renew = False
+        user.subscription_status = "cancelled"
+        user.next_charge_date = None
+        
+        await session.commit()
+        await session.refresh(user)
+        
+        logger.info(f"Cancelled auto-renew for user {telegram_id}")
+        return user
+
+
+async def expire_subscription(telegram_id: int) -> User | None:
+    """
+    Деактивує Pro коли підписка закінчилась і автопродовження не вдалось.
+    """
+    async with SessionLocal() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            return None
+        
+        user.plan = "free"
+        user.subscription_status = "expired"
+        user.auto_renew = False
+        user.next_charge_date = None
+        
+        await session.commit()
+        await session.refresh(user)
+        
+        logger.info(f"Expired subscription for user {telegram_id}")
+        return user

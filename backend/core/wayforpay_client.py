@@ -1,0 +1,304 @@
+"""
+WayForPay integration з підтримкою Regular (Recurring) Payments.
+
+Документація: 
+- Purchase API: https://wiki.wayforpay.com/uk/view/852102
+- Regular Payments: https://wiki.wayforpay.com/uk/view/8783175
+"""
+import os
+import time
+import hmac
+import hashlib
+import logging
+import httpx
+from typing import TypedDict
+from urllib.parse import urlencode
+from dotenv import load_dotenv
+
+load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+MERCHANT_LOGIN = os.getenv("WAYFORPAY_MERCHANT_LOGIN", "")
+MERCHANT_SECRET = os.getenv("WAYFORPAY_MERCHANT_SECRET", "")
+MERCHANT_DOMAIN = os.getenv("WAYFORPAY_MERCHANT_DOMAIN", "t.me/WordSnapBot")
+RETURN_URL = os.getenv("WAYFORPAY_RETURN_URL", "https://t.me/WordSnapBot")
+WEBHOOK_URL = os.getenv("WAYFORPAY_WEBHOOK_URL", "")
+
+# URLs
+WAYFORPAY_PURCHASE_URL = "https://secure.wayforpay.com/pay"
+WAYFORPAY_API_URL = "https://api.wayforpay.com/api"
+
+# Параметри підписки
+SUBSCRIPTION_AMOUNT = 1.49
+SUBSCRIPTION_CURRENCY = "USD"
+SUBSCRIPTION_DAYS = 30
+
+
+class PaymentLink(TypedDict):
+    payment_url: str
+    order_reference: str
+
+
+def _hmac_md5(message: str, secret: str) -> str:
+    """HMAC-MD5 підпис для WayForPay"""
+    return hmac.new(
+        secret.encode("utf-8"),
+        message.encode("utf-8"),
+        hashlib.md5,
+    ).hexdigest()
+
+
+# === ПЕРШИЙ ПЛАТІЖ (Purchase API) ===
+
+def generate_purchase_signature(
+    merchant_account: str,
+    merchant_domain: str,
+    order_reference: str,
+    order_date: int,
+    amount: float,
+    currency: str,
+    product_names: list[str],
+    product_counts: list[int],
+    product_prices: list[float],
+) -> str:
+    """Генерує signature для запиту на оплату."""
+    parts = [
+        merchant_account,
+        merchant_domain,
+        order_reference,
+        str(order_date),
+        str(amount),
+        currency,
+        *product_names,
+        *[str(c) for c in product_counts],
+        *[str(p) for p in product_prices],
+    ]
+    message = ";".join(parts)
+    return _hmac_md5(message, MERCHANT_SECRET)
+
+
+def create_payment_link(
+    user_telegram_id: int,
+    amount: float = SUBSCRIPTION_AMOUNT,
+    currency: str = SUBSCRIPTION_CURRENCY,
+) -> PaymentLink:
+    """
+    Створює посилання на ПЕРШИЙ платіж.
+    WayForPay автоматично запам'ятає картку якщо в кабінеті увімкнено
+    'Збереження карток' (за замовчуванням так).
+    """
+    if not MERCHANT_LOGIN or not MERCHANT_SECRET:
+        raise ValueError("WayForPay credentials not configured")
+    
+    order_reference = f"WS_{user_telegram_id}_{int(time.time())}"
+    order_date = int(time.time())
+    
+    product_names = ["WordSnap Pro - 30 days"]
+    product_counts = [1]
+    product_prices = [amount]
+    
+    signature = generate_purchase_signature(
+        merchant_account=MERCHANT_LOGIN,
+        merchant_domain=MERCHANT_DOMAIN,
+        order_reference=order_reference,
+        order_date=order_date,
+        amount=amount,
+        currency=currency,
+        product_names=product_names,
+        product_counts=product_counts,
+        product_prices=product_prices,
+    )
+    
+    params = {
+        "merchantAccount": MERCHANT_LOGIN,
+        "merchantDomainName": MERCHANT_DOMAIN,
+        "merchantSignature": signature,
+        "orderReference": order_reference,
+        "orderDate": order_date,
+        "amount": amount,
+        "currency": currency,
+        "productName[]": product_names[0],
+        "productCount[]": product_counts[0],
+        "productPrice[]": product_prices[0],
+        "clientFirstName": f"User{user_telegram_id}",
+        "clientEmail": f"user{user_telegram_id}@wordsnap.app",
+        "language": "UA",
+        "returnUrl": RETURN_URL,
+    }
+    
+    if WEBHOOK_URL:
+        params["serviceUrl"] = WEBHOOK_URL
+    
+    payment_url = f"{WAYFORPAY_PURCHASE_URL}?{urlencode(params)}"
+    
+    logger.info(f"Created payment link for user {user_telegram_id}, order {order_reference}")
+    
+    return {
+        "payment_url": payment_url,
+        "order_reference": order_reference,
+    }
+
+
+# === ПЕРЕВІРКА CALLBACK ===
+
+def verify_callback_signature(data: dict) -> bool:
+    """
+    Перевіряє підпис callback від WayForPay.
+    Формат: merchantAccount;orderReference;amount;currency;authCode;cardPan;transactionStatus;reasonCode
+    """
+    received_signature = data.get("merchantSignature", "")
+    
+    parts = [
+        str(data.get("merchantAccount", "")),
+        str(data.get("orderReference", "")),
+        str(data.get("amount", "")),
+        str(data.get("currency", "")),
+        str(data.get("authCode", "")),
+        str(data.get("cardPan", "")),
+        str(data.get("transactionStatus", "")),
+        str(data.get("reasonCode", "")),
+    ]
+    message = ";".join(parts)
+    expected_signature = _hmac_md5(message, MERCHANT_SECRET)
+    
+    is_valid = received_signature == expected_signature
+    if not is_valid:
+        logger.warning(f"Invalid WayForPay signature for order {data.get('orderReference')}")
+    
+    return is_valid
+
+
+def generate_response_signature(
+    order_reference: str,
+    status: str,
+    time_value: int,
+) -> str:
+    """Signature для відповіді WayForPay."""
+    message = f"{order_reference};{status};{time_value}"
+    return _hmac_md5(message, MERCHANT_SECRET)
+
+
+# === RECURRING / REGULAR PAYMENTS ===
+
+def generate_charge_signature(
+    merchant_account: str,
+    order_reference: str,
+    amount: float,
+    currency: str,
+) -> str:
+    """
+    Signature для CHARGE запиту (recurring списання).
+    Формат: merchantAccount;orderReference;amount;currency
+    """
+    message = f"{merchant_account};{order_reference};{amount};{currency}"
+    return _hmac_md5(message, MERCHANT_SECRET)
+
+
+async def charge_recurring(
+    rec_token: str,
+    user_telegram_id: int,
+    amount: float = SUBSCRIPTION_AMOUNT,
+    currency: str = SUBSCRIPTION_CURRENCY,
+) -> dict:
+    """
+    Виконує АВТОМАТИЧНЕ списання за збереженим токеном картки.
+    Викликається з cron-задачі коли підходить час продовження.
+    
+    Returns: dict з відповіддю WayForPay
+        - reasonCode == "1100" → успіх
+        - reasonCode != "1100" → помилка (брак коштів, заблокована картка тощо)
+    """
+    order_reference = f"WS_REC_{user_telegram_id}_{int(time.time())}"
+    
+    signature = generate_charge_signature(
+        merchant_account=MERCHANT_LOGIN,
+        order_reference=order_reference,
+        amount=amount,
+        currency=currency,
+    )
+    
+    payload = {
+        "transactionType": "CHARGE",
+        "merchantAccount": MERCHANT_LOGIN,
+        "merchantAuthType": "SimpleSignature",
+        "merchantSignature": signature,
+        "apiVersion": 1,
+        "orderReference": order_reference,
+        "amount": amount,
+        "currency": currency,
+        "recToken": rec_token,
+        "productName": ["WordSnap Pro - 30 days (renewal)"],
+        "productCount": [1],
+        "productPrice": [amount],
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                WAYFORPAY_API_URL,
+                json=payload,
+            )
+            data = response.json()
+            
+            logger.info(
+                f"Recurring charge for user {user_telegram_id}: "
+                f"reasonCode={data.get('reasonCode')} reason={data.get('reason')}"
+            )
+            
+            return {
+                "success": str(data.get("reasonCode")) == "1100",
+                "order_reference": order_reference,
+                "reason_code": str(data.get("reasonCode", "")),
+                "reason": data.get("reason", ""),
+                "transaction_status": data.get("transactionStatus", ""),
+                "raw": data,
+            }
+            
+    except httpx.TimeoutException:
+        logger.error(f"WayForPay timeout for user {user_telegram_id}")
+        return {
+            "success": False,
+            "order_reference": order_reference,
+            "reason_code": "TIMEOUT",
+            "reason": "Request timeout",
+            "raw": {},
+        }
+    except Exception as e:
+        logger.error(f"WayForPay charge error: {e}", exc_info=True)
+        return {
+            "success": False,
+            "order_reference": order_reference,
+            "reason_code": "ERROR",
+            "reason": str(e),
+            "raw": {},
+        }
+
+
+async def remove_recurring_token(rec_token: str) -> bool:
+    """
+    Видаляє збережений токен картки в WayForPay.
+    Викликається коли юзер скасовує підписку.
+    """
+    signature_message = f"{MERCHANT_LOGIN};{rec_token}"
+    signature = _hmac_md5(signature_message, MERCHANT_SECRET)
+    
+    payload = {
+        "transactionType": "REMOVE",
+        "merchantAccount": MERCHANT_LOGIN,
+        "merchantAuthType": "SimpleSignature",
+        "merchantSignature": signature,
+        "apiVersion": 1,
+        "recToken": rec_token,
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(WAYFORPAY_API_URL, json=payload)
+            data = response.json()
+            success = str(data.get("reasonCode")) == "1100"
+            logger.info(f"Token removal: success={success}, response={data}")
+            return success
+    except Exception as e:
+        logger.error(f"Token removal error: {e}")
+        return False
