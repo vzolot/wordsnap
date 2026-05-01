@@ -3,11 +3,12 @@
 """
 import logging
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.exc import IntegrityError
 
 from .models import Word
 from .db import SessionLocal
+from .srs import calculate_next_review, ReviewResult
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +32,15 @@ async def save_word(
     target_lang: str,
     ai_data: dict,
     image_url: str | None = None,
-) -> Word | None:
-    """Зберігає слово в БД з даними від AI і картинкою."""
+) -> bool:
+    """
+    Зберігає слово в БД з даними від AI і картинкою.
+    Повертає True якщо успішно, False якщо помилка.
+    Прибрано session.refresh() — економія часу.
+    """
     word_clean = word.lower().strip()
     next_review = datetime.now(timezone.utc) + timedelta(days=1)
-    
+
     try:
         async with SessionLocal() as session:
             new_word = Word(
@@ -56,25 +61,20 @@ async def save_word(
                 status="learning",
                 source="manual",
             )
-            
+
             session.add(new_word)
             await session.commit()
-            await session.refresh(new_word)
-            
+            # session.refresh() ПРИБРАНО — економимо ~1с
+
             logger.info(f"Saved word '{word_clean}' for user_id={user_id}")
-            return new_word
-            
+            return True
+
     except IntegrityError:
         logger.warning(f"Word '{word_clean}' already exists for user_id={user_id}")
-        return None
+        return False
     except Exception as e:
         logger.error(f"Error saving word: {e}")
-        return None
-        # === Day 5: Review functions ===
-
-from sqlalchemy import update, and_
-
-from .srs import calculate_next_review, ReviewResult
+        return False
 
 
 async def get_words_due_review(user_id: int, limit: int = 10) -> list[Word]:
@@ -114,35 +114,31 @@ async def process_review(
     Returns: (updated_word, new_interval_days)
     """
     async with SessionLocal() as session:
-        # Беремо слово
         db_result = await session.execute(
             select(Word).where(Word.id == word_id)
         )
         word = db_result.scalar_one_or_none()
-        
+
         if not word:
             return None, 0
-        
-        # Розраховуємо новий інтервал
+
         new_interval, new_ease, next_review, new_status = calculate_next_review(
             result=result,
             current_interval=word.interval_days,
             current_ease=word.ease_factor,
             review_count=word.review_count,
         )
-        
-        # Оновлюємо слово
+
         word.interval_days = new_interval
         word.ease_factor = new_ease
         word.next_review = next_review
         word.review_count += 1
         word.status = new_status
         word.last_reviewed_at = datetime.now(timezone.utc)
-        
+
         if result == "knew":
             word.correct_count += 1
-        
-        # Записуємо в історію
+
         from .models import Review
         review_record = Review(
             word_id=word.id,
@@ -154,13 +150,13 @@ async def process_review(
             ease_after=new_ease,
         )
         session.add(review_record)
-        
+
         await session.commit()
         await session.refresh(word)
-        
+
         logger.info(
             f"Review: word_id={word_id} result={result} "
             f"new_interval={new_interval:.1f}d ease={new_ease:.2f}"
         )
-        
+
         return word, new_interval

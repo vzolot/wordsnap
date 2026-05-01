@@ -150,7 +150,7 @@ async def handle_word(message: Message):
         image_url = await image_task
 
         # Зберігаємо в БД
-        saved = await save_word(
+        success = await save_word(
             user_id=user.id,
             word=word,
             target_lang=user.target_lang or "en",
@@ -158,7 +158,7 @@ async def handle_word(message: Message):
             image_url=image_url,
         )
 
-        if saved is None:
+        if not success:
             stop_typing.set()
             await typing_task
             await message.answer("❌ Не вдалось зберегти слово. Спробуй ще раз.")
