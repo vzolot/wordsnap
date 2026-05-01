@@ -11,7 +11,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from dotenv import load_dotenv
 
 from bot.handlers.word_handler import router as word_router
@@ -85,7 +85,14 @@ async def cmd_start(message: Message):
         f"<i>Спробуй: ephemeral, breakthrough, take advantage of</i>"
     )
     
-    await message.answer(welcome_text)
+    mini_app_url = "https://miniapp-omega-three.vercel.app"
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="📱 Відкрити WordSnap App",
+            web_app=WebAppInfo(url=mini_app_url)
+        )]
+    ])
+    await message.answer(welcome_text, reply_markup=keyboard)
     logger.info(f"User {tg_user.id} ({tg_user.username}) started the bot")
 
 
