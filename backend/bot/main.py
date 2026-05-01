@@ -74,7 +74,7 @@ async def cmd_start(message: Message):
         )
     
     welcome_text = (
-        f"👋 Привіт, <b>{tg_user.first_name}</b>!\n\n"
+        f"👋 Привіт, <b>{tg_user.first_name}</b>! [v2-with-button]\n\n"
         f"Я <b>WordSnap</b> — твій AI-помічник у вивченні англійської 🧠\n\n"
         f"<b>Як це працює:</b>\n"
         f"1️⃣ Надішли слово або фразу англійською\n"
