@@ -11,12 +11,11 @@ from aiogram.filters import Command
 from core.languages import LANGUAGES, lang_flag, lang_name
 from core.user_service import get_or_create_user, update_user_languages
 from core.bot_i18n import t as bt
+from core.constants import MINI_APP_URL
 
 logger = logging.getLogger(__name__)
 
 router = Router()
-
-MINI_APP_URL = "https://miniapp-omega-three.vercel.app"
 
 
 def native_lang_keyboard() -> InlineKeyboardMarkup:

@@ -1,8 +1,10 @@
 """
 Inline-клавіатури для повторення слів.
 """
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+from core.constants import MINI_APP_URL
 
 
 def review_answer_keyboard(word_id: int, source: str = "rev") -> InlineKeyboardMarkup:
@@ -26,7 +28,7 @@ def review_answer_keyboard(word_id: int, source: str = "rev") -> InlineKeyboardM
 
 
 def show_translation_keyboard(word_id: int, source: str = "rev") -> InlineKeyboardMarkup:
-    """Кнопка 'Показати переклад'. source: 'rev' (сесія) або 'rem' (нагадування)."""
+    """Кнопка 'Показати переклад'. Для нагадувань додаємо ще 'Відкрити App'."""
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
@@ -34,4 +36,11 @@ def show_translation_keyboard(word_id: int, source: str = "rev") -> InlineKeyboa
             callback_data=f"reveal:{word_id}:{source}",
         )
     )
+    if source == "rem":
+        builder.row(
+            InlineKeyboardButton(
+                text="📱 Відкрити App",
+                web_app=WebAppInfo(url=MINI_APP_URL),
+            )
+        )
     return builder.as_markup()

@@ -96,6 +96,38 @@ async def get_words_due_review(user_id: int, limit: int = 10) -> list[Word]:
         return list(result.scalars().all())
 
 
+async def get_word_for_reminder(user_id: int, cooldown_hours: int) -> Word | None:
+    """
+    Повертає одне слово для нагадування — таке, де next_review <= now,
+    і яке не нагадували протягом останніх cooldown_hours.
+    """
+    async with SessionLocal() as session:
+        now = datetime.now(timezone.utc)
+        cooldown_threshold = now - timedelta(hours=cooldown_hours)
+        result = await session.execute(
+            select(Word)
+            .where(
+                Word.user_id == user_id,
+                Word.status == "learning",
+                Word.next_review <= now,
+                (Word.last_reminder_at.is_(None)) | (Word.last_reminder_at < cooldown_threshold),
+            )
+            .order_by(Word.next_review)
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+
+async def mark_word_reminded(word_id: int) -> None:
+    """Записує час останнього нагадування — щоб не спамити те саме слово."""
+    async with SessionLocal() as session:
+        result = await session.execute(select(Word).where(Word.id == word_id))
+        word = result.scalar_one_or_none()
+        if word:
+            word.last_reminder_at = datetime.now(timezone.utc)
+            await session.commit()
+
+
 async def get_word_by_id(word_id: int) -> Word | None:
     """Отримати слово за ID"""
     async with SessionLocal() as session:

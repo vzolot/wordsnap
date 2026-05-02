@@ -105,6 +105,7 @@ class Word(Base):
     # Часові мітки
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_reminder_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Зв'язок назад до юзера
     user: Mapped["User"] = relationship(back_populates="words")
