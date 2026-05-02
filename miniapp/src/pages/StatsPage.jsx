@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { getStats } from '../api/client';
+import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 
 function StatsPage() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useT();
 
   useEffect(() => {
     getStats().then(r => {
@@ -15,30 +17,29 @@ function StatsPage() {
 
   if (loading) return <div className="page"><div className="center-loader"><span className="spinner" /></div></div>;
 
+  const isPro = stats?.plan === 'pro';
   const learning = (stats?.total_words || 0) - (stats?.learned_words || 0);
 
   const tiles = [
-    { label: 'Total words',       value: stats?.total_words || 0,    color: 'violet' },
-    { label: 'Mastered',          value: stats?.learned_words || 0,  color: 'lime'   },
-    { label: 'Learning',          value: learning,                   color: 'violet' },
-    { label: 'Reviewed today',    value: stats?.reviewed_today || 0, color: ''       },
-    { label: 'Streak days',       value: stats?.streak || 0,         color: 'coral'  },
+    { label: t('stats.total_words'),    value: stats?.total_words || 0,    color: 'violet' },
+    { label: t('stats.mastered'),       value: stats?.learned_words || 0,  color: 'lime'   },
+    { label: t('stats.learning'),       value: learning,                   color: 'violet' },
+    { label: t('stats.reviewed_today'), value: stats?.reviewed_today || 0, color: ''       },
+    { label: t('stats.streak_days'),    value: stats?.streak || 0,         color: 'coral'  },
   ];
-
-  const isPro = stats?.plan === 'pro';
 
   return (
     <>
       <AppBar isPro={isPro} />
 
       <div className="page">
-        <h1 className="h1" style={{ marginBottom: 14 }}>Your progress</h1>
+        <h1 className="h1" style={{ marginBottom: 14 }}>{t('stats.title')}</h1>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {tiles.map(t => (
-            <div key={t.label} className="stat-cell" style={{ padding: '18px 16px' }}>
-              <div className={`stat-num ${t.color}`} style={{ fontSize: 28 }}>{t.value}</div>
-              <div className="stat-label">{t.label}</div>
+          {tiles.map(tile => (
+            <div key={tile.label} className="stat-cell" style={{ padding: '18px 16px' }}>
+              <div className={`stat-num ${tile.color}`} style={{ fontSize: 28 }}>{tile.value}</div>
+              <div className="stat-label">{tile.label}</div>
             </div>
           ))}
         </div>

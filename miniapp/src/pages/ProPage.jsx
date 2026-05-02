@@ -1,21 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStats, createBuyLink } from '../api/client';
+import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
-
-const FEATURES = [
-  'Unlimited word snaps from any chat',
-  'AI-generated example sentences',
-  'Spaced repetition with smart scheduling',
-  'Daily streaks + analytics',
-  'Multi-language support (UK, EN, ES, PL)',
-];
 
 function ProPage() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { t } = useT();
   const tg = window.Telegram?.WebApp;
 
   useEffect(() => {
@@ -24,6 +18,14 @@ function ProPage() {
 
   const isPro = stats?.plan === 'pro';
 
+  const featureKeys = [
+    'pro.features.unlimited',
+    'pro.features.ai',
+    'pro.features.srs',
+    'pro.features.streaks',
+    'pro.features.langs',
+  ];
+
   const handleBuy = async () => {
     setLoading(true);
     setError('');
@@ -31,13 +33,10 @@ function ProPage() {
       const r = await createBuyLink();
       const url = r.data?.payment_url;
       if (!url) throw new Error('No payment URL');
-      if (tg?.openLink) {
-        tg.openLink(url);
-      } else {
-        window.open(url, '_blank');
-      }
+      if (tg?.openLink) tg.openLink(url);
+      else window.open(url, '_blank');
     } catch (e) {
-      setError('Couldn\'t open payment. Try /buy in chat.');
+      setError(t('pro.error.payment'));
     } finally {
       setLoading(false);
     }
@@ -48,24 +47,24 @@ function ProPage() {
       <AppBar showProLink={false} />
 
       <div className="page">
-        <span className="pro-eyebrow">Pro</span>
+        <span className="pro-eyebrow">{t('pro.eyebrow')}</span>
         <h1 className="pro-headline">
-          Snap unlimited <span className="gradient-text">without limits</span>
+          {t('pro.headline.main')} <span className="gradient-text">{t('pro.headline.accent')}</span>
         </h1>
-        <p className="pro-sub">One coffee a month. Forever vocabulary growth.</p>
+        <p className="pro-sub">{t('pro.sub')}</p>
 
         <div className="pro-card">
-          <div className="pro-monthly">Monthly</div>
+          <div className="pro-monthly">{t('pro.monthly')}</div>
           <div className="pro-price">
             <span className="pro-price-num">$1.49</span>
             <span className="pro-price-unit">/ month</span>
           </div>
 
           <ul className="pro-features">
-            {FEATURES.map(f => (
-              <li key={f} className="pro-feature">
+            {featureKeys.map(k => (
+              <li key={k} className="pro-feature">
                 <span className="check">✓</span>
-                <span>{f}</span>
+                <span>{t(k)}</span>
               </li>
             ))}
           </ul>
@@ -73,35 +72,26 @@ function ProPage() {
           {isPro ? (
             <>
               <div style={{ textAlign: 'center', marginTop: 18, padding: '16px 0', background: 'rgba(255,255,255,0.06)', borderRadius: 'var(--r-f)' }}>
-                <span style={{ fontWeight: 700 }}>✓ You're already Pro</span>
+                <span style={{ fontWeight: 700 }}>✓ {t('pro.active.heading')}</span>
               </div>
               {stats?.plan_expires_at && (
                 <p className="pro-finefoot" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                  Active until {new Date(stats.plan_expires_at).toLocaleDateString()}
+                  {t('pro.active.until', { date: new Date(stats.plan_expires_at).toLocaleDateString() })}
                 </p>
               )}
             </>
           ) : (
             <button className="pro-cta" onClick={handleBuy} disabled={loading}>
-              {loading ? 'Opening payment…' : 'Start 7-day free trial'}
+              {loading ? t('pro.cta_loading') : t('pro.cta')}
             </button>
           )}
         </div>
 
-        {!isPro && (
-          <p className="pro-finefoot">Cancel anytime · No payment until trial ends</p>
-        )}
+        {!isPro && <p className="pro-finefoot">{t('pro.finefoot')}</p>}
+        {error && <p style={{ color: 'var(--coral)', textAlign: 'center', marginTop: 12, fontSize: 13 }}>{error}</p>}
 
-        {error && (
-          <p style={{ color: 'var(--coral)', textAlign: 'center', marginTop: 12, fontSize: 13 }}>{error}</p>
-        )}
-
-        <button
-          className="btn btn-secondary"
-          style={{ marginTop: 24 }}
-          onClick={() => navigate(-1)}
-        >
-          Back
+        <button className="btn btn-secondary" style={{ marginTop: 24 }} onClick={() => navigate(-1)}>
+          {t('pro.back')}
         </button>
       </div>
     </>

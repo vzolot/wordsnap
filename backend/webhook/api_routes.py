@@ -46,12 +46,15 @@ async def get_words(telegram_id: int = Query(...)):
 
 @router.get("/api/stats")
 async def get_stats(telegram_id: int = Query(...)):
+    from datetime import timedelta
     async with SessionLocal() as session:
         user = await _get_user(session, telegram_id)
         if not user:
             return {
                 "total_words": 0, "learned_words": 0, "streak": 0,
                 "plan": "free", "plan_expires_at": None,
+                "used_today": 0, "daily_limit": 10,
+                "native_lang": "uk", "target_lang": None,
             }
 
         learned = (await session.execute(
@@ -62,6 +65,8 @@ async def get_stats(telegram_id: int = Query(...)):
 
         now = datetime.now(timezone.utc)
         is_pro = user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now
+        is_trial = (not is_pro) and user.created_at and (now - user.created_at) < timedelta(days=7)
+        daily_limit = 100 if (is_pro or is_trial) else 10
 
         return {
             "total_words": user.total_words,
@@ -72,6 +77,9 @@ async def get_stats(telegram_id: int = Query(...)):
             "auto_renew": user.auto_renew,
             "native_lang": user.native_lang,
             "target_lang": user.target_lang,
+            "used_today": user.words_added_today,
+            "daily_limit": daily_limit,
+            "is_trial": is_trial,
         }
 
 
@@ -104,6 +112,65 @@ async def submit_review(data: dict, telegram_id: int = Query(...)):
 
     word, new_interval = await process_review(word_id, result)
     return {"ok": bool(word), "interval_days": new_interval}
+
+
+@router.post("/api/words")
+async def add_word_endpoint(data: dict, telegram_id: int = Query(...)):
+    """Додає нове слово через міні-апп — той самий флоу, що й у боті."""
+    from core.user_service import get_or_create_user, can_add_word, increment_word_counter
+    from core.word_service import word_exists, save_word
+    from core.openai_client import get_word_data
+    from core.unsplash_client import search_image
+
+    word = (data.get("word") or "").strip()
+    if not word:
+        raise HTTPException(status_code=400, detail="Word is required")
+    if len(word) < 2 or len(word) > 100:
+        raise HTTPException(status_code=400, detail="Word must be 2–100 characters")
+
+    user = await get_or_create_user(telegram_id=telegram_id)
+    if not user.target_lang:
+        return {"error": "setup_required"}
+
+    can, reason = await can_add_word(user)
+    if not can:
+        return {"error": "limit_reached", "message": reason}
+
+    if await word_exists(user.id, word, user.target_lang):
+        return {"error": "duplicate"}
+
+    ai_data = await get_word_data(
+        word, target_lang=user.target_lang, native_lang=user.native_lang or "uk"
+    )
+    if not ai_data:
+        raise HTTPException(status_code=502, detail="AI generation failed")
+
+    image_url = await search_image(ai_data.get("image_keyword", word))
+
+    success = await save_word(
+        user_id=user.id, word=word, target_lang=user.target_lang,
+        ai_data=ai_data, image_url=image_url,
+    )
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to save word")
+
+    await increment_word_counter(telegram_id)
+
+    async with SessionLocal() as session:
+        saved = (await session.execute(
+            select(Word).where(
+                Word.user_id == user.id,
+                Word.word == word,
+                Word.target_lang == user.target_lang,
+            )
+        )).scalar_one_or_none()
+
+    return {
+        "ok": True,
+        "word": _serialize_word(saved) if saved else None,
+        "ai_data": ai_data,
+        "image_url": image_url,
+    }
 
 
 @router.post("/api/buy")

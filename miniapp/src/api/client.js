@@ -20,6 +20,7 @@ export const getStats = () => api.get('/api/stats');
 export const getReviewWords = () => api.get('/api/review');
 export const submitReview = (wordId, quality) =>
   api.post('/api/review', { word_id: wordId, quality });
+export const addWord = (word) => api.post('/api/words', { word });
 export const createBuyLink = () => api.post('/api/buy');
 
 export default api;

@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom';
+import { useT } from '../contexts/LangContext';
 
 function AppBar({ showProLink = true, isPro = false }) {
+  const { t } = useT();
   return (
     <header className="app-bar">
       <div className="app-bar-logo">W</div>
       <div>
         <div className="app-bar-title">WordSnap</div>
-        <div className="app-bar-sub">mini app</div>
+        <div className="app-bar-sub">{t('app.subtitle')}</div>
       </div>
       {showProLink && (
         isPro ? (

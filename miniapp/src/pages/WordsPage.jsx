@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import { getWords } from '../api/client';
+import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 
-function statusBadge(word) {
-  if (word.status === 'mastered') return { cls: 'badge-mastered', text: 'Mastered' };
-  if ((word.review_count || 0) === 0) return { cls: 'badge-new', text: 'New' };
-  return { cls: 'badge-learning', text: 'Learning' };
+function badge(word, t) {
+  if (word.status === 'mastered') return { cls: 'badge-mastered', text: t('badge.mastered') };
+  if ((word.review_count || 0) === 0) return { cls: 'badge-new', text: t('badge.new') };
+  return { cls: 'badge-learning', text: t('badge.learning') };
 }
 
 function WordsPage() {
   const [words, setWords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const { t } = useT();
 
   useEffect(() => {
     getWords().then(r => {
@@ -30,12 +32,12 @@ function WordsPage() {
       <AppBar />
 
       <div className="page">
-        <h1 className="h1" style={{ marginBottom: 14 }}>My words</h1>
+        <h1 className="h1" style={{ marginBottom: 14 }}>{t('words.title')}</h1>
 
         <input
           className="input"
           type="text"
-          placeholder="Search words…"
+          placeholder={t('words.search')}
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{ marginBottom: 14 }}
@@ -45,11 +47,11 @@ function WordsPage() {
           <div className="center-loader"><span className="spinner" /></div>
         ) : filtered.length === 0 ? (
           <div className="card-soft" style={{ textAlign: 'center', padding: 28 }}>
-            <div className="body-2">{words.length === 0 ? 'No words yet — add one in the chat.' : 'No matches'}</div>
+            <div className="body-2">{words.length === 0 ? t('words.empty') : t('words.no_matches')}</div>
           </div>
         ) : (
           filtered.map(w => {
-            const b = statusBadge(w);
+            const b = badge(w, t);
             return (
               <div key={w.id} className="word-row">
                 <div>

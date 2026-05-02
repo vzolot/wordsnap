@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getReviewWords, submitReview } from '../api/client';
+import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
+
+const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱' };
 
 function ReviewPage() {
   const [words, setWords] = useState([]);
@@ -11,6 +14,7 @@ function ReviewPage() {
   const [done, setDone] = useState(false);
   const [stats, setStats] = useState({ reviewed: 0, mastered: 0 });
   const navigate = useNavigate();
+  const { t, lang } = useT();
 
   useEffect(() => {
     getReviewWords().then(r => {
@@ -52,9 +56,9 @@ function ReviewPage() {
                 <line x1="8" y1="15" x2="14" y2="15" />
               </svg>
             </div>
-            <h2 className="empty-title">No words yet</h2>
-            <p className="empty-sub">Send a word in the chat to add it to your collection.</p>
-            <button className="btn btn-gradient" onClick={() => navigate('/')}>Back to home</button>
+            <h2 className="empty-title">{t('review.empty.title')}</h2>
+            <p className="empty-sub">{t('review.empty.sub')}</p>
+            <button className="btn btn-gradient" onClick={() => navigate('/')}>{t('review.empty.cta')}</button>
           </div>
         </div>
       </>
@@ -62,6 +66,7 @@ function ReviewPage() {
   }
 
   if (done) {
+    const masteredPart = stats.mastered > 0 ? t('review.complete.mastered_part', { n: stats.mastered }) : '';
     return (
       <>
         <AppBar />
@@ -71,27 +76,27 @@ function ReviewPage() {
               <path d="M5 12l5 5L20 7" />
             </svg>
           </div>
-          <h1 className="h-display" style={{ marginBottom: 8 }}>Session complete!</h1>
+          <h1 className="h-display" style={{ marginBottom: 8 }}>{t('review.complete.title')}</h1>
           <p className="body-2" style={{ marginBottom: 22, padding: '0 16px' }}>
-            You reviewed <b style={{ color: 'var(--text-1)' }}>{stats.reviewed} words</b>{stats.mastered > 0 && <> and mastered <b style={{ color: '#65A30D' }}>{stats.mastered} new ones</b></>}.
+            {t('review.complete.summary', { reviewed: stats.reviewed, mastered: masteredPart })}
           </p>
 
           <div className="stats-row" style={{ marginBottom: 22 }}>
             <div className="stat-cell">
               <div className="stat-num">{stats.reviewed}</div>
-              <div className="stat-label">reviewed</div>
+              <div className="stat-label">{t('review.complete.reviewed')}</div>
             </div>
             <div className="stat-cell">
               <div className="stat-num violet">+{stats.reviewed * 3} XP</div>
-              <div className="stat-label">earned</div>
+              <div className="stat-label">{t('review.complete.earned')}</div>
             </div>
             <div className="stat-cell">
               <div className="stat-num">{stats.mastered}</div>
-              <div className="stat-label">mastered</div>
+              <div className="stat-label">{t('review.complete.mastered')}</div>
             </div>
           </div>
 
-          <button className="btn btn-primary" onClick={() => navigate('/')}>Back to home</button>
+          <button className="btn btn-primary" onClick={() => navigate('/')}>{t('review.back_home')}</button>
         </div>
       </>
     );
@@ -124,23 +129,23 @@ function ReviewPage() {
           ) : (
             <div className="review-image-placeholder">📸</div>
           )}
-          <div className="review-pos">{current.part_of_speech || 'word'}</div>
+          <div className="review-pos">{current.part_of_speech || ''}</div>
           <div className="review-word">{current.word}</div>
 
           {!revealed ? (
             <button className="btn-pill" style={{ marginTop: 18 }} onClick={() => setRevealed(true)}>
-              Tap to reveal translation
+              {t('review.reveal')}
             </button>
           ) : (
             <>
               <div className="review-translation-box">
-                <div className="translation-eyebrow">Translation</div>
-                <div className="translation-text">{current.translation}</div>
+                <div className="translation-eyebrow">{t('review.translation')}</div>
+                <div className="translation-text">{FLAGS[lang] || ''} {current.translation}</div>
                 {current.memory_tip && <div className="translation-sub">{current.memory_tip}</div>}
               </div>
               {exampleSentence && (
                 <div className="review-examples">
-                  <div className="eyebrow" style={{ padding: '0 4px' }}>Example</div>
+                  <div className="eyebrow" style={{ padding: '0 4px' }}>{t('review.example')}</div>
                   <div className="review-example">"{exampleSentence}"</div>
                 </div>
               )}
@@ -152,15 +157,15 @@ function ReviewPage() {
           <div className="answer-bar">
             <button className="answer-btn forgot" onClick={() => handleAnswer(1)}>
               <span className="icon">✕</span>
-              <span>Forgot</span>
+              <span>{t('review.forgot')}</span>
             </button>
             <button className="answer-btn hard" onClick={() => handleAnswer(3)}>
               <span className="icon">◐</span>
-              <span>Hard</span>
+              <span>{t('review.hard')}</span>
             </button>
             <button className="answer-btn easy" onClick={() => handleAnswer(5)}>
               <span className="icon">✓</span>
-              <span>Easy</span>
+              <span>{t('review.easy')}</span>
             </button>
           </div>
         )}

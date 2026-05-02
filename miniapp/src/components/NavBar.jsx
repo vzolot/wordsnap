@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useT } from '../contexts/LangContext';
 import './NavBar.css';
 
 const Icon = ({ d }) => (
@@ -14,20 +15,21 @@ const ICONS = {
   stats:  'M3 21h18M5 21V10M11 21V4M17 21v-7',
 };
 
-const items = [
-  { to: '/',       label: 'Home',    icon: ICONS.home },
-  { to: '/words',  label: 'Words',   icon: ICONS.book },
-  { to: '/review', label: 'Review',  icon: ICONS.review },
-  { to: '/stats',  label: 'Stats',   icon: ICONS.stats },
-];
-
 function NavBar() {
+  const { t } = useT();
+  const items = [
+    { to: '/',       key: 'nav.home',   icon: ICONS.home },
+    { to: '/words',  key: 'nav.words',  icon: ICONS.book },
+    { to: '/review', key: 'nav.review', icon: ICONS.review },
+    { to: '/stats',  key: 'nav.stats',  icon: ICONS.stats },
+  ];
+
   return (
     <nav className="navbar">
       {items.map(it => (
         <NavLink key={it.to} to={it.to} end={it.to === '/'} className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
           <Icon d={it.icon} />
-          <span className="nav-label">{it.label}</span>
+          <span className="nav-label">{t(it.key)}</span>
         </NavLink>
       ))}
     </nav>
