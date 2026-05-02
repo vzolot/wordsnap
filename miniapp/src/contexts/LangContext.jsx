@@ -13,8 +13,12 @@ export function LangProvider({ children }) {
 
   useEffect(() => {
     getStats().then(r => {
-      if (r.data?.native_lang) setLang(r.data.native_lang);
-    }).catch(() => {});
+      const nl = r.data?.native_lang;
+      console.log('[wordsnap] stats native_lang:', nl, 'response:', r.data);
+      if (nl) setLang(nl);
+    }).catch(err => {
+      console.error('[wordsnap] getStats failed:', err?.response?.status, err?.response?.data, err?.message);
+    });
   }, []);
 
   const value = useMemo(() => ({ lang, setLang }), [lang]);

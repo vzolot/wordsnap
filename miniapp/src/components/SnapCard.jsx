@@ -36,7 +36,11 @@ function SnapCard({ nativeLang, usedToday, dailyLimit, onAdded }) {
       onAdded?.();
     } catch (err) {
       const status = err?.response?.status;
-      setError(status === 502 ? t('snap.error') : t('snap.error'));
+      const detail = err?.response?.data?.detail;
+      const detailStr = typeof detail === 'string'
+        ? detail
+        : detail ? JSON.stringify(detail) : err?.message || '';
+      setError(`${t('snap.error')} [${status || 'net'}] ${detailStr}`.trim());
     } finally {
       setLoading(false);
     }

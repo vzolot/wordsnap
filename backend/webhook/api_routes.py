@@ -3,12 +3,22 @@ REST API для miniapp.
 """
 from datetime import datetime, timezone
 from fastapi import APIRouter, Query, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select, func
 
 from core.db import SessionLocal
 from core.models import User, Word
 
 router = APIRouter()
+
+
+class WordRequest(BaseModel):
+    word: str
+
+
+class ReviewRequest(BaseModel):
+    word_id: int
+    quality: int = 3
 
 
 def _serialize_word(w: Word) -> dict:
@@ -99,30 +109,23 @@ async def get_review_words(telegram_id: int = Query(...)):
 
 
 @router.post("/api/review")
-async def submit_review(data: dict, telegram_id: int = Query(...)):
+async def submit_review(data: ReviewRequest, telegram_id: int = Query(...)):
     from core.word_service import process_review
-
-    word_id = data.get("word_id")
-    quality = data.get("quality", 3)
-    if not word_id:
-        raise HTTPException(status_code=400, detail="word_id is required")
-
     result_map = {1: "forgot", 3: "struggled", 5: "knew"}
-    result = result_map.get(quality, "struggled")
-
-    word, new_interval = await process_review(word_id, result)
+    result = result_map.get(data.quality, "struggled")
+    word, new_interval = await process_review(data.word_id, result)
     return {"ok": bool(word), "interval_days": new_interval}
 
 
 @router.post("/api/words")
-async def add_word_endpoint(data: dict, telegram_id: int = Query(...)):
+async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
     """Додає нове слово через міні-апп — той самий флоу, що й у боті."""
     from core.user_service import get_or_create_user, can_add_word, increment_word_counter
     from core.word_service import word_exists, save_word
     from core.openai_client import get_word_data
     from core.unsplash_client import search_image
 
-    word = (data.get("word") or "").strip()
+    word = (data.word or "").strip()
     if not word:
         raise HTTPException(status_code=400, detail="Word is required")
     if len(word) < 2 or len(word) > 100:

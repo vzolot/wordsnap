@@ -11,6 +11,8 @@ api.interceptors.request.use((config) => {
   const userId = tg?.initDataUnsafe?.user?.id;
   if (userId) {
     config.params = { ...config.params, telegram_id: userId };
+  } else {
+    return Promise.reject(new Error('NO_TELEGRAM_ID — open this app from Telegram'));
   }
   return config;
 });
