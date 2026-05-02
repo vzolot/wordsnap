@@ -10,6 +10,7 @@ from aiogram.filters import Command
 
 from core.languages import LANGUAGES, lang_flag, lang_name
 from core.user_service import get_or_create_user, update_user_languages
+from core.bot_i18n import t as bt
 
 logger = logging.getLogger(__name__)
 
@@ -39,26 +40,27 @@ def target_lang_keyboard(native_code: str) -> InlineKeyboardMarkup:
     ])
 
 
-def ask_native_lang_text() -> str:
-    return "🌍 <b>Яка твоя рідна мова?</b>\n\n<i>Переклади будуть показані цією мовою.</i>"
+def ask_native_lang_text(lang: str = "uk") -> str:
+    return bt("setup.ask_native", lang)
 
 
 @router.message(Command("language"))
 async def cmd_language(message: Message):
     """Змінити мови навчання"""
-    await message.answer(ask_native_lang_text(), reply_markup=native_lang_keyboard())
+    user = await get_or_create_user(telegram_id=message.from_user.id)
+    lang = user.native_lang or "uk"
+    await message.answer(ask_native_lang_text(lang), reply_markup=native_lang_keyboard())
 
 
 @router.callback_query(F.data.startswith("setup_native:"))
 async def handle_native_lang(callback: CallbackQuery):
     native_code = callback.data.split(":")[1]
     if native_code not in LANGUAGES:
-        await callback.answer("Невідома мова", show_alert=True)
+        await callback.answer("?", show_alert=True)
         return
 
     await callback.message.edit_text(
-        f"✅ Рідна мова: <b>{lang_flag(native_code)} {lang_name(native_code)}</b>\n\n"
-        f"🎯 <b>Яку мову хочеш вивчати?</b>",
+        bt("setup.ask_target", native_code, flag=lang_flag(native_code), name=lang_name(native_code)),
         reply_markup=target_lang_keyboard(native_code),
     )
     await callback.answer()
@@ -68,12 +70,12 @@ async def handle_native_lang(callback: CallbackQuery):
 async def handle_target_lang(callback: CallbackQuery):
     parts = callback.data.split(":")
     if len(parts) != 3:
-        await callback.answer("Помилка", show_alert=True)
+        await callback.answer("Error", show_alert=True)
         return
 
     _, native_code, target_code = parts
     if native_code not in LANGUAGES or target_code not in LANGUAGES:
-        await callback.answer("Невідома мова", show_alert=True)
+        await callback.answer("?", show_alert=True)
         return
 
     await update_user_languages(
@@ -84,20 +86,21 @@ async def handle_target_lang(callback: CallbackQuery):
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text="📱 Відкрити WordSnap App",
+            text=bt("setup.open_app", native_code),
             web_app=WebAppInfo(url=MINI_APP_URL),
         )]
     ])
 
-    await callback.message.edit_text(
-        f"✅ <b>Налаштування збережено!</b>\n\n"
-        f"🏠 Рідна мова: <b>{lang_flag(native_code)} {lang_name(native_code)}</b>\n"
-        f"🎯 Вивчаємо: <b>{lang_flag(target_code)} {lang_name(target_code)}</b>\n\n"
-        f"<b>Як хочеш користуватись:</b>\n"
-        f"💬 <b>У чаті</b> — просто надсилай слова сюди, бот робить переклад і нагадування\n"
-        f"📱 <b>У додатку</b> — натисни кнопку нижче, додавай слова, повторюй у зручному UI\n\n"
-        f"<i>Можеш користуватись і там, і там — все синхронізовано.</i>\n"
-        f"<i>Змінити мови: /language</i>",
-        reply_markup=keyboard,
+    text = (
+        f"{bt('setup.saved', native_code)}\n\n"
+        f"{bt('setup.native', native_code)}: <b>{lang_flag(native_code)} {lang_name(native_code)}</b>\n"
+        f"{bt('setup.target', native_code)}: <b>{lang_flag(target_code)} {lang_name(target_code)}</b>\n\n"
+        f"{bt('setup.how_to_use', native_code)}\n"
+        f"{bt('setup.via_chat', native_code)}\n"
+        f"{bt('setup.via_app', native_code)}\n\n"
+        f"{bt('setup.synced', native_code)}\n"
+        f"{bt('setup.change_lang', native_code)}"
     )
+
+    await callback.message.edit_text(text, reply_markup=keyboard)
     await callback.answer()

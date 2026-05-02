@@ -808,3 +808,26 @@
   border-radius: var(--r-f);
 }
 .snap-another:active { transform: scale(0.98); }
+
+/* ── Debug banner ───────────────────────────────────── */
+.debug-banner {
+  background: var(--coral-soft);
+  color: var(--coral);
+  padding: 10px 14px;
+  margin: 8px 16px;
+  border-radius: var(--r-md);
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.debug-banner b { font-weight: 700; }
+.debug-banner button {
+  background: var(--coral);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: var(--r-f);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}

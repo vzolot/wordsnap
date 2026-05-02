@@ -50,7 +50,7 @@ async def check_and_send_reminders(bot: Bot):
                     f"📚 <b>{escape(word.word)}</b>\n\n"
                     f"<i>Згадав переклад? Натисни щоб перевірити 👇</i>"
                 )
-                keyboard = show_translation_keyboard(word.id)
+                keyboard = show_translation_keyboard(word.id, source="rem")
 
                 await bot.send_message(
                     chat_id=user.telegram_id,

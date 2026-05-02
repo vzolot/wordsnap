@@ -90,18 +90,20 @@ async def cmd_review(message: Message):
     await send_review_word(message, words[0])
 
 
-async def send_review_word(message: Message, word) -> None:
+async def send_review_word(message: Message, word, source: str = "rev") -> None:
     """Відправити слово для повторення"""
     text = format_review_question(word)
-    keyboard = show_translation_keyboard(word.id)
+    keyboard = show_translation_keyboard(word.id, source=source)
     await message.answer(text, reply_markup=keyboard)
 
 
 @router.callback_query(F.data.startswith("reveal:"))
 async def show_translation(callback: CallbackQuery):
     """Юзер натиснув 'Показати переклад'"""
-    word_id = int(callback.data.split(":")[1])
-    
+    parts = callback.data.split(":")
+    word_id = int(parts[1])
+    source = parts[2] if len(parts) > 2 else "rev"
+
     word = await get_word_by_id(word_id)
     if not word:
         await callback.answer("Слово не знайдено", show_alert=True)
@@ -109,8 +111,8 @@ async def show_translation(callback: CallbackQuery):
 
     user = await get_or_create_user(telegram_id=callback.from_user.id)
     text = format_review_revealed(word, native_lang=user.native_lang or "uk")
-    keyboard = review_answer_keyboard(word_id)
-    
+    keyboard = review_answer_keyboard(word_id, source=source)
+
     await callback.message.edit_text(text, reply_markup=keyboard)
     await callback.answer()
 
@@ -119,59 +121,58 @@ async def show_translation(callback: CallbackQuery):
 async def handle_review_answer(callback: CallbackQuery):
     """Юзер натиснув знав/згадав/забув"""
     parts = callback.data.split(":")
-    if len(parts) != 3:
+    if len(parts) < 3:
         await callback.answer("Помилка", show_alert=True)
         return
-    
-    _, result, word_id_str = parts
+
+    _, result, word_id_str = parts[0], parts[1], parts[2]
+    source = parts[3] if len(parts) > 3 else "rev"
     word_id = int(word_id_str)
-    
+
     if result not in ("knew", "struggled", "forgot"):
         await callback.answer("Помилка", show_alert=True)
         return
-    
-    # Обробляємо відповідь
+
     word, new_interval = await process_review(word_id, result)
-    
+
     if not word:
         await callback.answer("Слово не знайдено", show_alert=True)
         return
-    
-    # Формуємо повідомлення-підтвердження
+
     interval_text = format_interval(new_interval)
-    
+
     if result == "knew":
-        emoji = "✅"
-        praise = "Чудово!"
+        emoji, praise = "✅", "Чудово!"
     elif result == "struggled":
-        emoji = "🤔"
-        praise = "Молодець!"
+        emoji, praise = "🤔", "Молодець!"
     else:
-        emoji = "❌"
-        praise = "Нічого, повторимо!"
-    
+        emoji, praise = "❌", "Нічого, повторимо!"
+
     text = (
         f"{emoji} <b>{praise}</b>\n\n"
         f"📚 <b>{escape(word.word)}</b> — {escape(word.translation)}\n"
         f"🔔 <i>Наступне повторення через {interval_text}</i>"
     )
-    
+
     await callback.message.edit_text(text)
     await callback.answer()
-    
-    # Перевіряємо чи є ще слова для повторення
+
+    # Авто-продовження тільки для /review сесії, не для нагадувань
+    if source != "rev":
+        logger.info(f"User answered '{result}' for word_id={word_id} (from reminder)")
+        return
+
     words = await get_words_due_review(word.user_id, limit=10)
-    
+
     if words:
-        # Невелика пауза, потім наступне слово
         await callback.message.answer(
             f"<i>Залишилось ще {len(words)} слів для повторення</i>"
         )
-        await send_review_word(callback.message, words[0])
+        await send_review_word(callback.message, words[0], source="rev")
     else:
         await callback.message.answer(
             "🎉 <b>Всі слова повторені!</b>\n"
             "<i>Чудова робота. Я нагадаю коли буде час знову 🔔</i>"
         )
-    
+
     logger.info(f"User answered '{result}' for word_id={word_id}")

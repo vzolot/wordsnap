@@ -6,6 +6,7 @@ import ReviewPage from './pages/ReviewPage';
 import StatsPage from './pages/StatsPage';
 import ProPage from './pages/ProPage';
 import NavBar from './components/NavBar';
+import DebugBanner from './components/DebugBanner';
 import { LangProvider } from './contexts/LangContext';
 import './App.css';
 
@@ -32,6 +33,7 @@ function App() {
     <LangProvider>
       <BrowserRouter>
         <div className="app">
+          <DebugBanner />
           <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/words" element={<WordsPage />} />
