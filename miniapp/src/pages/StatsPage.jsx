@@ -12,27 +12,41 @@ function StatsPage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="page"><p style={{color:'var(--hint)',textAlign:'center'}}>Завантаження...</p></div>;
+  if (loading) return <div className="page"><div className="center-loader"><span className="spinner" /></div></div>;
+
+  const learning = (stats?.total_words || 0) - (stats?.learned_words || 0);
+
+  const tiles = [
+    { label: 'Total words',       value: stats?.total_words || 0,    color: 'violet' },
+    { label: 'Mastered',          value: stats?.learned_words || 0,  color: 'lime'   },
+    { label: 'Learning',          value: learning,                   color: 'violet' },
+    { label: 'Reviewed today',    value: stats?.reviewed_today || 0, color: ''       },
+    { label: 'Streak days',       value: stats?.streak || 0,         color: 'coral'  },
+  ];
 
   return (
-    <div className="page">
-      <h1 style={{fontSize: 22, fontWeight: 700, marginBottom: 16}}>📊 Статистика</h1>
+    <>
+      <header className="app-bar">
+        <div className="app-bar-logo">W</div>
+        <div>
+          <div className="app-bar-title">WordSnap</div>
+          <div className="app-bar-sub">mini app</div>
+        </div>
+      </header>
 
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12}}>
-        {[
-          {label:'Всього слів', value: stats?.total_words || 0, icon:'📖'},
-          {label:'Вивчено', value: stats?.learned_words || 0, icon:'✅'},
-          {label:'Повторено сьогодні', value: stats?.reviewed_today || 0, icon:'🔄'},
-          {label:'Серія днів', value: stats?.streak || 0, icon:'🔥'},
-        ].map(item => (
-          <div key={item.label} className="card" style={{textAlign:'center'}}>
-            <p style={{fontSize:28}}>{item.icon}</p>
-            <p style={{fontSize:24,fontWeight:700,marginTop:4}}>{item.value}</p>
-            <p style={{color:'var(--hint)',fontSize:12,marginTop:2}}>{item.label}</p>
-          </div>
-        ))}
+      <div className="page">
+        <h1 className="h1" style={{ marginBottom: 14 }}>Your progress</h1>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {tiles.map(t => (
+            <div key={t.label} className="stat-cell" style={{ padding: '18px 16px' }}>
+              <div className={`stat-num ${t.color}`} style={{ fontSize: 28 }}>{t.value}</div>
+              <div className="stat-label">{t.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
