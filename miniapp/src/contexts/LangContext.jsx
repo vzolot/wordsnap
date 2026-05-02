@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { getStats } from '../api/client';
+import { getStats, getTelegramUserId } from '../api/client';
 import { detectLang, plural as pluralFn, t as tFn } from '../i18n';
 
 const LangContext = createContext({ lang: 'en', setLang: () => {} });
@@ -12,13 +12,32 @@ export function LangProvider({ children }) {
   const [lang, setLang] = useState(initial);
 
   useEffect(() => {
-    getStats().then(r => {
-      const nl = r.data?.native_lang;
-      console.log('[wordsnap] stats native_lang:', nl, 'response:', r.data);
-      if (nl) setLang(nl);
-    }).catch(err => {
-      console.error('[wordsnap] getStats failed:', err?.response?.status, err?.response?.data, err?.message);
-    });
+    let cancelled = false;
+    const fetchStats = () => {
+      getStats().then(r => {
+        if (cancelled) return;
+        const nl = r.data?.native_lang;
+        if (nl) setLang(nl);
+      }).catch(err => {
+        console.warn('[wordsnap] getStats failed:', err?.message);
+      });
+    };
+
+    if (getTelegramUserId()) {
+      fetchStats();
+    } else {
+      // Telegram WebApp may inject initDataUnsafe slightly later — retry briefly
+      let tries = 0;
+      const interval = setInterval(() => {
+        tries += 1;
+        if (getTelegramUserId() || tries >= 10) {
+          clearInterval(interval);
+          if (getTelegramUserId()) fetchStats();
+        }
+      }, 200);
+      return () => { cancelled = true; clearInterval(interval); };
+    }
+    return () => { cancelled = true; };
   }, []);
 
   const value = useMemo(() => ({ lang, setLang }), [lang]);

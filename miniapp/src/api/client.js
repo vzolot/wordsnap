@@ -6,13 +6,35 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
-api.interceptors.request.use((config) => {
+export function getTelegramUserId() {
   const tg = window.Telegram?.WebApp;
-  const userId = tg?.initDataUnsafe?.user?.id;
+  if (!tg) return null;
+
+  const direct = tg.initDataUnsafe?.user?.id;
+  if (direct) return direct;
+
+  const raw = tg.initData;
+  if (raw) {
+    try {
+      const params = new URLSearchParams(raw);
+      const userStr = params.get('user');
+      if (userStr) {
+        const parsed = JSON.parse(userStr);
+        if (parsed?.id) return parsed.id;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
+api.interceptors.request.use((config) => {
+  const userId = getTelegramUserId();
   if (userId) {
     config.params = { ...config.params, telegram_id: userId };
   } else {
-    return Promise.reject(new Error('NO_TELEGRAM_ID — open this app from Telegram'));
+    return Promise.reject(new Error('NO_TELEGRAM_ID'));
   }
   return config;
 });

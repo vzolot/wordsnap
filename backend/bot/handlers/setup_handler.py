@@ -4,7 +4,7 @@
 import logging
 from aiogram import Router, F
 from aiogram.types import (
-    CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message
+    CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message, WebAppInfo
 )
 from aiogram.filters import Command
 
@@ -14,6 +14,8 @@ from core.user_service import get_or_create_user, update_user_languages
 logger = logging.getLogger(__name__)
 
 router = Router()
+
+MINI_APP_URL = "https://miniapp-omega-three.vercel.app"
 
 
 def native_lang_keyboard() -> InlineKeyboardMarkup:
@@ -80,11 +82,22 @@ async def handle_target_lang(callback: CallbackQuery):
         target_lang=target_code,
     )
 
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="📱 Відкрити WordSnap App",
+            web_app=WebAppInfo(url=MINI_APP_URL),
+        )]
+    ])
+
     await callback.message.edit_text(
         f"✅ <b>Налаштування збережено!</b>\n\n"
         f"🏠 Рідна мова: <b>{lang_flag(native_code)} {lang_name(native_code)}</b>\n"
         f"🎯 Вивчаємо: <b>{lang_flag(target_code)} {lang_name(target_code)}</b>\n\n"
-        f"Відправ перше слово {lang_name(target_code).lower()}, щоб почати! 🚀\n\n"
-        f"<i>Змінити мови в будь-який момент: /language</i>"
+        f"<b>Як хочеш користуватись:</b>\n"
+        f"💬 <b>У чаті</b> — просто надсилай слова сюди, бот робить переклад і нагадування\n"
+        f"📱 <b>У додатку</b> — натисни кнопку нижче, додавай слова, повторюй у зручному UI\n\n"
+        f"<i>Можеш користуватись і там, і там — все синхронізовано.</i>\n"
+        f"<i>Змінити мови: /language</i>",
+        reply_markup=keyboard,
     )
     await callback.answer()
