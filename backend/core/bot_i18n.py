@@ -58,6 +58,19 @@ T = {
         "setup.ask_native": "🌍 <b>Jaki jest Twój język ojczysty?</b>\n\n<i>Tłumaczenia będą pokazane w tym języku.</i>",
         "setup.ask_target": "✅ Język ojczysty: <b>{flag} {name}</b>\n\n🎯 <b>Jakiego języka chcesz się uczyć?</b>",
     },
+    "de": {
+        "setup.saved": "✅ <b>Einstellungen gespeichert!</b>",
+        "setup.native": "🏠 Muttersprache",
+        "setup.target": "🎯 Lernen",
+        "setup.how_to_use": "<b>So benutzt du es:</b>",
+        "setup.via_chat": "💬 <b>Im Chat</b> — sende einfach Wörter hierher, der Bot übersetzt und erinnert",
+        "setup.via_app": "📱 <b>In der App</b> — tippe unten, um Wörter in einer schönen UI hinzuzufügen und zu wiederholen",
+        "setup.synced": "<i>Nutze beides — alles ist synchronisiert.</i>",
+        "setup.change_lang": "<i>Sprachen ändern: /language</i>",
+        "setup.open_app": "📱 WordSnap App öffnen",
+        "setup.ask_native": "🌍 <b>Was ist deine Muttersprache?</b>\n\n<i>Übersetzungen werden in dieser Sprache angezeigt.</i>",
+        "setup.ask_target": "✅ Muttersprache: <b>{flag} {name}</b>\n\n🎯 <b>Welche Sprache möchtest du lernen?</b>",
+    },
 }
 
 

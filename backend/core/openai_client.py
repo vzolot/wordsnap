@@ -18,6 +18,7 @@ LANGUAGE_NAMES = {
     "en": "English",
     "es": "Spanish",
     "pl": "Polish",
+    "de": "German",
 }
 
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))

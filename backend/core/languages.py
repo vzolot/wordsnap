@@ -3,6 +3,7 @@ LANGUAGES = {
     "en": ("English", "🇬🇧"),
     "es": ("Español", "🇪🇸"),
     "pl": ("Polski", "🇵🇱"),
+    "de": ("Deutsch", "🇩🇪"),
 }
 
 
