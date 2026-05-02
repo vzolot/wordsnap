@@ -18,7 +18,8 @@ api.interceptors.request.use((config) => {
 export const getWords = () => api.get('/api/words');
 export const getStats = () => api.get('/api/stats');
 export const getReviewWords = () => api.get('/api/review');
-export const submitReview = (wordId, quality) => 
+export const submitReview = (wordId, quality) =>
   api.post('/api/review', { word_id: wordId, quality });
+export const createBuyLink = () => api.post('/api/buy');
 
 export default api;

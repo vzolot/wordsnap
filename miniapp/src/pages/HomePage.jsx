@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStats, getReviewWords, getWords } from '../api/client';
+import AppBar from '../components/AppBar';
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -13,9 +14,9 @@ const greeting = () => {
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function statusBadge(word) {
-  if (word.repetition >= 3)  return { cls: 'badge-mastered', text: 'Mastered' };
-  if (word.repetition >= 1)  return { cls: 'badge-learning', text: 'Learning' };
-  return { cls: 'badge-new', text: 'New' };
+  if (word.status === 'mastered') return { cls: 'badge-mastered', text: 'Mastered' };
+  if ((word.review_count || 0) === 0) return { cls: 'badge-new', text: 'New' };
+  return { cls: 'badge-learning', text: 'Learning' };
 }
 
 function HomePage() {
@@ -35,17 +36,12 @@ function HomePage() {
   const streak = stats?.streak || 0;
   const learning = (stats?.total_words || 0) - (stats?.learned_words || 0);
   const mastered = stats?.learned_words || 0;
+  const isPro = stats?.plan === 'pro';
   const todayIdx = (new Date().getDay() + 6) % 7;
 
   return (
     <>
-      <header className="app-bar">
-        <div className="app-bar-logo">W</div>
-        <div>
-          <div className="app-bar-title">WordSnap</div>
-          <div className="app-bar-sub">mini app</div>
-        </div>
-      </header>
+      <AppBar isPro={isPro} />
 
       <div className="page">
         <p className="greeting-eyebrow">{greeting()}, {userName}</p>

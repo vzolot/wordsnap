@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { getWords } from '../api/client';
+import AppBar from '../components/AppBar';
 
 function statusBadge(word) {
-  if (word.repetition >= 3)  return { cls: 'badge-mastered', text: 'Mastered' };
-  if (word.repetition >= 1)  return { cls: 'badge-learning', text: 'Learning' };
-  return { cls: 'badge-new', text: 'New' };
+  if (word.status === 'mastered') return { cls: 'badge-mastered', text: 'Mastered' };
+  if ((word.review_count || 0) === 0) return { cls: 'badge-new', text: 'New' };
+  return { cls: 'badge-learning', text: 'Learning' };
 }
 
 function WordsPage() {
@@ -26,13 +27,7 @@ function WordsPage() {
 
   return (
     <>
-      <header className="app-bar">
-        <div className="app-bar-logo">W</div>
-        <div>
-          <div className="app-bar-title">WordSnap</div>
-          <div className="app-bar-sub">mini app</div>
-        </div>
-      </header>
+      <AppBar />
 
       <div className="page">
         <h1 className="h1" style={{ marginBottom: 14 }}>My words</h1>

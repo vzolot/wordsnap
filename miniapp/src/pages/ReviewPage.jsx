@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getReviewWords, submitReview } from '../api/client';
+import AppBar from '../components/AppBar';
 
 function ReviewPage() {
   const [words, setWords] = useState([]);
@@ -40,65 +41,72 @@ function ReviewPage() {
 
   if (words.length === 0) {
     return (
-      <div className="page">
-        <div className="empty-state">
-          <div className="empty-illu">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.5">
-              <path d="M4 4h12l4 4v12H4z" />
-              <line x1="8" y1="11" x2="16" y2="11" />
-              <line x1="8" y1="15" x2="14" y2="15" />
-            </svg>
+      <>
+        <AppBar />
+        <div className="page">
+          <div className="empty-state">
+            <div className="empty-illu">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.5">
+                <path d="M4 4h12l4 4v12H4z" />
+                <line x1="8" y1="11" x2="16" y2="11" />
+                <line x1="8" y1="15" x2="14" y2="15" />
+              </svg>
+            </div>
+            <h2 className="empty-title">No words yet</h2>
+            <p className="empty-sub">Send a word in the chat to add it to your collection.</p>
+            <button className="btn btn-gradient" onClick={() => navigate('/')}>Back to home</button>
           </div>
-          <h2 className="empty-title">No words yet</h2>
-          <p className="empty-sub">Send a word in the chat to add it to your collection.</p>
-          <button className="btn btn-gradient" onClick={() => navigate('/')}>Back to home</button>
         </div>
-      </div>
+      </>
     );
   }
 
   if (done) {
     return (
-      <div className="page" style={{ textAlign: 'center', paddingTop: 50 }}>
-        <div className="success-circle">
-          <svg className="success-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12l5 5L20 7" />
-          </svg>
-        </div>
-        <h1 className="h-display" style={{ marginBottom: 8 }}>Session complete!</h1>
-        <p className="body-2" style={{ marginBottom: 22, padding: '0 16px' }}>
-          You reviewed <b style={{ color: 'var(--text-1)' }}>{stats.reviewed} words</b>{stats.mastered > 0 && <> and mastered <b style={{ color: '#65A30D' }}>{stats.mastered} new ones</b></>}.
-        </p>
+      <>
+        <AppBar />
+        <div className="page" style={{ textAlign: 'center', paddingTop: 30 }}>
+          <div className="success-circle">
+            <svg className="success-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12l5 5L20 7" />
+            </svg>
+          </div>
+          <h1 className="h-display" style={{ marginBottom: 8 }}>Session complete!</h1>
+          <p className="body-2" style={{ marginBottom: 22, padding: '0 16px' }}>
+            You reviewed <b style={{ color: 'var(--text-1)' }}>{stats.reviewed} words</b>{stats.mastered > 0 && <> and mastered <b style={{ color: '#65A30D' }}>{stats.mastered} new ones</b></>}.
+          </p>
 
-        <div className="stats-row" style={{ marginBottom: 22 }}>
-          <div className="stat-cell">
-            <div className="stat-num">{stats.reviewed}</div>
-            <div className="stat-label">reviewed</div>
+          <div className="stats-row" style={{ marginBottom: 22 }}>
+            <div className="stat-cell">
+              <div className="stat-num">{stats.reviewed}</div>
+              <div className="stat-label">reviewed</div>
+            </div>
+            <div className="stat-cell">
+              <div className="stat-num violet">+{stats.reviewed * 3} XP</div>
+              <div className="stat-label">earned</div>
+            </div>
+            <div className="stat-cell">
+              <div className="stat-num">{stats.mastered}</div>
+              <div className="stat-label">mastered</div>
+            </div>
           </div>
-          <div className="stat-cell">
-            <div className="stat-num violet">+{stats.reviewed * 3} XP</div>
-            <div className="stat-label">earned</div>
-          </div>
-          <div className="stat-cell">
-            <div className="stat-num">{stats.mastered}</div>
-            <div className="stat-label">mastered</div>
-          </div>
-        </div>
 
-        <button className="btn btn-primary" onClick={() => navigate('/')}>Back to home</button>
-      </div>
+          <button className="btn btn-primary" onClick={() => navigate('/')}>Back to home</button>
+        </div>
+      </>
     );
   }
 
+  const exampleSentence = (() => {
+    const ex = current.examples;
+    if (!ex || !ex.length) return null;
+    const first = ex[0];
+    return typeof first === 'string' ? first : first?.sentence;
+  })();
+
   return (
     <>
-      <header className="app-bar">
-        <div className="app-bar-logo">W</div>
-        <div>
-          <div className="app-bar-title">WordSnap</div>
-          <div className="app-bar-sub">mini app</div>
-        </div>
-      </header>
+      <AppBar />
 
       <div className="page">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -106,12 +114,16 @@ function ReviewPage() {
             {index + 1} / {words.length}
           </span>
           <div className="progress-track" style={{ flex: 1 }}>
-            <div className="progress-fill" style={{ width: `${((index) / words.length) * 100}%` }} />
+            <div className="progress-fill" style={{ width: `${(index / words.length) * 100}%` }} />
           </div>
         </div>
 
         <div className="review-card">
-          <div className="review-image-placeholder">📸</div>
+          {current.image_url ? (
+            <img src={current.image_url} alt="" className="review-image" />
+          ) : (
+            <div className="review-image-placeholder">📸</div>
+          )}
           <div className="review-pos">{current.part_of_speech || 'word'}</div>
           <div className="review-word">{current.word}</div>
 
@@ -124,11 +136,12 @@ function ReviewPage() {
               <div className="review-translation-box">
                 <div className="translation-eyebrow">Translation</div>
                 <div className="translation-text">{current.translation}</div>
+                {current.memory_tip && <div className="translation-sub">{current.memory_tip}</div>}
               </div>
-              {current.example && (
+              {exampleSentence && (
                 <div className="review-examples">
                   <div className="eyebrow" style={{ padding: '0 4px' }}>Example</div>
-                  <div className="review-example">"{current.example}"</div>
+                  <div className="review-example">"{exampleSentence}"</div>
                 </div>
               )}
             </>

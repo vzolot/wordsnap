@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getStats } from '../api/client';
+import AppBar from '../components/AppBar';
 
 function StatsPage() {
   const [stats, setStats] = useState(null);
@@ -24,15 +25,11 @@ function StatsPage() {
     { label: 'Streak days',       value: stats?.streak || 0,         color: 'coral'  },
   ];
 
+  const isPro = stats?.plan === 'pro';
+
   return (
     <>
-      <header className="app-bar">
-        <div className="app-bar-logo">W</div>
-        <div>
-          <div className="app-bar-title">WordSnap</div>
-          <div className="app-bar-sub">mini app</div>
-        </div>
-      </header>
+      <AppBar isPro={isPro} />
 
       <div className="page">
         <h1 className="h1" style={{ marginBottom: 14 }}>Your progress</h1>

@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import WordsPage from './pages/WordsPage';
 import ReviewPage from './pages/ReviewPage';
 import StatsPage from './pages/StatsPage';
+import ProPage from './pages/ProPage';
 import NavBar from './components/NavBar';
 import './App.css';
 
@@ -34,6 +35,7 @@ function App() {
           <Route path="/words" element={<WordsPage />} />
           <Route path="/review" element={<ReviewPage />} />
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/pro" element={<ProPage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
         <NavBar />
