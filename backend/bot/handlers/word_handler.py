@@ -15,13 +15,14 @@ from core.openai_client import get_word_data
 from core.unsplash_client import search_image
 from core.user_service import get_or_create_user, can_add_word, increment_word_counter
 from core.word_service import word_exists, save_word
+from core.languages import lang_flag
 
 logger = logging.getLogger(__name__)
 
 router = Router()
 
 
-def format_word_response(word: str, data: dict, has_image: bool = False) -> str:
+def format_word_response(word: str, data: dict, native_lang: str = "uk", has_image: bool = False) -> str:
     """Форматує AI-відповідь у HTML-текст для Telegram"""
     word_safe = escape(word)
     translation = escape(data.get('translation', ''))
@@ -36,7 +37,7 @@ def format_word_response(word: str, data: dict, has_image: bool = False) -> str:
         text += f" • {difficulty}"
     text += "\n"
 
-    text += f"🇺🇦 <b>{translation}</b>\n\n"
+    text += f"{lang_flag(native_lang)} <b>{translation}</b>\n\n"
 
     text += "📖 <b>Examples:</b>\n"
     for i, ex in enumerate(data.get('examples', []), 1):
@@ -101,6 +102,13 @@ async def handle_word(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
+
+    # Мова ще не обрана — просимо пройти налаштування
+    if not user.target_lang:
+        await message.answer(
+            "⚙️ Спочатку обери мову для вивчення — надішли /start"
+        )
+        return
 
     # Перевірка ліміту
     can_add, reason = await can_add_word(user)
@@ -172,7 +180,7 @@ async def handle_word(message: Message):
         await typing_task
 
         # Форматуємо відповідь
-        formatted = format_word_response(word, ai_data, has_image=bool(image_url))
+        formatted = format_word_response(word, ai_data, native_lang=user.native_lang or "uk", has_image=bool(image_url))
 
         # Відправляємо: якщо є картинка — як photo з caption, інакше — текстом
         if image_url:

@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 
 from bot.handlers.word_handler import router as word_router
 from bot.handlers.review_handler import router as review_router
+from bot.handlers.setup_handler import router as setup_router, native_lang_keyboard, ask_native_lang_text
 from scheduler.reminder import reminder_loop
 from scheduler.recurring_charges import recurring_charges_loop
 from webhook.server import app as webhook_app
@@ -49,7 +50,7 @@ dp = Dispatcher()
 async def cmd_start(message: Message):
     """Реєстрація юзера в БД при /start"""
     tg_user = message.from_user
-    
+
     user = await get_or_create_user(
         telegram_id=tg_user.id,
         username=tg_user.username,
@@ -57,39 +58,53 @@ async def cmd_start(message: Message):
         last_name=tg_user.last_name,
         language_code=tg_user.language_code,
     )
-    
+
+    # Новий юзер або ще не обрав мову — запускаємо онбординг
+    if not user.target_lang:
+        await message.answer(
+            f"👋 Привіт, <b>{tg_user.first_name}</b>! Я <b>WordSnap</b> — "
+            f"твій AI-помічник у вивченні мов 🧠\n\n"
+            + ask_native_lang_text(),
+            reply_markup=native_lang_keyboard(),
+        )
+        logger.info(f"New user {tg_user.id} — started language setup")
+        return
+
     status = await get_user_status(user)
-    
+
     if status["is_trial"]:
         plan_text = (
             f"🎁 <b>У тебе TRIAL: {status['trial_days_left']} днів повного доступу!</b>\n"
             f"Користуйся всім без обмежень — а потім вирішиш чи лишатись на Pro."
         )
     elif status["plan"] == "pro":
-        plan_text = f"💎 <b>План:</b> PRO"
+        plan_text = "💎 <b>План:</b> PRO"
     else:
         plan_text = (
             f"📊 <b>План:</b> FREE (10 слів/день)\n"
             f"<i>Хочеш більше? /premium</i>"
         )
-    
+
+    from core.languages import lang_flag, lang_name
+    target = user.target_lang or "en"
     welcome_text = (
-        f"👋 Привіт, <b>{tg_user.first_name}</b>! [v2-with-button]\n\n"
-        f"Я <b>WordSnap</b> — твій AI-помічник у вивченні англійської 🧠\n\n"
+        f"👋 Привіт, <b>{tg_user.first_name}</b>!\n\n"
+        f"Я <b>WordSnap</b> — твій AI-помічник у вивченні мов 🧠\n\n"
         f"<b>Як це працює:</b>\n"
-        f"1️⃣ Надішли слово або фразу англійською\n"
+        f"1️⃣ Надішли слово або фразу {lang_name(target).lower()}\n"
         f"2️⃣ Я зроблю переклад, приклади і memory tip\n"
         f"3️⃣ Нагадаю повторити в правильний час 🔔\n\n"
+        f"🎯 Зараз вивчаємо: <b>{lang_flag(target)} {lang_name(target)}</b>\n\n"
         f"{plan_text}\n\n"
         f"📝 Сьогодні додано: {status['used_today']}/{status['daily_limit']}\n\n"
-        f"<i>Спробуй: ephemeral, breakthrough, take advantage of</i>"
+        f"<i>Змінити мову: /language</i>"
     )
-    
+
     mini_app_url = "https://miniapp-omega-three.vercel.app"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="📱 Відкрити WordSnap App",
-            web_app=WebAppInfo(url=mini_app_url)
+            web_app=WebAppInfo(url=mini_app_url),
         )]
     ])
     await message.answer(welcome_text, reply_markup=keyboard)
@@ -103,7 +118,8 @@ async def cmd_help(message: Message):
         "<b>Навчання:</b>\n"
         "• Просто надсилай слова — я перекладатиму\n"
         "• /review — повторити слова зараз\n"
-        "• /stats — твоя статистика\n\n"
+        "• /stats — твоя статистика\n"
+        "• /language — змінити мову навчання\n\n"
         "<b>Підписка:</b>\n"
         "• /premium — інфо про Pro\n"
         "• /buy — оформити Pro\n"
@@ -278,7 +294,8 @@ async def cmd_unsubscribe(message: Message):
         await message.answer("❌ Сталася помилка. Спробуй ще раз.")
 
 
-# Підключаємо роутери
+# Підключаємо роутери (setup першим — має пріоритет над word_router)
+dp.include_router(setup_router)
 dp.include_router(word_router)
 dp.include_router(review_router)
 

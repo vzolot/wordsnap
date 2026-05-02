@@ -33,7 +33,7 @@ async def get_or_create_user(
                 last_name=last_name,
                 language_code=language_code,
                 native_lang="uk",
-                target_lang="en",
+                target_lang=None,
                 plan="free",
             )
             session.add(user)
@@ -213,6 +213,24 @@ async def cancel_subscription(telegram_id: int) -> User | None:
         
         logger.info(f"Cancelled auto-renew for user {telegram_id}")
         return user
+
+
+async def update_user_languages(
+    telegram_id: int,
+    native_lang: str,
+    target_lang: str,
+) -> None:
+    """Зберігає вибір рідної та цільової мови."""
+    async with SessionLocal() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = result.scalar_one_or_none()
+        if user:
+            user.native_lang = native_lang
+            user.target_lang = target_lang
+            await session.commit()
+            logger.info(f"Updated languages for user {telegram_id}: {native_lang} → {target_lang}")
 
 
 async def expire_subscription(telegram_id: int) -> User | None:

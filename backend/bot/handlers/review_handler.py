@@ -12,6 +12,7 @@ from aiogram.types import Message, CallbackQuery
 from core.user_service import get_or_create_user
 from core.word_service import get_words_due_review, get_word_by_id, process_review
 from core.srs import format_interval
+from core.languages import lang_flag
 from bot.keyboards.review_keyboards import review_answer_keyboard, show_translation_keyboard
 
 logger = logging.getLogger(__name__)
@@ -34,18 +35,18 @@ def format_review_question(word) -> str:
     return text
 
 
-def format_review_revealed(word) -> str:
+def format_review_revealed(word, native_lang: str = "uk") -> str:
     """Повна інформація про слово (після натискання 'показати')"""
     word_safe = escape(word.word)
     translation = escape(word.translation or "")
     pos = escape(word.part_of_speech or "")
     memory_tip = escape(word.memory_tip or "")
-    
+
     text = f"📚 <b>{word_safe}</b>"
     if pos:
         text += f" <i>({pos})</i>"
     text += "\n"
-    text += f"🇺🇦 <b>{translation}</b>\n\n"
+    text += f"{lang_flag(native_lang)} <b>{translation}</b>\n\n"
     
     if word.examples:
         text += "📖 <b>Examples:</b>\n"
@@ -105,8 +106,9 @@ async def show_translation(callback: CallbackQuery):
     if not word:
         await callback.answer("Слово не знайдено", show_alert=True)
         return
-    
-    text = format_review_revealed(word)
+
+    user = await get_or_create_user(telegram_id=callback.from_user.id)
+    text = format_review_revealed(word, native_lang=user.native_lang or "uk")
     keyboard = review_answer_keyboard(word_id)
     
     await callback.message.edit_text(text, reply_markup=keyboard)
