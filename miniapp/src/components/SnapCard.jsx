@@ -28,6 +28,7 @@ function SnapCard({ nativeLang, usedToday, dailyLimit, onAdded }) {
         word: data.word?.word || word,
         translation: data.word?.translation || data.ai_data?.translation,
         part_of_speech: data.word?.part_of_speech || data.ai_data?.part_of_speech,
+        difficulty: data.word?.difficulty || data.ai_data?.difficulty,
         examples: data.word?.examples || data.ai_data?.examples || [],
         memory_tip: data.word?.memory_tip || data.ai_data?.memory_tip,
         image_url: data.word?.image_url || data.image_url,
@@ -48,11 +49,9 @@ function SnapCard({ nativeLang, usedToday, dailyLimit, onAdded }) {
 
   const reset = () => { setResult(null); setError(''); };
 
-  const example = (() => {
-    if (!result?.examples?.length) return null;
-    const first = result.examples[0];
-    return typeof first === 'string' ? first : first?.sentence;
-  })();
+  const examples = Array.isArray(result?.examples)
+    ? result.examples.map(e => typeof e === 'string' ? { sentence: e, explanation: '' } : e)
+    : [];
 
   return (
     <div className="snap-card">
@@ -84,26 +83,46 @@ function SnapCard({ nativeLang, usedToday, dailyLimit, onAdded }) {
         </form>
       ) : (
         <>
-          <div className="snap-result">
+          <div className="snap-result-head">
             {result.image_url ? (
               <img src={result.image_url} alt="" className="snap-result-img" />
             ) : (
-              <div className="snap-result-img" style={{ display: 'grid', placeItems: 'center', fontSize: 28 }}>📸</div>
+              <div className="snap-result-img" style={{ display: 'grid', placeItems: 'center', fontSize: 30 }}>📸</div>
             )}
             <div className="snap-result-body">
-              <div className="snap-result-pos">{result.part_of_speech || ''}</div>
+              <div className="snap-result-meta">
+                {result.part_of_speech && <span>{result.part_of_speech}</span>}
+                {result.part_of_speech && result.difficulty && <span className="dot">·</span>}
+                {result.difficulty && <span>{result.difficulty}</span>}
+              </div>
               <div className="snap-result-word">{result.word}</div>
               <div className="snap-result-translation">
                 {FLAGS[nativeLang] || '🌐'} {result.translation}
               </div>
-              {example && <div className="snap-result-example">"{example}"</div>}
             </div>
           </div>
+
+          {examples.length > 0 && (
+            <>
+              <div className="snap-section-label">{t('snap.examples')}</div>
+              {examples.slice(0, 3).map((ex, i) => (
+                <div key={i} className="snap-example-item">
+                  <span className="snap-example-num">{i + 1}.</span>
+                  <span className="snap-example-sentence">{ex.sentence}</span>
+                  {ex.explanation && (
+                    <span className="snap-example-explanation">→ {ex.explanation}</span>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+
           {result.memory_tip && (
             <div className="snap-tip">
               💡 <span>{result.memory_tip}</span>
             </div>
           )}
+
           <button type="button" className="snap-another" onClick={reset}>
             ✨ {t('snap.another')}
           </button>

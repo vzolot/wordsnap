@@ -20,7 +20,6 @@ function NavBar() {
   const items = [
     { to: '/',       key: 'nav.home',   icon: ICONS.home },
     { to: '/words',  key: 'nav.words',  icon: ICONS.book },
-    { to: '/review', key: 'nav.review', icon: ICONS.review },
     { to: '/stats',  key: 'nav.stats',  icon: ICONS.stats },
   ];
 

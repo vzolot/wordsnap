@@ -14,18 +14,36 @@ function applyTheme(scheme) {
   document.documentElement.setAttribute('data-theme', scheme === 'dark' ? 'dark' : 'light');
 }
 
+function getInitialTheme() {
+  try {
+    const saved = localStorage.getItem('wordsnap.theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+  } catch {}
+  const tg = window.Telegram?.WebApp;
+  if (tg?.colorScheme) return tg.colorScheme;
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 function App() {
   useEffect(() => {
+    applyTheme(getInitialTheme());
     const tg = window.Telegram?.WebApp;
     if (tg) {
       tg.ready();
       tg.expand();
-      applyTheme(tg.colorScheme || 'light');
-      tg.onEvent?.('themeChanged', () => applyTheme(tg.colorScheme));
+      tg.onEvent?.('themeChanged', () => {
+        // Only auto-follow if user hasn't picked a theme manually
+        try {
+          if (!localStorage.getItem('wordsnap.theme')) applyTheme(tg.colorScheme);
+        } catch { applyTheme(tg.colorScheme); }
+      });
     } else {
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      applyTheme(mq.matches ? 'dark' : 'light');
-      mq.addEventListener?.('change', e => applyTheme(e.matches ? 'dark' : 'light'));
+      mq.addEventListener?.('change', e => {
+        try {
+          if (!localStorage.getItem('wordsnap.theme')) applyTheme(e.matches ? 'dark' : 'light');
+        } catch { applyTheme(e.matches ? 'dark' : 'light'); }
+      });
     }
   }, []);
 

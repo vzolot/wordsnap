@@ -27,6 +27,7 @@ def _serialize_word(w: Word) -> dict:
         "word": w.word,
         "translation": w.translation,
         "part_of_speech": w.part_of_speech,
+        "difficulty": w.difficulty,
         "examples": w.examples or [],
         "image_url": w.image_url,
         "memory_tip": w.memory_tip,

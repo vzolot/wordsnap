@@ -29,7 +29,10 @@ const T = {
     'snap.another': 'Snap another',
     'snap.translation': 'Translation',
     'snap.example': 'Example',
+    'snap.examples': 'Examples',
     'snap.tip': 'Memory tip',
+    'theme.light': 'Light',
+    'theme.dark': 'Dark',
     'snap.added_n': '{used}/{limit} today',
 
     'words.title': 'My words',
@@ -111,7 +114,10 @@ const T = {
     'snap.another': 'Додати ще',
     'snap.translation': 'Переклад',
     'snap.example': 'Приклад',
+    'snap.examples': 'Приклади',
     'snap.tip': 'Як запам\'ятати',
+    'theme.light': 'Світла',
+    'theme.dark': 'Темна',
     'snap.added_n': '{used}/{limit} сьогодні',
 
     'words.title': 'Мої слова',
@@ -193,7 +199,10 @@ const T = {
     'snap.another': 'Capturar otra',
     'snap.translation': 'Traducción',
     'snap.example': 'Ejemplo',
+    'snap.examples': 'Ejemplos',
     'snap.tip': 'Truco para recordar',
+    'theme.light': 'Claro',
+    'theme.dark': 'Oscuro',
     'snap.added_n': '{used}/{limit} hoy',
 
     'words.title': 'Mis palabras',
@@ -275,7 +284,10 @@ const T = {
     'snap.another': 'Dodaj kolejne',
     'snap.translation': 'Tłumaczenie',
     'snap.example': 'Przykład',
+    'snap.examples': 'Przykłady',
     'snap.tip': 'Sposób na zapamiętanie',
+    'theme.light': 'Jasny',
+    'theme.dark': 'Ciemny',
     'snap.added_n': '{used}/{limit} dziś',
 
     'words.title': 'Moje słowa',
