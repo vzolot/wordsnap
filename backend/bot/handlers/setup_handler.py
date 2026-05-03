@@ -71,12 +71,16 @@ def city_keyboard(native_code: str, target_code: str, lang: str) -> InlineKeyboa
 
 
 def demo_keyboard(target_code: str, lang: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
             text=bt("onboard.demo_snap_btn", lang),
             callback_data=f"demo_snap:{target_code}",
-        ),
-    ]])
+        )],
+        [InlineKeyboardButton(
+            text=bt("setup.open_app", lang),
+            web_app=WebAppInfo(url=MINI_APP_URL),
+        )],
+    ])
 
 
 def open_app_keyboard(lang: str) -> InlineKeyboardMarkup:

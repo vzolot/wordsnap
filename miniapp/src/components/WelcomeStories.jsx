@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useT } from '../contexts/LangContext';
+import { useLang, useT } from '../contexts/LangContext';
 
 const STORAGE_KEY = 'wordsnap.welcome_seen';
 
@@ -20,10 +20,14 @@ export function shouldShowWelcome() {
 }
 
 function WelcomeStories({ onClose }) {
-  const { t } = useT();
+  const { t, loaded } = useT();
   const [index, setIndex] = useState(0);
   const slide = SLIDE_KEYS[index];
   const isLast = index === SLIDE_KEYS.length - 1;
+
+  // Не показуємо сторіс, поки мова не визначена з API — інакше перший слайд
+  // встигає рендеритись на дефолтній 'en' до того, як прийде native_lang.
+  if (!loaded) return null;
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';

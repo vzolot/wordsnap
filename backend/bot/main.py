@@ -79,26 +79,34 @@ async def cmd_start(message: Message):
         return
 
     lang = user.native_lang or "uk"
-    status = await get_user_status(user)
+    status = await get_user_status(user, lang)
     target = user.target_lang or "en"
 
+    # Визначаємо план з урахуванням нової логіки (trial 10/day → expired/free package → Pro)
+    from core.user_service import XP_FREE_PACKAGE_THRESHOLD
+    has_free_pkg = (user.total_xp or 0) >= XP_FREE_PACKAGE_THRESHOLD
     if status["is_trial"]:
         plan_text = bt("start.plan_trial", lang, days=status["trial_days_left"])
     elif status["plan"] == "pro":
         plan_text = bt("start.plan_pro", lang)
-    else:
+    elif has_free_pkg:
         plan_text = bt("start.plan_free", lang)
+    else:
+        xp_left = max(0, XP_FREE_PACKAGE_THRESHOLD - (user.total_xp or 0))
+        plan_text = bt("start.plan_expired", lang, xp_left=xp_left)
+
+    # Денний ліміт залежить від реального плану
+    if status["plan"] == "pro":
+        daily_limit = 100
+    else:
+        daily_limit = 10
 
     welcome_text = (
         f"{bt('start.hi', lang, name=tg_user.first_name)}\n\n"
-        f"{bt('start.intro', lang)}\n\n"
-        f"{bt('start.how_works', lang)}\n"
-        f"{bt('start.step1', lang, lang_name=lang_name(target))}\n"
-        f"{bt('start.step2', lang)}\n"
-        f"{bt('start.step3', lang)}\n\n"
-        f"{bt('start.learning', lang, flag=lang_flag(target), lang_name=lang_name(target))}\n\n"
-        f"{plan_text}\n\n"
-        f"{bt('start.added_today', lang, used=status['used_today'], limit=status['daily_limit'])}\n\n"
+        f"{bt('start.learning', lang, flag=lang_flag(target), lang_name=lang_name(target))}\n"
+        f"{plan_text}\n"
+        f"{bt('start.added_today', lang, used=status['used_today'], limit=daily_limit)}\n\n"
+        f"{bt('start.tagline', lang)}\n\n"
         f"{bt('start.change_hint', lang)}"
     )
 

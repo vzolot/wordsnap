@@ -56,10 +56,17 @@ async def get_or_create_user(
         return user
 
 
+XP_FREE_PACKAGE_THRESHOLD = 500  # XP щоб розблокувати безкоштовний пакет після trial
+
+
 async def can_add_word(user: User, lang: str | None = None) -> tuple[bool, str]:
     """
-    Перевіряє чи може юзер додати ще одне слово.
-    Повідомлення-причина повертається мовою юзера (lang або user.native_lang).
+    Логіка лімітів:
+    - PRO активна: 100 слів/день
+    - TRIAL (перші 7 днів): 10 слів/день
+    - Після trial:
+      - Якщо total_xp >= 500 — безкоштовний пакет 10 слів/день назавжди
+      - Інакше — блокування, потрібен Pro
     """
     from .bot_i18n import t as bt
     msg_lang = lang or user.native_lang or "uk"
@@ -77,14 +84,18 @@ async def can_add_word(user: User, lang: str | None = None) -> tuple[bool, str]:
             trial_active = True
 
     if trial_active:
-        if user.words_added_today >= 100:
+        if user.words_added_today >= 10:
             return False, bt("limit.trial", msg_lang)
         return True, ""
 
-    if user.words_added_today >= 10:
-        return False, bt("limit.free", msg_lang)
+    # Trial скінчився — потрібен XP-пакет або Pro
+    if (user.total_xp or 0) >= XP_FREE_PACKAGE_THRESHOLD:
+        if user.words_added_today >= 10:
+            return False, bt("limit.free", msg_lang)
+        return True, ""
 
-    return True, ""
+    # Заблоковано
+    return False, bt("limit.expired", msg_lang, xp=user.total_xp or 0, threshold=XP_FREE_PACKAGE_THRESHOLD)
 
 
 async def get_user_status(user: User, lang: str | None = None) -> dict:

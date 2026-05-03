@@ -56,15 +56,17 @@ def build_user_prompt(word: str, target_lang: str, native_lang: str = "uk") -> s
         f'  "part_of_speech": "noun|verb|adjective|adverb|phrase",\n'
         f'  "difficulty": "A1|A2|B1|B2|C1|C2",\n'
         f'  "examples": [\n'
-        f'    {{"sentence": "<short example>", "explanation": "<6-10 words>"}},\n'
-        f'    {{"sentence": "<short example>", "explanation": "<6-10 words>"}},\n'
-        f'    {{"sentence": "<short example>", "explanation": "<6-10 words>"}}\n'
+        f'    {{"sentence": "<example sentence in {target_name}>", "explanation": "<6-10 word usage note in {target_name} ONLY — never a translation>"}},\n'
+        f'    {{"sentence": "<example sentence in {target_name}>", "explanation": "<usage note in {target_name}>"}},\n'
+        f'    {{"sentence": "<example sentence in {target_name}>", "explanation": "<usage note in {target_name}>"}}\n'
         f'  ],\n'
-        f'  "memory_tip": "<max 60 chars mnemonic in {target_name}>",\n'
+        f'  "memory_tip": "<max 60 chars mnemonic in {native_name}>",\n'
         f'  "image_keyword": "<single English noun for image search>"\n'
         f'}}\n\n'
-        f'Rules: max 10 words per example, max 10 words per explanation, '
-        f'no quotes inside strings, common usage only.'
+        f'Rules: examples and their explanations MUST be in {target_name} only — '
+        f'explanation is a brief usage note (situation/context), NEVER a translation. '
+        f'Memory tip is in {native_name}. Translation is in {native_name}. '
+        f'Max 10 words per example, max 10 words per explanation, no quotes inside strings.'
     )
 
 
