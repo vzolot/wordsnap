@@ -3,13 +3,14 @@ REST API для miniapp.
 """
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select, func, update
 
 from core.db import SessionLocal
-from core.models import User, Word
+from core.models import Review, User, Word
+from core.rewards import current_tier, next_tier
 
 logger = logging.getLogger(__name__)
 
@@ -75,17 +76,62 @@ async def get_words(telegram_id: int = Query(...)):
         return [_serialize_word(w) for w in result.scalars().all()]
 
 
+async def _calculate_streak(session, user_id: int) -> int:
+    """Підрахунок підряд днів з повтореннями (закінчуючи сьогодні чи вчора)."""
+    rows = await session.execute(
+        select(func.date(Review.reviewed_at)).where(
+            Review.user_id == user_id,
+        ).distinct().order_by(func.date(Review.reviewed_at).desc())
+    )
+    dates = [r[0] for r in rows.all()]
+    if not dates:
+        return 0
+
+    today = datetime.now(timezone.utc).date()
+    yesterday = today - timedelta(days=1)
+    if dates[0] != today and dates[0] != yesterday:
+        return 0
+
+    streak = 1
+    for i in range(1, len(dates)):
+        if dates[i] == dates[i - 1] - timedelta(days=1):
+            streak += 1
+        else:
+            break
+    return streak
+
+
+async def _reviewed_today(session, user_id: int) -> int:
+    """Скільки повторень зроблено за сьогодні (у UTC)."""
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    n = (await session.execute(
+        select(func.count(Review.id)).where(
+            Review.user_id == user_id,
+            Review.reviewed_at >= today_start,
+        )
+    )).scalar() or 0
+    return n
+
+
 @router.get("/api/stats")
 async def get_stats(telegram_id: int = Query(...)):
-    from datetime import timedelta
     async with SessionLocal() as session:
         user = await _get_user(session, telegram_id)
         if not user:
+            beginner = current_tier(0)
+            nxt = next_tier(0)
             return {
                 "total_words": 0, "learned_words": 0, "streak": 0,
+                "reviewed_today": 0, "total_reviews": 0, "total_xp": 0,
+                "tier_xp": beginner[0], "tier_key": beginner[1],
+                "tier_reward_key": beginner[2],
+                "next_tier_xp": nxt[0] if nxt else None,
+                "next_tier_key": nxt[1] if nxt else None,
+                "next_tier_reward_key": nxt[2] if nxt else None,
                 "plan": "free", "plan_expires_at": None,
                 "used_today": 0, "daily_limit": 10,
                 "native_lang": "uk", "target_lang": None,
+                "is_trial": True,
             }
 
         learned = (await session.execute(
@@ -94,15 +140,31 @@ async def get_stats(telegram_id: int = Query(...)):
             )
         )).scalar() or 0
 
+        reviewed_today = await _reviewed_today(session, user.id)
+        streak = await _calculate_streak(session, user.id)
+
         now = datetime.now(timezone.utc)
         is_pro = user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now
         is_trial = (not is_pro) and user.created_at and (now - user.created_at) < timedelta(days=7)
         daily_limit = 100 if (is_pro or is_trial) else 10
 
+        xp = user.total_xp or 0
+        tier = current_tier(xp)
+        nxt = next_tier(xp)
+
         return {
             "total_words": user.total_words,
             "learned_words": learned,
-            "streak": user.streak_days,
+            "streak": streak,
+            "reviewed_today": reviewed_today,
+            "total_reviews": user.total_reviews,
+            "total_xp": xp,
+            "tier_xp": tier[0],
+            "tier_key": tier[1],
+            "tier_reward_key": tier[2],
+            "next_tier_xp": nxt[0] if nxt else None,
+            "next_tier_key": nxt[1] if nxt else None,
+            "next_tier_reward_key": nxt[2] if nxt else None,
             "plan": "pro" if is_pro else user.plan,
             "plan_expires_at": user.plan_expires_at.isoformat() if user.plan_expires_at else None,
             "auto_renew": user.auto_renew,

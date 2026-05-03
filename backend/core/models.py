@@ -56,6 +56,7 @@ class User(Base):
     # Статистика
     total_words: Mapped[int] = mapped_column(Integer, default=0)
     total_reviews: Mapped[int] = mapped_column(Integer, default=0)
+    total_xp: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     streak_days: Mapped[int] = mapped_column(Integer, default=0)
     last_activity_date: Mapped[date | None] = mapped_column(Date)
 

@@ -12,7 +12,7 @@ function ReviewPage() {
   const [revealed, setRevealed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [done, setDone] = useState(false);
-  const [stats, setStats] = useState({ reviewed: 0, mastered: 0 });
+  const [stats, setStats] = useState({ reviewed: 0, mastered: 0, xp: 0 });
   const [selected, setSelected] = useState(null); // 'forgot' | 'hard' | 'easy'
   const navigate = useNavigate();
   const { t, lang } = useT();
@@ -35,9 +35,11 @@ function ReviewPage() {
     if (selected) return;
     setSelected(key);
     await submitReview(current.id, quality).catch(() => {});
+    const xpGain = quality === 5 ? 10 : quality === 3 ? 6 : 2;
     setStats(s => ({
       reviewed: s.reviewed + 1,
       mastered: s.mastered + (quality === 5 ? 1 : 0),
+      xp: s.xp + xpGain,
     }));
     // Невелика затримка щоб користувач побачив підсвічування вибраної кнопки
     setTimeout(() => {
@@ -98,7 +100,7 @@ function ReviewPage() {
               <div className="stat-label">{t('review.complete.reviewed')}</div>
             </div>
             <div className="stat-cell">
-              <div className="stat-num violet">+{stats.reviewed * 3} XP</div>
+              <div className="stat-num violet">+{stats.xp} XP</div>
               <div className="stat-label">{t('review.complete.earned')}</div>
             </div>
             <div className="stat-cell">

@@ -174,6 +174,18 @@ T: dict[str, dict[str, str]] = {
         # — reminders —
         "remind.title": "🔔 <b>Час повторити слово!</b>",
         "remind.hint": "<i>Згадав переклад? Натисни щоб перевірити 👇</i>",
+
+        "rewards.beginner": "Новачок",
+        "rewards.apprentice": "Підмайстер",
+        "rewards.word_master": "Майстер слів",
+        "rewards.polyglot": "Поліглот",
+        "rewards.sage": "Мудрець словника",
+        "rewards.discount_25": "−25% наступний місяць Pro",
+        "rewards.discount_50": "−50% наступний місяць Pro",
+        "rewards.free_month": "1 місяць Pro безкоштовно",
+        "stats.xp_label": "XP",
+        "stats.xp_to_next": "ще {n} XP до «{title}»",
+        "stats.tier_now": "Зараз: <b>{title}</b>",
     },
 
     # =========================================================
@@ -325,6 +337,18 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>Time to review a word!</b>",
         "remind.hint": "<i>Remember the translation? Tap to check 👇</i>",
+
+        "rewards.beginner": "Beginner",
+        "rewards.apprentice": "Apprentice",
+        "rewards.word_master": "Word Master",
+        "rewards.polyglot": "Polyglot",
+        "rewards.sage": "Vocabulary Sage",
+        "rewards.discount_25": "−25% off next Pro month",
+        "rewards.discount_50": "−50% off next Pro month",
+        "rewards.free_month": "1 free Pro month",
+        "stats.xp_label": "XP",
+        "stats.xp_to_next": "{n} XP to «{title}»",
+        "stats.tier_now": "Now: <b>{title}</b>",
     },
 
     # =========================================================
@@ -476,6 +500,18 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>¡Hora de repasar una palabra!</b>",
         "remind.hint": "<i>¿Recuerdas la traducción? Pulsa para verificar 👇</i>",
+
+        "rewards.beginner": "Principiante",
+        "rewards.apprentice": "Aprendiz",
+        "rewards.word_master": "Maestro de palabras",
+        "rewards.polyglot": "Políglota",
+        "rewards.sage": "Sabio del vocabulario",
+        "rewards.discount_25": "−25% del próximo mes Pro",
+        "rewards.discount_50": "−50% del próximo mes Pro",
+        "rewards.free_month": "1 mes Pro gratis",
+        "stats.xp_label": "XP",
+        "stats.xp_to_next": "{n} XP para «{title}»",
+        "stats.tier_now": "Ahora: <b>{title}</b>",
     },
 
     # =========================================================
@@ -627,6 +663,18 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>Czas na powtórkę słowa!</b>",
         "remind.hint": "<i>Pamiętasz tłumaczenie? Naciśnij, by sprawdzić 👇</i>",
+
+        "rewards.beginner": "Początkujący",
+        "rewards.apprentice": "Czeladnik",
+        "rewards.word_master": "Mistrz słów",
+        "rewards.polyglot": "Poliglota",
+        "rewards.sage": "Mędrzec słownika",
+        "rewards.discount_25": "−25% na następny miesiąc Pro",
+        "rewards.discount_50": "−50% na następny miesiąc Pro",
+        "rewards.free_month": "1 miesiąc Pro za darmo",
+        "stats.xp_label": "XP",
+        "stats.xp_to_next": "jeszcze {n} XP do «{title}»",
+        "stats.tier_now": "Teraz: <b>{title}</b>",
     },
 
     # =========================================================
@@ -778,6 +826,18 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>Zeit für eine Wiederholung!</b>",
         "remind.hint": "<i>Erinnerst du dich an die Übersetzung? Tippe zum Prüfen 👇</i>",
+
+        "rewards.beginner": "Anfänger",
+        "rewards.apprentice": "Lehrling",
+        "rewards.word_master": "Wortmeister",
+        "rewards.polyglot": "Polyglott",
+        "rewards.sage": "Wortschatz-Weiser",
+        "rewards.discount_25": "−25% auf nächsten Pro-Monat",
+        "rewards.discount_50": "−50% auf nächsten Pro-Monat",
+        "rewards.free_month": "1 Monat Pro gratis",
+        "stats.xp_label": "XP",
+        "stats.xp_to_next": "{n} XP bis «{title}»",
+        "stats.tier_now": "Jetzt: <b>{title}</b>",
     },
 }
 

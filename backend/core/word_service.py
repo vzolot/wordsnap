@@ -3,11 +3,12 @@
 """
 import logging
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, update
 from sqlalchemy.exc import IntegrityError
 
-from .models import Word
+from .models import Word, User
 from .db import SessionLocal
+from .rewards import xp_for_result
 from .srs import calculate_next_review, ReviewResult
 
 logger = logging.getLogger(__name__)
@@ -182,6 +183,15 @@ async def process_review(
             ease_after=new_ease,
         )
         session.add(review_record)
+
+        # Нараховуємо XP та інкрементуємо лічильник переглядів атомарно
+        xp = xp_for_result(result)
+        await session.execute(
+            update(User).where(User.id == word.user_id).values(
+                total_xp=User.total_xp + xp,
+                total_reviews=User.total_reviews + 1,
+            )
+        )
 
         await session.commit()
         await session.refresh(word)

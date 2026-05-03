@@ -479,38 +479,107 @@
   pointer-events: none;
 }
 
+/* Selected = фіолетові відтінки бренду (від темного до градієнта) */
 .answer-btn.selected.forgot {
-  background: var(--coral);
-  border-color: var(--coral);
+  background: #5B21B6; /* violet-dark */
+  border-color: #5B21B6;
   color: #fff;
 }
 .answer-btn.selected.forgot .icon {
-  background: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.22);
   color: #fff;
 }
 
 .answer-btn.selected.hard {
-  background: var(--amber);
-  border-color: var(--amber);
+  background: #7C3AED; /* violet primary */
+  border-color: #7C3AED;
   color: #fff;
 }
 .answer-btn.selected.hard .icon {
-  background: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.22);
   color: #fff;
 }
 
 .answer-btn.selected.easy {
-  background: var(--lime);
-  border-color: var(--lime);
-  color: var(--ink);
+  background: var(--gradient); /* violet → pink */
+  border-color: transparent;
+  color: #fff;
 }
 .answer-btn.selected.easy .icon {
-  background: rgba(15,15,20,0.15);
-  color: var(--ink);
+  background: rgba(255,255,255,0.28);
+  color: #fff;
 }
 
 .answer-btn:disabled {
   cursor: default;
+}
+
+/* ── XP card ────────────────────────────────────────── */
+.xp-card {
+  background: var(--gradient);
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+  color: #fff;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.xp-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  opacity: 0.95;
+}
+
+.xp-card-tier {
+  background: rgba(255,255,255,0.18);
+  padding: 4px 10px;
+  border-radius: var(--r-f);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: none;
+  font-size: 11px;
+}
+
+.xp-card-num {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  margin-top: 6px;
+  letter-spacing: -0.5px;
+}
+
+.xp-progress {
+  margin-top: 10px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.25);
+  overflow: hidden;
+}
+
+.xp-progress-fill {
+  height: 100%;
+  background: rgba(255,255,255,0.95);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.xp-card-foot {
+  font-size: 12px;
+  margin-top: 8px;
+  opacity: 0.95;
+  font-weight: 500;
+}
+
+.xp-card-reward {
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 600;
 }
 
 /* ── Empty state ─────────────────────────────────────── */
