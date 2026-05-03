@@ -858,6 +858,104 @@
 }
 .snap-another:active { transform: scale(0.98); }
 
+/* ── Songs page ─────────────────────────────────────── */
+.song-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  transition: transform 0.15s, background 0.15s;
+}
+.song-card:active { transform: scale(0.98); background: var(--bg-card-2); }
+
+.song-emoji { font-size: 28px; flex-shrink: 0; }
+.song-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.song-title { font-size: 15px; font-weight: 700; color: var(--text-1); }
+.song-artist { font-size: 12px; color: var(--text-2); font-weight: 500; }
+.song-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--violet);
+  background: var(--violet-soft);
+  padding: 4px 10px;
+  border-radius: var(--r-f);
+  flex-shrink: 0;
+}
+
+.link-back {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--violet);
+  margin-bottom: 14px;
+  padding: 4px 0;
+}
+
+.song-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+.song-hero-emoji { font-size: 44px; flex-shrink: 0; }
+
+.song-words { display: flex; flex-direction: column; gap: 8px; }
+
+.song-word {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 13px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-1);
+  text-align: left;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
+}
+.song-word:active { transform: scale(0.98); }
+
+.song-word.added {
+  background: var(--lime-soft);
+  border-color: transparent;
+  color: #65A30D;
+}
+[data-theme="dark"] .song-word.added { color: var(--lime); }
+
+.song-word.duplicate {
+  opacity: 0.6;
+}
+
+.song-word.error {
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+.song-word-status {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-card-2);
+  color: var(--text-2);
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.song-word.added .song-word-status { background: var(--lime); color: var(--ink); }
+.song-word.error .song-word-status { background: var(--coral-soft); color: var(--coral); }
+
 /* ── Debug banner ───────────────────────────────────── */
 .debug-banner {
   background: var(--coral-soft);

@@ -177,6 +177,19 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
     }
 
 
+@router.get("/api/songs")
+async def list_song_packs(telegram_id: int = Query(...)):
+    """Повертає набори слів з пісень для target_lang юзера."""
+    from core.song_packs import get_packs
+
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id)
+        target = (user.target_lang if user else None) or "en"
+
+    packs = get_packs(target)
+    return {"target_lang": target, "packs": packs}
+
+
 @router.post("/api/buy")
 async def create_buy_link(telegram_id: int = Query(...)):
     """Створює посилання на оплату Pro для конкретного юзера."""

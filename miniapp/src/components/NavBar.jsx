@@ -10,6 +10,7 @@ const Icon = ({ d }) => (
 
 const ICONS = {
   home:   'M3 11.5L12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z',
+  songs:  'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
   book:   'M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 1 4 17.5zM4 17.5A2.5 2.5 0 0 1 6.5 20H20',
   review: 'M21 12a9 9 0 1 1-3.5-7.1M21 4v5h-5',
   stats:  'M3 21h18M5 21V10M11 21V4M17 21v-7',
@@ -19,6 +20,7 @@ function NavBar() {
   const { t } = useT();
   const items = [
     { to: '/',       key: 'nav.home',   icon: ICONS.home },
+    { to: '/songs',  key: 'nav.songs',  icon: ICONS.songs },
     { to: '/words',  key: 'nav.words',  icon: ICONS.book },
     { to: '/stats',  key: 'nav.stats',  icon: ICONS.stats },
   ];

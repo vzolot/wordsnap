@@ -7,16 +7,22 @@ import os
 from datetime import datetime, timezone
 
 import uvicorn
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import (
+    Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo,
+    BotCommand, BotCommandScopeDefault,
+)
 from dotenv import load_dotenv
 
 from bot.handlers.word_handler import router as word_router
 from bot.handlers.review_handler import router as review_router
 from bot.handlers.setup_handler import router as setup_router, native_lang_keyboard, ask_native_lang_text
+from bot.handlers.songs_handler import router as songs_router
+from core.bot_i18n import help_text, t as bt
+from core.constants import MINI_APP_URL
 from scheduler.reminder import reminder_loop
 from scheduler.recurring_charges import recurring_charges_loop
 from webhook.server import app as webhook_app
@@ -113,22 +119,62 @@ async def cmd_start(message: Message):
 
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
-    help_text = (
-        "❓ <b>Команди WordSnap</b>\n\n"
-        "<b>Навчання:</b>\n"
-        "• Просто надсилай слова — я перекладатиму\n"
-        "• /review — повторити слова зараз\n"
-        "• /stats — твоя статистика\n"
-        "• /language — змінити мову навчання\n\n"
-        "<b>Підписка:</b>\n"
-        "• /premium — інфо про Pro\n"
-        "• /buy — оформити Pro\n"
-        "• /subscription — статус підписки\n"
-        "• /unsubscribe — скасувати автопродовження\n\n"
-        "<b>Free:</b> 10 слів/день\n"
-        "<b>Pro:</b> 100 слів/день, $1.49/міс"
+    user = await get_or_create_user(
+        telegram_id=message.from_user.id,
+        username=message.from_user.username,
+        first_name=message.from_user.first_name,
     )
-    await message.answer(help_text)
+    lang = user.native_lang or "uk"
+    await message.answer(help_text(lang))
+
+
+@dp.message(Command("app"))
+async def cmd_app(message: Message):
+    user = await get_or_create_user(
+        telegram_id=message.from_user.id,
+        username=message.from_user.username,
+        first_name=message.from_user.first_name,
+    )
+    lang = user.native_lang or "uk"
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text=bt("setup.open_app", lang),
+            web_app=WebAppInfo(url=MINI_APP_URL),
+        )
+    ]])
+    await message.answer(bt("app.intro", lang), reply_markup=keyboard)
+
+
+@dp.message(Command("settings"))
+async def cmd_settings(message: Message):
+    user = await get_or_create_user(
+        telegram_id=message.from_user.id,
+        username=message.from_user.username,
+        first_name=message.from_user.first_name,
+    )
+    lang = user.native_lang or "uk"
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text=bt("settings.lang_btn", lang),
+            callback_data="settings:language",
+        )],
+        [InlineKeyboardButton(
+            text=bt("settings.app_btn", lang),
+            web_app=WebAppInfo(url=MINI_APP_URL),
+        )],
+    ])
+    await message.answer(bt("settings.title", lang), reply_markup=keyboard)
+
+
+@dp.callback_query(F.data == "settings:language")
+async def settings_language(callback: CallbackQuery):
+    user = await get_or_create_user(telegram_id=callback.from_user.id)
+    lang = user.native_lang or "uk"
+    await callback.message.edit_text(
+        ask_native_lang_text(lang),
+        reply_markup=native_lang_keyboard(),
+    )
+    await callback.answer()
 
 
 @dp.message(Command("stats"))
@@ -296,13 +342,33 @@ async def cmd_unsubscribe(message: Message):
 
 # Підключаємо роутери (setup першим — має пріоритет над word_router)
 dp.include_router(setup_router)
-dp.include_router(word_router)
+dp.include_router(songs_router)
 dp.include_router(review_router)
+dp.include_router(word_router)
+
+
+async def setup_bot_commands():
+    """Оновлює меню команд бота. Викликається на старті."""
+    commands = [
+        BotCommand(command="start", description="Почати або змінити налаштування"),
+        BotCommand(command="songs", description="🎵 Слова з популярних пісень"),
+        BotCommand(command="review", description="Повторити слова"),
+        BotCommand(command="app", description="📱 Відкрити додаток"),
+        BotCommand(command="stats", description="Моя статистика"),
+        BotCommand(command="language", description="Змінити мову навчання"),
+        BotCommand(command="premium", description="Pro-підписка"),
+        BotCommand(command="help", description="Як користуватись"),
+    ]
+    await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
 
 
 async def main():
     logger.info("🚀 WordSnap Bot starting...")
     await bot.delete_webhook(drop_pending_updates=True)
+    try:
+        await setup_bot_commands()
+    except Exception as e:
+        logger.warning(f"Failed to set bot commands: {e}")
     
     # Конфігурація FastAPI server
     port = int(os.getenv("PORT", "8000"))

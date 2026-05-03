@@ -5,6 +5,7 @@ import WordsPage from './pages/WordsPage';
 import ReviewPage from './pages/ReviewPage';
 import StatsPage from './pages/StatsPage';
 import ProPage from './pages/ProPage';
+import SongsPage from './pages/SongsPage';
 import NavBar from './components/NavBar';
 import DebugBanner from './components/DebugBanner';
 import { LangProvider } from './contexts/LangContext';
@@ -56,6 +57,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/words" element={<WordsPage />} />
           <Route path="/review" element={<ReviewPage />} />
+          <Route path="/songs" element={<SongsPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/pro" element={<ProPage />} />
             <Route path="*" element={<Navigate to="/" />} />

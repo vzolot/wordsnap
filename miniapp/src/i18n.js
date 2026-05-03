@@ -1,7 +1,7 @@
 const T = {
   en: {
     'app.subtitle': 'mini app',
-    'nav.home': 'Home', 'nav.words': 'Words', 'nav.review': 'Review', 'nav.stats': 'Stats',
+    'nav.home': 'Home', 'nav.songs': 'Songs', 'nav.words': 'Words', 'nav.review': 'Review', 'nav.stats': 'Stats',
     'common.back': 'Back', 'common.loading': 'Loading…',
 
     'home.greeting.morning': 'Good morning',
@@ -33,6 +33,16 @@ const T = {
     'snap.tip': 'Memory tip',
     'theme.light': 'Light',
     'theme.dark': 'Dark',
+
+    'songs.title': 'Vocabulary from popular songs',
+    'songs.sub': 'Tap a song to see its key words and add them to your vocabulary.',
+    'songs.empty': 'No song packs for this language yet — coming soon!',
+    'songs.song_sub': 'Tap any word to add it to your vocabulary.',
+    'songs.add': 'Add',
+    'songs.added': '✅ Added',
+    'songs.duplicate': 'Already in vocabulary',
+    'songs.adding': 'Adding…',
+    'songs.back': '← Back to songs',
     'snap.added_n': '{used}/{limit} today',
 
     'words.title': 'My words',
@@ -86,7 +96,7 @@ const T = {
 
   uk: {
     'app.subtitle': 'міні-додаток',
-    'nav.home': 'Головна', 'nav.words': 'Слова', 'nav.review': 'Повторення', 'nav.stats': 'Статистика',
+    'nav.home': 'Головна', 'nav.songs': 'Пісні', 'nav.words': 'Слова', 'nav.review': 'Повторення', 'nav.stats': 'Статистика',
     'common.back': 'Назад', 'common.loading': 'Завантаження…',
 
     'home.greeting.morning': 'Доброго ранку',
@@ -118,6 +128,16 @@ const T = {
     'snap.tip': 'Як запам\'ятати',
     'theme.light': 'Світла',
     'theme.dark': 'Темна',
+
+    'songs.title': 'Слова з популярних пісень',
+    'songs.sub': 'Тапни на пісню — побачиш ключові слова й зможеш додати їх у словник.',
+    'songs.empty': 'Поки немає підборок для цієї мови — скоро додамо!',
+    'songs.song_sub': 'Тапни будь-яке слово, щоб додати його у свій словник.',
+    'songs.add': 'Додати',
+    'songs.added': '✅ Додано',
+    'songs.duplicate': 'Вже у словнику',
+    'songs.adding': 'Додаю…',
+    'songs.back': '← До пісень',
     'snap.added_n': '{used}/{limit} сьогодні',
 
     'words.title': 'Мої слова',
@@ -171,7 +191,7 @@ const T = {
 
   es: {
     'app.subtitle': 'mini app',
-    'nav.home': 'Inicio', 'nav.words': 'Palabras', 'nav.review': 'Repaso', 'nav.stats': 'Estadísticas',
+    'nav.home': 'Inicio', 'nav.songs': 'Canciones', 'nav.words': 'Palabras', 'nav.review': 'Repaso', 'nav.stats': 'Estadísticas',
     'common.back': 'Atrás', 'common.loading': 'Cargando…',
 
     'home.greeting.morning': 'Buenos días',
@@ -203,6 +223,16 @@ const T = {
     'snap.tip': 'Truco para recordar',
     'theme.light': 'Claro',
     'theme.dark': 'Oscuro',
+
+    'songs.title': 'Vocabulario de canciones populares',
+    'songs.sub': 'Toca una canción para ver palabras clave y añadirlas a tu vocabulario.',
+    'songs.empty': 'Aún no hay packs para este idioma — pronto.',
+    'songs.song_sub': 'Toca cualquier palabra para añadirla a tu vocabulario.',
+    'songs.add': 'Añadir',
+    'songs.added': '✅ Añadida',
+    'songs.duplicate': 'Ya en tu vocabulario',
+    'songs.adding': 'Añadiendo…',
+    'songs.back': '← Volver a canciones',
     'snap.added_n': '{used}/{limit} hoy',
 
     'words.title': 'Mis palabras',
@@ -256,7 +286,7 @@ const T = {
 
   pl: {
     'app.subtitle': 'mini app',
-    'nav.home': 'Główna', 'nav.words': 'Słowa', 'nav.review': 'Powtórka', 'nav.stats': 'Statystyki',
+    'nav.home': 'Główna', 'nav.songs': 'Piosenki', 'nav.words': 'Słowa', 'nav.review': 'Powtórka', 'nav.stats': 'Statystyki',
     'common.back': 'Wstecz', 'common.loading': 'Ładowanie…',
 
     'home.greeting.morning': 'Dzień dobry',
@@ -288,6 +318,16 @@ const T = {
     'snap.tip': 'Sposób na zapamiętanie',
     'theme.light': 'Jasny',
     'theme.dark': 'Ciemny',
+
+    'songs.title': 'Słownictwo z popularnych piosenek',
+    'songs.sub': 'Dotknij piosenki, by zobaczyć kluczowe słowa i dodać je do słownika.',
+    'songs.empty': 'Brak paczek dla tego języka — wkrótce!',
+    'songs.song_sub': 'Dotknij dowolne słowo, by dodać do słownika.',
+    'songs.add': 'Dodaj',
+    'songs.added': '✅ Dodano',
+    'songs.duplicate': 'Masz już w słowniku',
+    'songs.adding': 'Dodaję…',
+    'songs.back': '← Wróć do piosenek',
     'snap.added_n': '{used}/{limit} dziś',
 
     'words.title': 'Moje słowa',
@@ -341,7 +381,7 @@ const T = {
 
   de: {
     'app.subtitle': 'mini app',
-    'nav.home': 'Start', 'nav.words': 'Wörter', 'nav.review': 'Wiederholen', 'nav.stats': 'Statistik',
+    'nav.home': 'Start', 'nav.songs': 'Lieder', 'nav.words': 'Wörter', 'nav.review': 'Wiederholen', 'nav.stats': 'Statistik',
     'common.back': 'Zurück', 'common.loading': 'Laden…',
 
     'home.greeting.morning': 'Guten Morgen',
@@ -420,6 +460,16 @@ const T = {
 
     'theme.light': 'Hell',
     'theme.dark': 'Dunkel',
+
+    'songs.title': 'Vokabeln aus beliebten Liedern',
+    'songs.sub': 'Tippe ein Lied, um Schlüsselwörter zu sehen und hinzuzufügen.',
+    'songs.empty': 'Noch keine Packs für diese Sprache — bald.',
+    'songs.song_sub': 'Tippe ein Wort, um es deinem Wortschatz hinzuzufügen.',
+    'songs.add': 'Hinzufügen',
+    'songs.added': '✅ Hinzugefügt',
+    'songs.duplicate': 'Bereits im Wortschatz',
+    'songs.adding': 'Hinzufügen…',
+    'songs.back': '← Zurück zu Liedern',
 
     'unit.day_one': 'Tag', 'unit.day_other': 'Tage',
     'unit.word_one': 'Wort', 'unit.word_other': 'Wörter',
