@@ -47,6 +47,7 @@ const T = {
     'welcome.next': 'Next',
     'welcome.skip': 'Skip',
     'welcome.start': "Let's go!",
+    'welcome.replay': '↻ Watch intro again',
 
     'rewards.beginner': 'Beginner',
     'rewards.apprentice': 'Apprentice',
@@ -172,6 +173,7 @@ const T = {
     'welcome.next': 'Далі',
     'welcome.skip': 'Пропустити',
     'welcome.start': 'Поїхали!',
+    'welcome.replay': '↻ Передивитись інтро',
 
     'rewards.beginner': 'Новачок',
     'rewards.apprentice': 'Підмайстер',
@@ -297,6 +299,7 @@ const T = {
     'welcome.next': 'Siguiente',
     'welcome.skip': 'Saltar',
     'welcome.start': '¡Vamos!',
+    'welcome.replay': '↻ Volver a ver el intro',
 
     'rewards.beginner': 'Principiante',
     'rewards.apprentice': 'Aprendiz',
@@ -422,6 +425,7 @@ const T = {
     'welcome.next': 'Dalej',
     'welcome.skip': 'Pomiń',
     'welcome.start': 'Jedziemy!',
+    'welcome.replay': '↻ Obejrzyj intro ponownie',
 
     'rewards.beginner': 'Początkujący',
     'rewards.apprentice': 'Czeladnik',
@@ -595,6 +599,7 @@ const T = {
     'welcome.next': 'Weiter',
     'welcome.skip': 'Überspringen',
     'welcome.start': 'Los geht\'s!',
+    'welcome.replay': '↻ Intro erneut ansehen',
 
     'rewards.beginner': 'Anfänger',
     'rewards.apprentice': 'Lehrling',

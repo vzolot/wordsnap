@@ -19,6 +19,11 @@ export function shouldShowWelcome() {
   }
 }
 
+export function replayWelcome() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch {}
+  window.dispatchEvent(new CustomEvent('wordsnap:replay-welcome'));
+}
+
 function WelcomeStories({ onClose }) {
   const { t } = useT();
   const [index, setIndex] = useState(0);

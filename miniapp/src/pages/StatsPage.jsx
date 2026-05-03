@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getStats } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
+import { replayWelcome } from '../components/WelcomeStories';
 
 function StatsPage() {
   const [stats, setStats] = useState(null);
@@ -82,6 +83,14 @@ function StatsPage() {
             </div>
           ))}
         </div>
+
+        <button
+          className="link-back"
+          style={{ marginTop: 22, color: 'var(--text-2)', display: 'block' }}
+          onClick={replayWelcome}
+        >
+          {t('welcome.replay')}
+        </button>
       </div>
     </>
   );

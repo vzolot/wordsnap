@@ -30,6 +30,12 @@ function App() {
   const [showWelcome, setShowWelcome] = useState(() => shouldShowWelcome());
 
   useEffect(() => {
+    const replay = () => setShowWelcome(true);
+    window.addEventListener('wordsnap:replay-welcome', replay);
+    return () => window.removeEventListener('wordsnap:replay-welcome', replay);
+  }, []);
+
+  useEffect(() => {
     applyTheme(getInitialTheme());
     const tg = window.Telegram?.WebApp;
     if (tg) {
