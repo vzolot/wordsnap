@@ -183,6 +183,25 @@ T: dict[str, dict[str, str]] = {
         "rewards.discount_25": "−25% наступний місяць Pro",
         "rewards.discount_50": "−50% наступний місяць Pro",
         "rewards.free_month": "1 місяць Pro безкоштовно",
+
+        "onboard.welcome": "Привіт! 👋 Я <b>WordSnap</b>.\n\nЯ не вчу мову за тебе. Я просто не даю забути слова, які ти вже зустрічаєш у житті за кордоном.\n\nСпробуємо? Спочатку — яку мову ти зараз ловиш на вулиці?",
+        "onboard.target_picked": "Гарний вибір {flag}\n\nА де живеш? Це не для статистики — щоб приклади були з твого життя, а не з підручника.",
+        "onboard.skip_city": "Пропустити",
+        "onboard.other_city": "Інше",
+        "onboard.demo_intro": "Окей, {city}. {flag}\n\nЗараз покажу як це працює — на одному слові, яке ти 100% почуєш цього тижня.",
+        "onboard.demo_snap_btn": "📸 Снепнути",
+        "onboard.demo_other_btn": "Інше слово",
+        "onboard.demo_done_title": "Готово ✅",
+        "onboard.demo_done_body": "Тепер це слово в твоїй стрічці. Я нагадаю про нього через 1 день, потім через 3, потім через тиждень — саме тоді, коли мозок готовий його забути.\n\nЦе називається інтервальне повторення. Працює без зубріння.",
+        "onboard.demo_xp": "🎉 +10 XP · Перший snap зроблено!\nПоточний tier: 🌱 {tier}",
+        "onboard.no_demo": "✅ <b>Налаштування збережено!</b>\n\n🏠 Рідна мова: <b>{flag_n} {name_n}</b>\n🎯 Вивчаємо: <b>{flag_t} {name_t}</b>\n\nНадішли мені перше слово, або відкрий додаток для зручного UI.",
+
+        "tierup.title": "✨ <b>Левел-ап!</b> ✨",
+        "tierup.body": "Ти щойно набив <b>{xp} XP</b>.\n\n🎖 НОВИЙ TIER\n\n✨ <b>{tier}</b> ✨\n\nТи вже не просто пробуєш — ти системно вчиш. Це видно по статистиці.",
+        "tierup.reward": "🎁 <b>Твоя нагорода:</b>\n{reward}\n\n<i>Код активується автоматично, коли продовжиш підписку. Ніяких комбінацій набирати не треба.</i>",
+        "tierup.no_reward": "<i>Так тримати — попереду більше нагород.</i>",
+        "tierup.btn_progress": "📊 Подивитись прогрес",
+        "tierup.btn_back": "Назад до слів",
         "stats.xp_label": "XP",
         "stats.xp_to_next": "ще {n} XP до «{title}»",
         "stats.tier_now": "Зараз: <b>{title}</b>",
@@ -346,6 +365,25 @@ T: dict[str, dict[str, str]] = {
         "rewards.discount_25": "−25% off next Pro month",
         "rewards.discount_50": "−50% off next Pro month",
         "rewards.free_month": "1 free Pro month",
+
+        "onboard.welcome": "Hi! 👋 I'm <b>WordSnap</b>.\n\nI don't teach you a language. I just stop you from forgetting the words you already meet in real life abroad.\n\nWanna try? First — what language are you catching out there?",
+        "onboard.target_picked": "Solid pick {flag}\n\nWhere do you live? Not for stats — so the examples come from your life, not a textbook.",
+        "onboard.skip_city": "Skip",
+        "onboard.other_city": "Other",
+        "onboard.demo_intro": "Alright, {city}. {flag}\n\nLet me show you how this works — with one word you'll hear this week for sure.",
+        "onboard.demo_snap_btn": "📸 Snap it",
+        "onboard.demo_other_btn": "Different word",
+        "onboard.demo_done_title": "Done ✅",
+        "onboard.demo_done_body": "The word is in your stream now. I'll remind you in 1 day, then 3, then a week — right when your brain is about to forget.\n\nIt's called spaced repetition. Works without cramming.",
+        "onboard.demo_xp": "🎉 +10 XP · First snap done!\nCurrent tier: 🌱 {tier}",
+        "onboard.no_demo": "✅ <b>Setup saved!</b>\n\n🏠 Native: <b>{flag_n} {name_n}</b>\n🎯 Learning: <b>{flag_t} {name_t}</b>\n\nSend me your first word, or open the app for a nicer UI.",
+
+        "tierup.title": "✨ <b>Level up!</b> ✨",
+        "tierup.body": "You've just hit <b>{xp} XP</b>.\n\n🎖 NEW TIER\n\n✨ <b>{tier}</b> ✨\n\nYou're not just trying anymore — you're systematically learning. The stats show it.",
+        "tierup.reward": "🎁 <b>Your reward:</b>\n{reward}\n\n<i>The code activates automatically when you renew. Nothing to copy-paste.</i>",
+        "tierup.no_reward": "<i>Keep going — more rewards ahead.</i>",
+        "tierup.btn_progress": "📊 See progress",
+        "tierup.btn_back": "Back to words",
         "stats.xp_label": "XP",
         "stats.xp_to_next": "{n} XP to «{title}»",
         "stats.tier_now": "Now: <b>{title}</b>",
@@ -509,6 +547,25 @@ T: dict[str, dict[str, str]] = {
         "rewards.discount_25": "−25% del próximo mes Pro",
         "rewards.discount_50": "−50% del próximo mes Pro",
         "rewards.free_month": "1 mes Pro gratis",
+
+        "onboard.welcome": "¡Hola! 👋 Soy <b>WordSnap</b>.\n\nNo te enseño un idioma. Solo evito que olvides las palabras que ya escuchas en la vida real fuera de tu país.\n\n¿Probamos? Primero — ¿qué idioma estás cazando ahí fuera?",
+        "onboard.target_picked": "Buena elección {flag}\n\n¿Dónde vives? No es por estadísticas — para que los ejemplos vengan de tu vida, no de un libro.",
+        "onboard.skip_city": "Saltar",
+        "onboard.other_city": "Otra",
+        "onboard.demo_intro": "Vale, {city}. {flag}\n\nTe muestro cómo funciona — con una palabra que vas a oír esta semana seguro.",
+        "onboard.demo_snap_btn": "📸 Capturar",
+        "onboard.demo_other_btn": "Otra palabra",
+        "onboard.demo_done_title": "Listo ✅",
+        "onboard.demo_done_body": "La palabra está en tu lista. Te recuerdo en 1 día, luego en 3, luego en una semana — justo cuando tu cerebro empieza a olvidar.",
+        "onboard.demo_xp": "🎉 +10 XP · ¡Primer snap hecho!\nNivel actual: 🌱 {tier}",
+        "onboard.no_demo": "✅ <b>¡Configuración guardada!</b>\n\n🏠 Nativo: <b>{flag_n} {name_n}</b>\n🎯 Estudiando: <b>{flag_t} {name_t}</b>\n\nEnvíame tu primera palabra o abre la app.",
+
+        "tierup.title": "✨ <b>¡Subiste de nivel!</b> ✨",
+        "tierup.body": "Acabas de llegar a <b>{xp} XP</b>.\n\n🎖 NUEVO TIER\n\n✨ <b>{tier}</b> ✨\n\nYa no solo lo intentas — estás aprendiendo en serio.",
+        "tierup.reward": "🎁 <b>Tu recompensa:</b>\n{reward}\n\n<i>El código se activa solo al renovar.</i>",
+        "tierup.no_reward": "<i>Sigue así — hay más recompensas.</i>",
+        "tierup.btn_progress": "📊 Ver progreso",
+        "tierup.btn_back": "Volver a palabras",
         "stats.xp_label": "XP",
         "stats.xp_to_next": "{n} XP para «{title}»",
         "stats.tier_now": "Ahora: <b>{title}</b>",
@@ -672,6 +729,25 @@ T: dict[str, dict[str, str]] = {
         "rewards.discount_25": "−25% na następny miesiąc Pro",
         "rewards.discount_50": "−50% na następny miesiąc Pro",
         "rewards.free_month": "1 miesiąc Pro za darmo",
+
+        "onboard.welcome": "Cześć! 👋 Jestem <b>WordSnap</b>.\n\nNie uczę cię języka. Po prostu nie pozwalam ci zapomnieć słów, które już słyszysz w prawdziwym życiu za granicą.\n\nSpróbujemy? Najpierw — jaki język łapiesz na ulicy?",
+        "onboard.target_picked": "Dobry wybór {flag}\n\nGdzie mieszkasz? Nie dla statystyk — żeby przykłady były z twojego życia, nie z podręcznika.",
+        "onboard.skip_city": "Pomiń",
+        "onboard.other_city": "Inne",
+        "onboard.demo_intro": "Dobra, {city}. {flag}\n\nPokażę ci jak to działa — na jednym słowie, które na pewno usłyszysz w tym tygodniu.",
+        "onboard.demo_snap_btn": "📸 Dodaj",
+        "onboard.demo_other_btn": "Inne słowo",
+        "onboard.demo_done_title": "Gotowe ✅",
+        "onboard.demo_done_body": "Słowo jest w twoim strumieniu. Przypomnę o nim za dzień, potem za 3 dni, potem za tydzień — dokładnie wtedy, gdy mózg zaczyna zapominać.",
+        "onboard.demo_xp": "🎉 +10 XP · Pierwszy snap zrobiony!\nObecny tier: 🌱 {tier}",
+        "onboard.no_demo": "✅ <b>Ustawienia zapisane!</b>\n\n🏠 Język ojczysty: <b>{flag_n} {name_n}</b>\n🎯 Uczę się: <b>{flag_t} {name_t}</b>\n\nWyślij mi pierwsze słowo lub otwórz aplikację.",
+
+        "tierup.title": "✨ <b>Level up!</b> ✨",
+        "tierup.body": "Właśnie zdobyłeś <b>{xp} XP</b>.\n\n🎖 NOWY TIER\n\n✨ <b>{tier}</b> ✨\n\nJuż nie tylko próbujesz — uczysz się systematycznie.",
+        "tierup.reward": "🎁 <b>Twoja nagroda:</b>\n{reward}\n\n<i>Kod aktywuje się automatycznie przy odnowieniu.</i>",
+        "tierup.no_reward": "<i>Tak trzymaj — przed tobą więcej nagród.</i>",
+        "tierup.btn_progress": "📊 Zobacz postępy",
+        "tierup.btn_back": "Wróć do słów",
         "stats.xp_label": "XP",
         "stats.xp_to_next": "jeszcze {n} XP do «{title}»",
         "stats.tier_now": "Teraz: <b>{title}</b>",
@@ -835,6 +911,25 @@ T: dict[str, dict[str, str]] = {
         "rewards.discount_25": "−25% auf nächsten Pro-Monat",
         "rewards.discount_50": "−50% auf nächsten Pro-Monat",
         "rewards.free_month": "1 Monat Pro gratis",
+
+        "onboard.welcome": "Hi! 👋 Ich bin <b>WordSnap</b>.\n\nIch bringe dir keine Sprache bei. Ich sorge nur dafür, dass du die Wörter nicht vergisst, die dir im Alltag im Ausland begegnen.\n\nProbieren wir's? Zuerst: welche Sprache fängst du gerade auf?",
+        "onboard.target_picked": "Solide Wahl {flag}\n\nWo lebst du? Nicht für Statistik — damit die Beispiele aus deinem Leben kommen, nicht aus dem Lehrbuch.",
+        "onboard.skip_city": "Überspringen",
+        "onboard.other_city": "Andere",
+        "onboard.demo_intro": "Okay, {city}. {flag}\n\nIch zeige dir, wie das geht — an einem Wort, das du diese Woche garantiert hörst.",
+        "onboard.demo_snap_btn": "📸 Snap",
+        "onboard.demo_other_btn": "Anderes Wort",
+        "onboard.demo_done_title": "Erledigt ✅",
+        "onboard.demo_done_body": "Das Wort ist jetzt in deinem Stream. Ich erinnere dich daran in 1 Tag, dann in 3, dann in einer Woche — genau dann, wenn dein Gehirn es vergessen will.",
+        "onboard.demo_xp": "🎉 +10 XP · Erster Snap gemacht!\nAktueller Tier: 🌱 {tier}",
+        "onboard.no_demo": "✅ <b>Einstellungen gespeichert!</b>\n\n🏠 Muttersprache: <b>{flag_n} {name_n}</b>\n🎯 Lernen: <b>{flag_t} {name_t}</b>\n\nSchicke mir dein erstes Wort oder öffne die App.",
+
+        "tierup.title": "✨ <b>Level-up!</b> ✨",
+        "tierup.body": "Du hast gerade <b>{xp} XP</b> geknackt.\n\n🎖 NEUER TIER\n\n✨ <b>{tier}</b> ✨\n\nDu probierst nicht mehr nur — du lernst systematisch.",
+        "tierup.reward": "🎁 <b>Deine Belohnung:</b>\n{reward}\n\n<i>Der Code wird automatisch aktiviert, wenn du verlängerst.</i>",
+        "tierup.no_reward": "<i>Mach weiter — weitere Belohnungen warten.</i>",
+        "tierup.btn_progress": "📊 Fortschritt sehen",
+        "tierup.btn_back": "Zurück zu Wörtern",
         "stats.xp_label": "XP",
         "stats.xp_to_next": "{n} XP bis «{title}»",
         "stats.tier_now": "Jetzt: <b>{title}</b>",
@@ -893,3 +988,14 @@ def buy_text(lang: str = "uk") -> str:
         f"{t('buy.cta_text', lang)}\n\n"
         f"{t('buy.fineprint', lang)}"
     )
+
+
+def tier_up_text(lang: str, xp: int, tier_key: str, reward_key: str | None) -> str:
+    """Збирає повний tier-up текст (заголовок + тіло + блок нагороди)."""
+    head = t("tierup.title", lang)
+    body = t("tierup.body", lang, xp=xp, tier=t(tier_key, lang))
+    if reward_key:
+        tail = t("tierup.reward", lang, reward=t(reward_key, lang))
+    else:
+        tail = t("tierup.no_reward", lang)
+    return f"{head}\n\n{body}\n\n{tail}"

@@ -25,6 +25,7 @@ class User(Base):
     # Налаштування мов
     native_lang: Mapped[str] = mapped_column(String(5), default="uk")
     target_lang: Mapped[str | None] = mapped_column(String(5))
+    region: Mapped[str | None] = mapped_column(String(50))
 
     # Підписка
     plan: Mapped[str] = mapped_column(String(20), default="free")

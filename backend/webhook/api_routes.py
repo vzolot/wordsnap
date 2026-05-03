@@ -213,10 +213,32 @@ async def get_review_words(telegram_id: int = Query(...)):
 @router.post("/api/review")
 async def submit_review(data: ReviewRequest, telegram_id: int = Query(...)):
     from core.word_service import process_review
+    from core.bot_i18n import tier_up_text
+    from core.telegram_send import send_message
+
     result_map = {1: "forgot", 3: "struggled", 5: "knew"}
     result = result_map.get(data.quality, "struggled")
-    word, new_interval = await process_review(data.word_id, result)
-    return {"ok": bool(word), "interval_days": new_interval}
+    word, new_interval, tier_up = await process_review(data.word_id, result)
+
+    # Якщо переступили tier — надсилаємо сторіс-вітання у бот-чат
+    if tier_up:
+        async with SessionLocal() as session:
+            user = await _get_user(session, telegram_id)
+        lang = (user.native_lang if user else None) or "uk"
+        threshold, tier_key, reward_key = tier_up
+        try:
+            await send_message(telegram_id, tier_up_text(lang, threshold, tier_key, reward_key))
+        except Exception as e:
+            logger.warning(f"tier-up send failed: {e}")
+
+    return {
+        "ok": bool(word),
+        "interval_days": new_interval,
+        "tier_up": (
+            {"xp": tier_up[0], "tier_key": tier_up[1], "reward_key": tier_up[2]}
+            if tier_up else None
+        ),
+    }
 
 
 @router.post("/api/words")

@@ -42,3 +42,17 @@ def next_tier(xp: int) -> tuple[int, str, str | None] | None:
 
 def xp_for_result(result: str) -> int:
     return XP_PER_RESULT.get(result, 5)
+
+
+def detect_tier_crossed(old_xp: int, new_xp: int) -> tuple[int, str, str | None] | None:
+    """
+    Якщо new_xp пересік межу нового tier (а old_xp був нижче) — повертаємо
+    цей tier. Інакше None.
+    """
+    for threshold, tier_key, reward_key in TIERS:
+        if threshold == 0:
+            continue
+        if old_xp < threshold <= new_xp:
+            return (threshold, tier_key, reward_key)
+    return None
+

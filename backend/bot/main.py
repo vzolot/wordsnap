@@ -68,10 +68,11 @@ async def cmd_start(message: Message):
 
     # Новий юзер або ще не обрав мову — запускаємо онбординг
     if not user.target_lang:
+        lang = user.native_lang or "uk"
+        # Single-message welcome (новий копірайт), потім питаємо рідну мову
+        await message.answer(bt("onboard.welcome", lang))
         await message.answer(
-            f"{bt('start.hi', user.native_lang or 'uk', name=tg_user.first_name)} "
-            f"{bt('start.intro', user.native_lang or 'uk')}\n\n"
-            + ask_native_lang_text(user.native_lang or "uk"),
+            ask_native_lang_text(lang),
             reply_markup=native_lang_keyboard(),
         )
         logger.info(f"New user {tg_user.id} — started language setup")

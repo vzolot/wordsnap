@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from .models import Word, User
 from .db import SessionLocal
-from .rewards import xp_for_result
+from .rewards import detect_tier_crossed, xp_for_result
 from .srs import calculate_next_review, ReviewResult
 
 logger = logging.getLogger(__name__)
@@ -141,10 +141,12 @@ async def get_word_by_id(word_id: int) -> Word | None:
 async def process_review(
     word_id: int,
     result: ReviewResult,
-) -> tuple[Word | None, float]:
+) -> tuple[Word | None, float, tuple[int, str, str | None] | None]:
     """
     Обробляє відповідь юзера на повторення.
-    Returns: (updated_word, new_interval_days)
+
+    Returns: (updated_word, new_interval_days, tier_crossed_or_None)
+    tier_crossed — нагорода за подоланий поріг. None якщо tier не змінився.
     """
     async with SessionLocal() as session:
         db_result = await session.execute(
@@ -153,7 +155,7 @@ async def process_review(
         word = db_result.scalar_one_or_none()
 
         if not word:
-            return None, 0
+            return None, 0, None
 
         new_interval, new_ease, next_review, new_status = calculate_next_review(
             result=result,
@@ -184,11 +186,17 @@ async def process_review(
         )
         session.add(review_record)
 
-        # Нараховуємо XP та інкрементуємо лічильник переглядів атомарно
+        # Нараховуємо XP — спершу читаємо поточне значення для tier-detection
+        old_xp_row = await session.execute(
+            select(User.total_xp).where(User.id == word.user_id)
+        )
+        old_xp = old_xp_row.scalar() or 0
         xp = xp_for_result(result)
+        new_xp = old_xp + xp
+
         await session.execute(
             update(User).where(User.id == word.user_id).values(
-                total_xp=User.total_xp + xp,
+                total_xp=new_xp,
                 total_reviews=User.total_reviews + 1,
             )
         )
@@ -196,9 +204,12 @@ async def process_review(
         await session.commit()
         await session.refresh(word)
 
+        tier_up = detect_tier_crossed(old_xp, new_xp)
+
         logger.info(
             f"Review: word_id={word_id} result={result} "
-            f"new_interval={new_interval:.1f}d ease={new_ease:.2f}"
+            f"new_interval={new_interval:.1f}d ease={new_ease:.2f} "
+            f"xp={old_xp}→{new_xp}{' TIER+' if tier_up else ''}"
         )
 
-        return word, new_interval
+        return word, new_interval, tier_up

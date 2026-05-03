@@ -8,7 +8,7 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 
-from core.bot_i18n import t as bt
+from core.bot_i18n import t as bt, tier_up_text
 from core.languages import lang_flag
 from core.srs import format_interval
 from core.user_service import get_or_create_user
@@ -123,7 +123,7 @@ async def handle_review_answer(callback: CallbackQuery):
         await callback.answer(bt("review.error", lang), show_alert=True)
         return
 
-    word, new_interval = await process_review(word_id, result)
+    word, new_interval, tier_up = await process_review(word_id, result)
     if not word:
         await callback.answer(bt("review.not_found", lang), show_alert=True)
         return
@@ -145,6 +145,12 @@ async def handle_review_answer(callback: CallbackQuery):
 
     await callback.message.edit_text(text)
     await callback.answer()
+
+    if tier_up:
+        threshold, tier_key, reward_key = tier_up
+        await callback.message.answer(
+            tier_up_text(lang, threshold, tier_key, reward_key)
+        )
 
     if source != "rev":
         logger.info(f"User answered '{result}' for word_id={word_id} (from reminder)")
