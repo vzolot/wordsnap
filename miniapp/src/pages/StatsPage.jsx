@@ -34,12 +34,16 @@ function StatsPage() {
     return Math.min(100, Math.round((got / span) * 100));
   })();
 
+  const totalSpent = stats?.total_spent || 0;
+  const spentLabel = totalSpent > 0 ? `$${totalSpent.toFixed(2)}` : '$0';
+
   const tiles = [
     { label: t('stats.total_words'),    value: stats?.total_words || 0,    color: 'violet' },
     { label: t('stats.mastered'),       value: stats?.learned_words || 0,  color: 'lime'   },
     { label: t('stats.learning'),       value: learning,                   color: 'violet' },
     { label: t('stats.reviewed_today'), value: stats?.reviewed_today || 0, color: ''       },
     { label: t('stats.streak_days'),    value: stats?.streak || 0,         color: 'coral'  },
+    { label: t('stats.total_spent'),    value: spentLabel,                 color: 'pink'   },
   ];
 
   return (

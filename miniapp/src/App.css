@@ -236,6 +236,13 @@
 .stat-num.lime   { color: #65A30D; }
 [data-theme="dark"] .stat-num.lime { color: var(--lime); }
 .stat-num.coral  { color: var(--coral); }
+.stat-num.pink   { color: var(--pink); }
+.stat-num.gradient {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
 /* ── CTA review button (dark) ───────────────────────── */
 .cta-review {

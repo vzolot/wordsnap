@@ -8,8 +8,10 @@ from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select, func, update
 
+from sqlalchemy import or_
+
 from core.db import SessionLocal
-from core.models import Review, User, Word
+from core.models import PaymentHistory, Review, User, Word
 from core.rewards import current_tier, next_tier
 
 logger = logging.getLogger(__name__)
@@ -113,6 +115,20 @@ async def _reviewed_today(session, user_id: int) -> int:
     return n
 
 
+async def _total_spent(session, user_id: int) -> float:
+    """Загальна сума успішних платежів юзера (USD)."""
+    spent = (await session.execute(
+        select(func.coalesce(func.sum(PaymentHistory.amount), 0)).where(
+            PaymentHistory.user_id == user_id,
+            or_(
+                PaymentHistory.status == "success",
+                PaymentHistory.transaction_status == "Approved",
+            ),
+        )
+    )).scalar()
+    return float(spent or 0)
+
+
 @router.get("/api/stats")
 async def get_stats(telegram_id: int = Query(...)):
     async with SessionLocal() as session:
@@ -123,6 +139,7 @@ async def get_stats(telegram_id: int = Query(...)):
             return {
                 "total_words": 0, "learned_words": 0, "streak": 0,
                 "reviewed_today": 0, "total_reviews": 0, "total_xp": 0,
+                "total_spent": 0.0,
                 "tier_xp": beginner[0], "tier_key": beginner[1],
                 "tier_reward_key": beginner[2],
                 "next_tier_xp": nxt[0] if nxt else None,
@@ -142,6 +159,7 @@ async def get_stats(telegram_id: int = Query(...)):
 
         reviewed_today = await _reviewed_today(session, user.id)
         streak = await _calculate_streak(session, user.id)
+        total_spent = await _total_spent(session, user.id)
 
         now = datetime.now(timezone.utc)
         is_pro = user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now
@@ -159,6 +177,7 @@ async def get_stats(telegram_id: int = Query(...)):
             "reviewed_today": reviewed_today,
             "total_reviews": user.total_reviews,
             "total_xp": xp,
+            "total_spent": total_spent,
             "tier_xp": tier[0],
             "tier_key": tier[1],
             "tier_reward_key": tier[2],

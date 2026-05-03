@@ -94,8 +94,8 @@ function HomePage() {
             <div className="stat-label">{t('home.stat.mastered')}</div>
           </div>
           <div className="stat-cell">
-            <div className="stat-num coral">{dueCount}</div>
-            <div className="stat-label">{t('home.stat.due_now')}</div>
+            <div className="stat-num gradient">✨ {stats?.total_xp || 0}</div>
+            <div className="stat-label">{t('home.stat.xp')}</div>
           </div>
         </div>
 
