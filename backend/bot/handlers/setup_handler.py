@@ -101,6 +101,47 @@ async def cmd_language(message: Message):
     await message.answer(ask_native_lang_text(lang), reply_markup=native_lang_keyboard())
 
 
+@router.message(Command("demo"))
+async def cmd_demo(message: Message):
+    """Показати демо-слово для поточних налаштувань (без зміни мов)."""
+    user = await get_or_create_user(telegram_id=message.from_user.id)
+    native = user.native_lang or "uk"
+    target = user.target_lang
+    if not target:
+        await message.answer(bt("word.setup_first", native))
+        return
+
+    demo = get_demo_word(target, native)
+    if not demo:
+        await message.answer("Demo для цієї пари мов ще немає. Просто надішли будь-яке слово 👋")
+        return
+
+    intro = bt("onboard.demo_intro", native, city=lang_name(target), flag=lang_flag(target))
+    await message.answer(intro)
+
+    from html import escape
+    word_safe = escape(demo["word"])
+    pos = escape(demo.get("part_of_speech") or "")
+    translation = escape(demo.get("translation") or "")
+
+    card = f"📚 <b>{word_safe}</b>"
+    if pos:
+        card += f" <i>({pos})</i>"
+    card += "\n"
+    card += f"{lang_flag(native)} <b>{translation}</b>\n\n"
+    card += bt("word.examples_label", native) + "\n"
+    for i, ex in enumerate(demo.get("examples", [])[:3], 1):
+        sentence = escape(ex.get("sentence", ""))
+        explanation = escape(ex.get("explanation", ""))
+        card += f"\n<b>{i}.</b> {sentence}\n"
+        if explanation:
+            card += f"   <i>→ {explanation}</i>\n"
+    if demo.get("memory_tip"):
+        card += f"\n💡 <i>{escape(demo['memory_tip'])}</i>"
+
+    await message.answer(card, reply_markup=demo_keyboard(target, native))
+
+
 @router.callback_query(F.data.startswith("setup_native:"))
 async def handle_native_lang(callback: CallbackQuery):
     native_code = callback.data.split(":")[1]

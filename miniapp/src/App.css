@@ -1095,6 +1095,95 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Welcome stories overlay ────────────────────────── */
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  color: #fff;
+  padding: 16px 22px 32px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.welcome-overlay.welcome-gradient { background: linear-gradient(160deg, #4C1D95 0%, #7C3AED 50%, #DB2777 100%); }
+.welcome-overlay.welcome-violet   { background: linear-gradient(160deg, #1E1B4B 0%, #5B21B6 100%); }
+.welcome-overlay.welcome-pink     { background: linear-gradient(160deg, #4C1D95 0%, #BE185D 100%); }
+
+.welcome-progress {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.welcome-bar {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.25);
+  overflow: hidden;
+  transition: background 0.25s;
+}
+.welcome-bar.done   { background: rgba(255,255,255,0.95); }
+.welcome-bar.active { background: rgba(255,255,255,0.95); }
+
+.welcome-skip {
+  position: absolute;
+  top: 30px;
+  right: 22px;
+  background: transparent;
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 4px;
+  z-index: 1001;
+}
+
+.welcome-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.welcome-title {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+  margin-bottom: 18px;
+}
+
+.welcome-body {
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.5;
+  opacity: 0.92;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.welcome-actions {
+  margin-top: 24px;
+  padding-bottom: 8px;
+}
+
+.welcome-cta {
+  background: rgba(255,255,255,0.95);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 16px;
+}
+.welcome-cta.btn-gradient {
+  background: #fff;
+  color: var(--ink);
+}
+
 /* ── Debug banner ───────────────────────────────────── */
 .debug-banner {
   background: var(--coral-soft);

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import WordsPage from './pages/WordsPage';
@@ -8,6 +8,7 @@ import ProPage from './pages/ProPage';
 import SongsPage from './pages/SongsPage';
 import NavBar from './components/NavBar';
 import DebugBanner from './components/DebugBanner';
+import WelcomeStories, { shouldShowWelcome } from './components/WelcomeStories';
 import { LangProvider } from './contexts/LangContext';
 import './App.css';
 
@@ -26,6 +27,8 @@ function getInitialTheme() {
 }
 
 function App() {
+  const [showWelcome, setShowWelcome] = useState(() => shouldShowWelcome());
+
   useEffect(() => {
     applyTheme(getInitialTheme());
     const tg = window.Telegram?.WebApp;
@@ -50,6 +53,7 @@ function App() {
 
   return (
     <LangProvider>
+      {showWelcome && <WelcomeStories onClose={() => setShowWelcome(false)} />}
       <BrowserRouter>
         <div className="app">
           <DebugBanner />
