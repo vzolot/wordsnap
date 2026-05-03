@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { addWord, getSongs } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
+import WordResult from '../components/WordResult';
 
 function SongsPage() {
   const [packs, setPacks] = useState([]);
@@ -21,12 +22,7 @@ function SongsPage() {
       <AppBar />
       <div className="page">
         {!active ? (
-          <SongsList
-            packs={packs}
-            loading={loading}
-            onPick={setActive}
-            t={t}
-          />
+          <SongsList packs={packs} loading={loading} onPick={setActive} t={t} />
         ) : (
           <SongDetail pack={active} onBack={() => setActive(null)} t={t} />
         )}
@@ -65,20 +61,44 @@ function SongsList({ packs, loading, onPick, t }) {
 
 function SongDetail({ pack, onBack, t }) {
   const [statusMap, setStatusMap] = useState({}); // word -> 'idle'|'loading'|'added'|'duplicate'|'error'
+  const [results, setResults] = useState({}); // word -> data shown inline
+  const [errors, setErrors] = useState({}); // word -> error msg
 
   const handleAdd = async (word) => {
     if (statusMap[word] === 'loading' || statusMap[word] === 'added') return;
     setStatusMap(s => ({ ...s, [word]: 'loading' }));
+    setErrors(e => ({ ...e, [word]: undefined }));
     try {
       const r = await addWord(word);
       const data = r.data || {};
       if (data.error === 'duplicate') {
         setStatusMap(s => ({ ...s, [word]: 'duplicate' }));
-      } else if (data.ok) {
-        setStatusMap(s => ({ ...s, [word]: 'added' }));
-      } else {
-        setStatusMap(s => ({ ...s, [word]: 'error' }));
+        setErrors(e => ({ ...e, [word]: t('songs.duplicate') }));
+        return;
       }
+      if (data.error === 'limit_reached') {
+        setStatusMap(s => ({ ...s, [word]: 'error' }));
+        setErrors(e => ({ ...e, [word]: data.message || t('songs.empty') }));
+        return;
+      }
+      if (!data.ok) {
+        setStatusMap(s => ({ ...s, [word]: 'error' }));
+        return;
+      }
+      const merged = { ...(data.ai_data || {}), ...(data.word || {}) };
+      setResults(rs => ({
+        ...rs,
+        [word]: {
+          word: merged.word || word,
+          translation: merged.translation,
+          part_of_speech: merged.part_of_speech,
+          difficulty: merged.difficulty,
+          examples: merged.examples || [],
+          memory_tip: merged.memory_tip,
+          image_url: merged.image_url || data.image_url,
+        },
+      }));
+      setStatusMap(s => ({ ...s, [word]: 'added' }));
     } catch {
       setStatusMap(s => ({ ...s, [word]: 'error' }));
     }
@@ -100,22 +120,33 @@ function SongDetail({ pack, onBack, t }) {
       <div className="song-words">
         {pack.words.map(w => {
           const st = statusMap[w] || 'idle';
+          const result = results[w];
+          const err = errors[w];
           return (
-            <button
-              key={w}
-              className={`song-word ${st}`}
-              onClick={() => handleAdd(w)}
-              disabled={st === 'loading' || st === 'added'}
-            >
-              <span className="song-word-text">{w}</span>
-              <span className="song-word-status">
-                {st === 'loading' && <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />}
-                {st === 'added' && '✓'}
-                {st === 'duplicate' && '•'}
-                {st === 'error' && '!'}
-                {st === 'idle' && '+'}
-              </span>
-            </button>
+            <div key={w}>
+              <button
+                className={`song-word ${st}`}
+                onClick={() => handleAdd(w)}
+                disabled={st === 'loading' || st === 'added'}
+              >
+                <span className="song-word-text">{w}</span>
+                <span className="song-word-status">
+                  {st === 'loading' && <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />}
+                  {st === 'added' && '✓'}
+                  {st === 'duplicate' && '•'}
+                  {st === 'error' && '!'}
+                  {st === 'idle' && '+'}
+                </span>
+              </button>
+              {result && st === 'added' && (
+                <div className="song-word-result">
+                  <WordResult data={result} />
+                </div>
+              )}
+              {err && st === 'duplicate' && (
+                <div className="song-word-hint">{err}</div>
+              )}
+            </div>
           );
         })}
       </div>

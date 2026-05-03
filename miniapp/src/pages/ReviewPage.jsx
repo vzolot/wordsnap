@@ -13,6 +13,7 @@ function ReviewPage() {
   const [loading, setLoading] = useState(true);
   const [done, setDone] = useState(false);
   const [stats, setStats] = useState({ reviewed: 0, mastered: 0 });
+  const [selected, setSelected] = useState(null); // 'forgot' | 'hard' | 'easy'
   const navigate = useNavigate();
   const { t, lang } = useT();
 
@@ -23,20 +24,30 @@ function ReviewPage() {
     }).catch(() => setLoading(false));
   }, []);
 
+  // Скидаємо вибір кнопки коли переключаємось на наступне слово
+  useEffect(() => {
+    setSelected(null);
+  }, [index]);
+
   const current = words[index];
 
-  const handleAnswer = async (quality) => {
+  const handleAnswer = async (quality, key) => {
+    if (selected) return;
+    setSelected(key);
     await submitReview(current.id, quality).catch(() => {});
     setStats(s => ({
       reviewed: s.reviewed + 1,
       mastered: s.mastered + (quality === 5 ? 1 : 0),
     }));
-    if (index + 1 >= words.length) {
-      setDone(true);
-    } else {
-      setIndex(i => i + 1);
-      setRevealed(false);
-    }
+    // Невелика затримка щоб користувач побачив підсвічування вибраної кнопки
+    setTimeout(() => {
+      if (index + 1 >= words.length) {
+        setDone(true);
+      } else {
+        setIndex(i => i + 1);
+        setRevealed(false);
+      }
+    }, 350);
   };
 
   if (loading) {
@@ -154,16 +165,28 @@ function ReviewPage() {
         </div>
 
         {revealed && (
-          <div className="answer-bar">
-            <button className="answer-btn forgot" onClick={() => handleAnswer(1)}>
+          <div className={`answer-bar ${selected ? 'locked' : ''}`}>
+            <button
+              className={`answer-btn forgot ${selected === 'forgot' ? 'selected' : ''}`}
+              onClick={() => handleAnswer(1, 'forgot')}
+              disabled={!!selected}
+            >
               <span className="icon">✕</span>
               <span>{t('review.forgot')}</span>
             </button>
-            <button className="answer-btn hard" onClick={() => handleAnswer(3)}>
+            <button
+              className={`answer-btn hard ${selected === 'hard' ? 'selected' : ''}`}
+              onClick={() => handleAnswer(3, 'hard')}
+              disabled={!!selected}
+            >
               <span className="icon">◐</span>
               <span>{t('review.hard')}</span>
             </button>
-            <button className="answer-btn easy" onClick={() => handleAnswer(5)}>
+            <button
+              className={`answer-btn easy ${selected === 'easy' ? 'selected' : ''}`}
+              onClick={() => handleAnswer(5, 'easy')}
+              disabled={!!selected}
+            >
               <span className="icon">✓</span>
               <span>{t('review.easy')}</span>
             </button>

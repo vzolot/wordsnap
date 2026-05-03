@@ -474,6 +474,45 @@
   color: var(--ink);
 }
 
+.answer-bar.locked .answer-btn:not(.selected) {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.answer-btn.selected.forgot {
+  background: var(--coral);
+  border-color: var(--coral);
+  color: #fff;
+}
+.answer-btn.selected.forgot .icon {
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
+.answer-btn.selected.hard {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #fff;
+}
+.answer-btn.selected.hard .icon {
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
+.answer-btn.selected.easy {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--ink);
+}
+.answer-btn.selected.easy .icon {
+  background: rgba(15,15,20,0.15);
+  color: var(--ink);
+}
+
+.answer-btn:disabled {
+  cursor: default;
+}
+
 /* ── Empty state ─────────────────────────────────────── */
 .empty-state {
   text-align: center;
@@ -955,6 +994,30 @@
 }
 .song-word.added .song-word-status { background: var(--lime); color: var(--ink); }
 .song-word.error .song-word-status { background: var(--coral-soft); color: var(--coral); }
+
+.song-word-result {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  animation: slideIn 0.25s ease;
+}
+
+.song-word-hint {
+  margin-top: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+  padding: 0 16px;
+  font-style: italic;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 /* ── Debug banner ───────────────────────────────────── */
 .debug-banner {

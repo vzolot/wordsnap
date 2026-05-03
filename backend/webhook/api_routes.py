@@ -1,13 +1,33 @@
 """
 REST API для miniapp.
 """
+import asyncio
+import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 
 from core.db import SessionLocal
 from core.models import User, Word
+
+logger = logging.getLogger(__name__)
+
+
+async def _attach_image_async(word_id: int, keyword: str) -> None:
+    """Фон-таск: завантажує картинку Unsplash і записує image_url у БД."""
+    try:
+        from core.unsplash_client import search_image
+        url = await search_image(keyword)
+        if not url:
+            return
+        async with SessionLocal() as session:
+            await session.execute(
+                update(Word).where(Word.id == word_id).values(image_url=url)
+            )
+            await session.commit()
+    except Exception as e:
+        logger.warning(f"Image fetch failed for word_id={word_id}: {e}")
 
 router = APIRouter()
 
@@ -124,7 +144,6 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
     from core.user_service import get_or_create_user, can_add_word, increment_word_counter
     from core.word_service import word_exists, save_word
     from core.openai_client import get_word_data
-    from core.unsplash_client import search_image
 
     word = (data.word or "").strip()
     if not word:
@@ -149,11 +168,12 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
     if not ai_data:
         raise HTTPException(status_code=502, detail="AI generation failed")
 
-    image_url = await search_image(ai_data.get("image_keyword", word))
-
+    # Зберігаємо БЕЗ картинки — швидко повертаємо переклад/приклади.
+    # Картинка довантажиться у фоні через Unsplash і зʼявиться при наступних
+    # запитах (Words / Songs reload).
     success = await save_word(
         user_id=user.id, word=word, target_lang=user.target_lang,
-        ai_data=ai_data, image_url=image_url,
+        ai_data=ai_data, image_url=None,
     )
     if not success:
         raise HTTPException(status_code=500, detail="Failed to save word")
@@ -169,11 +189,15 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
             )
         )).scalar_one_or_none()
 
+    image_keyword = ai_data.get("image_keyword", word)
+    if saved:
+        asyncio.create_task(_attach_image_async(saved.id, image_keyword))
+
     return {
         "ok": True,
         "word": _serialize_word(saved) if saved else None,
         "ai_data": ai_data,
-        "image_url": image_url,
+        "image_url": None,
     }
 
 
