@@ -48,4 +48,44 @@ export const addWord = (word) => api.post('/api/words', { word });
 export const getSongs = () => api.get('/api/songs');
 export const createBuyLink = () => api.post('/api/buy');
 
+/**
+ * Stale-while-revalidate fetch.
+ * - Якщо є cached дані не старші TTL — повертає одразу + фоновий refresh
+ * - Інакше робить нормальний запит та кешує
+ *
+ * useCached(key, fetcher, onFresh) — onFresh викликається коли свіжі дані прийшли
+ */
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 хв
+
+export function readCache(key) {
+  try {
+    const raw = localStorage.getItem(`wordsnap.cache.${key}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.t !== 'number') return null;
+    if (Date.now() - parsed.t > CACHE_TTL_MS) return null;
+    return parsed.d;
+  } catch { return null; }
+}
+
+export function writeCache(key, data) {
+  try {
+    localStorage.setItem(`wordsnap.cache.${key}`, JSON.stringify({ t: Date.now(), d: data }));
+  } catch {}
+}
+
+export function clearCache(key) {
+  try { localStorage.removeItem(`wordsnap.cache.${key}`); } catch {}
+}
+
+/**
+ * Запускає префетч для головних endpoints — викликається при відкритті
+ * додатку, щоб дані вже були готові коли користувач переходить між екранами.
+ */
+export function prefetchAll() {
+  getStats().then(r => writeCache('stats', r.data)).catch(() => {});
+  getWords().then(r => writeCache('words', r.data)).catch(() => {});
+  getReviewWords().then(r => writeCache('review', r.data)).catch(() => {});
+}
+
 export default api;

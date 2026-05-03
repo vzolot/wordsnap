@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { addWord, getSongs } from '../api/client';
+import { addWord, clearCache, getSongs } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 import WordResult from '../components/WordResult';
@@ -99,6 +99,8 @@ function SongDetail({ pack, onBack, t }) {
         },
       }));
       setStatusMap(s => ({ ...s, [word]: 'added' }));
+      clearCache('stats');
+      clearCache('words');
     } catch {
       setStatusMap(s => ({ ...s, [word]: 'error' }));
     }

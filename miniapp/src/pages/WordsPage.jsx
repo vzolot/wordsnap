@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getWords } from '../api/client';
+import { getWords, readCache, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 
@@ -10,14 +10,17 @@ function badge(word, t) {
 }
 
 function WordsPage() {
-  const [words, setWords] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cached = readCache('words');
+  const [words, setWords] = useState(Array.isArray(cached) ? cached : []);
+  const [loading, setLoading] = useState(!cached);
   const [search, setSearch] = useState('');
   const { t } = useT();
 
   useEffect(() => {
     getWords().then(r => {
-      setWords(r.data || []);
+      const list = r.data || [];
+      setWords(list);
+      writeCache('words', list);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);

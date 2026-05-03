@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
-import { getStats } from '../api/client';
+import { getStats, readCache, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 import { replayWelcome } from '../components/WelcomeStories';
 
 function StatsPage() {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const cached = readCache('stats');
+  const [stats, setStats] = useState(cached);
+  const [loading, setLoading] = useState(!cached);
   const { t } = useT();
 
   useEffect(() => {
     getStats().then(r => {
       setStats(r.data);
+      writeCache('stats', r.data);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);

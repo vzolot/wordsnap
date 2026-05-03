@@ -1,16 +1,19 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
-import WordsPage from './pages/WordsPage';
-import ReviewPage from './pages/ReviewPage';
-import StatsPage from './pages/StatsPage';
-import ProPage from './pages/ProPage';
-import SongsPage from './pages/SongsPage';
 import NavBar from './components/NavBar';
 import DebugBanner from './components/DebugBanner';
 import WelcomeStories, { shouldShowWelcome } from './components/WelcomeStories';
 import { LangProvider } from './contexts/LangContext';
+import { prefetchAll } from './api/client';
 import './App.css';
+
+// Code-split важкі сторінки — кожна підвантажиться лише коли користувач переходить
+const WordsPage  = lazy(() => import('./pages/WordsPage'));
+const ReviewPage = lazy(() => import('./pages/ReviewPage'));
+const StatsPage  = lazy(() => import('./pages/StatsPage'));
+const ProPage    = lazy(() => import('./pages/ProPage'));
+const SongsPage  = lazy(() => import('./pages/SongsPage'));
 
 function applyTheme(scheme) {
   document.documentElement.setAttribute('data-theme', scheme === 'dark' ? 'dark' : 'light');
@@ -25,6 +28,10 @@ function getInitialTheme() {
   if (tg?.colorScheme) return tg.colorScheme;
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
+
+const RouteFallback = () => (
+  <div className="page"><div className="center-loader"><span className="spinner" /></div></div>
+);
 
 function App() {
   const [showWelcome, setShowWelcome] = useState(() => shouldShowWelcome());
@@ -42,7 +49,6 @@ function App() {
       tg.ready();
       tg.expand();
       tg.onEvent?.('themeChanged', () => {
-        // Only auto-follow if user hasn't picked a theme manually
         try {
           if (!localStorage.getItem('wordsnap.theme')) applyTheme(tg.colorScheme);
         } catch { applyTheme(tg.colorScheme); }
@@ -55,6 +61,10 @@ function App() {
         } catch { applyTheme(e.matches ? 'dark' : 'light'); }
       });
     }
+
+    // Префетч даних після того як Telegram готовий — Home/Stats/Words рендеряться миттєво
+    const prefetchTimer = setTimeout(() => prefetchAll(), 100);
+    return () => clearTimeout(prefetchTimer);
   }, []);
 
   return (
@@ -63,15 +73,17 @@ function App() {
       <BrowserRouter>
         <div className="app">
           <DebugBanner />
-          <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/words" element={<WordsPage />} />
-          <Route path="/review" element={<ReviewPage />} />
-          <Route path="/songs" element={<SongsPage />} />
-          <Route path="/stats" element={<StatsPage />} />
-          <Route path="/pro" element={<ProPage />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/words" element={<WordsPage />} />
+              <Route path="/review" element={<ReviewPage />} />
+              <Route path="/songs" element={<SongsPage />} />
+              <Route path="/stats" element={<StatsPage />} />
+              <Route path="/pro" element={<ProPage />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </Suspense>
           <NavBar />
         </div>
       </BrowserRouter>

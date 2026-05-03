@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { addWord } from '../api/client';
+import { addWord, clearCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import WordResult from './WordResult';
 
@@ -34,6 +34,9 @@ function SnapCard({ nativeLang, usedToday, dailyLimit, onAdded }) {
         image_url: merged.image_url || data.image_url,
       });
       setValue('');
+      // Свіжі дані будуть підтягнуті у Home/Stats/Words; інвалідуємо кеш
+      clearCache('stats');
+      clearCache('words');
       onAdded?.();
     } catch (err) {
       const status = err?.response?.status;

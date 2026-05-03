@@ -128,6 +128,23 @@ class Review(Base):
     reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class AiCache(Base):
+    """Кеш OpenAI-відповідей за (word, target_lang, native_lang).
+    Перетинаючий запит з ідентичними параметрами повертає кеш миттєво
+    замість виклику OpenAI (~3 сек → ~50 мс)."""
+    __tablename__ = "ai_cache"
+    __table_args__ = (UniqueConstraint("word", "target_lang", "native_lang"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    word: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_lang: Mapped[str] = mapped_column(String(5), nullable=False)
+    native_lang: Mapped[str] = mapped_column(String(5), nullable=False)
+    data: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class PaymentHistory(Base):
     """Історія платежів — для аналітики, дебагу і фінансової звітності"""
     __tablename__ = "payment_history"

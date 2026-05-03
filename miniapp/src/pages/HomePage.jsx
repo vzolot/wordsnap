@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStats, getReviewWords } from '../api/client';
+import { getStats, getReviewWords, readCache, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 import SnapCard from '../components/SnapCard';
@@ -14,16 +14,27 @@ const greetingKey = () => {
 };
 
 function HomePage() {
-  const [stats, setStats] = useState(null);
-  const [dueCount, setDueCount] = useState(0);
+  // Stale-while-revalidate: одразу рендеримось з cached даних, потім фоном тягнемо свіжі
+  const [stats, setStats] = useState(() => readCache('stats'));
+  const [dueCount, setDueCount] = useState(() => {
+    const cached = readCache('review');
+    return Array.isArray(cached) ? cached.length : 0;
+  });
   const navigate = useNavigate();
   const { t, plural } = useT();
   const tg = window.Telegram?.WebApp;
   const userName = tg?.initDataUnsafe?.user?.first_name || '';
 
   const loadAll = useCallback(() => {
-    getStats().then(r => setStats(r.data)).catch(() => {});
-    getReviewWords().then(r => setDueCount(r.data?.length || 0)).catch(() => {});
+    getStats().then(r => {
+      setStats(r.data);
+      writeCache('stats', r.data);
+    }).catch(() => {});
+    getReviewWords().then(r => {
+      const list = r.data || [];
+      setDueCount(list.length);
+      writeCache('review', list);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);

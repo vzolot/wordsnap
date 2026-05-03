@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getReviewWords, submitReview } from '../api/client';
+import { clearCache, getReviewWords, submitReview } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 
@@ -35,6 +35,9 @@ function ReviewPage() {
     if (selected) return;
     setSelected(key);
     await submitReview(current.id, quality).catch(() => {});
+    // Інвалідуємо кеш — review/stats тепер застаріли
+    clearCache('review');
+    clearCache('stats');
     const xpGain = quality === 5 ? 10 : quality === 3 ? 6 : 2;
     setStats(s => ({
       reviewed: s.reviewed + 1,

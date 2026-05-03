@@ -70,16 +70,60 @@ def build_user_prompt(word: str, target_lang: str, native_lang: str = "uk") -> s
     )
 
 
+async def _cache_lookup(word: str, target_lang: str, native_lang: str) -> dict | None:
+    """Шукає попередньо згенеровану відповідь у кеші."""
+    try:
+        from sqlalchemy import select
+        from .db import SessionLocal
+        from .models import AiCache
+        async with SessionLocal() as session:
+            result = await session.execute(
+                select(AiCache.data).where(
+                    AiCache.word == word,
+                    AiCache.target_lang == target_lang,
+                    AiCache.native_lang == native_lang,
+                )
+            )
+            return result.scalar_one_or_none()
+    except Exception as e:
+        logger.warning(f"Cache lookup failed: {e}")
+        return None
+
+
+async def _cache_store(word: str, target_lang: str, native_lang: str, data: dict) -> None:
+    """Зберігає відповідь у кеш. Помилки логуються, не валять флоу."""
+    try:
+        from sqlalchemy.exc import IntegrityError
+        from .db import SessionLocal
+        from .models import AiCache
+        async with SessionLocal() as session:
+            session.add(AiCache(
+                word=word, target_lang=target_lang,
+                native_lang=native_lang, data=data,
+            ))
+            try:
+                await session.commit()
+            except IntegrityError:
+                pass  # Паралельний запит уже закешував
+    except Exception as e:
+        logger.warning(f"Cache store failed: {e}")
+
+
 async def get_word_data(word: str, target_lang: str, native_lang: str = "uk") -> WordData | None:
-    """Запитує OpenAI про слово і повертає структуровані дані."""
+    """Запитує OpenAI про слово і повертає структуровані дані. Перевіряє кеш."""
     word = word.strip().lower()
 
     if not word:
         return None
-
     if len(word) > 100:
         logger.warning(f"Word too long: {len(word)} chars")
         return None
+
+    # ⚡ Cache hit — повертаємо за ~50 мс замість 3 сек OpenAI
+    cached = await _cache_lookup(word, target_lang, native_lang)
+    if cached:
+        logger.info(f"AI cache HIT: '{word}' ({target_lang}/{native_lang})")
+        return cached
 
     try:
         response = await client.chat.completions.create(
@@ -114,6 +158,10 @@ async def get_word_data(word: str, target_lang: str, native_lang: str = "uk") ->
             cost = (response.usage.prompt_tokens * 0.00015 +
                     response.usage.completion_tokens * 0.0006) / 1000
             logger.info(f"OpenAI: {tokens} tokens, ~${cost:.5f}")
+
+        # Зберігаємо для майбутніх запитів — не блокуємо відповідь
+        import asyncio as _aio
+        _aio.create_task(_cache_store(word, target_lang, native_lang, data))
 
         return data
 
