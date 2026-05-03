@@ -164,7 +164,12 @@ async def get_stats(telegram_id: int = Query(...)):
         now = datetime.now(timezone.utc)
         is_pro = user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now
         is_trial = (not is_pro) and user.created_at and (now - user.created_at) < timedelta(days=7)
-        daily_limit = 100 if (is_pro or is_trial) else 10
+        if is_pro:
+            daily_limit = 100
+        elif is_trial:
+            daily_limit = 10
+        else:
+            daily_limit = 0  # post-trial — заблоковано, лише Pro
 
         xp = user.total_xp or 0
         tier = current_tier(xp)

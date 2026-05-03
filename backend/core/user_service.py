@@ -56,17 +56,12 @@ async def get_or_create_user(
         return user
 
 
-XP_FREE_PACKAGE_THRESHOLD = 500  # XP щоб розблокувати безкоштовний пакет після trial
-
-
 async def can_add_word(user: User, lang: str | None = None) -> tuple[bool, str]:
     """
     Логіка лімітів:
     - PRO активна: 100 слів/день
     - TRIAL (перші 7 днів): 10 слів/день
-    - Після trial:
-      - Якщо total_xp >= 500 — безкоштовний пакет 10 слів/день назавжди
-      - Інакше — блокування, потрібен Pro
+    - Після trial: блокування, потрібен Pro (XP дає знижки на Pro у tier-системі).
     """
     from .bot_i18n import t as bt
     msg_lang = lang or user.native_lang or "uk"
@@ -88,14 +83,8 @@ async def can_add_word(user: User, lang: str | None = None) -> tuple[bool, str]:
             return False, bt("limit.trial", msg_lang)
         return True, ""
 
-    # Trial скінчився — потрібен XP-пакет або Pro
-    if (user.total_xp or 0) >= XP_FREE_PACKAGE_THRESHOLD:
-        if user.words_added_today >= 10:
-            return False, bt("limit.free", msg_lang)
-        return True, ""
-
-    # Заблоковано
-    return False, bt("limit.expired", msg_lang, xp=user.total_xp or 0, threshold=XP_FREE_PACKAGE_THRESHOLD)
+    # Trial скінчився — тільки Pro
+    return False, bt("limit.expired", msg_lang, xp=user.total_xp or 0)
 
 
 async def get_user_status(user: User, lang: str | None = None) -> dict:
@@ -117,10 +106,10 @@ async def get_user_status(user: User, lang: str | None = None) -> dict:
         daily_limit = 100
         plan_label = bt("stats.plan.pro", msg_lang)
     elif is_trial:
-        daily_limit = 100
+        daily_limit = 10
         plan_label = bt("stats.plan.trial", msg_lang, days=trial_days_left)
     else:
-        daily_limit = 10
+        daily_limit = 0  # post-trial: блок, тільки Pro
         plan_label = bt("stats.plan.free", msg_lang)
 
     return {
