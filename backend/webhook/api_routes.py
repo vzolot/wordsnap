@@ -136,7 +136,7 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
     if not user.target_lang:
         return {"error": "setup_required"}
 
-    can, reason = await can_add_word(user)
+    can, reason = await can_add_word(user, user.native_lang)
     if not can:
         return {"error": "limit_reached", "message": reason}
 

@@ -21,8 +21,9 @@ from bot.handlers.word_handler import router as word_router
 from bot.handlers.review_handler import router as review_router
 from bot.handlers.setup_handler import router as setup_router, native_lang_keyboard, ask_native_lang_text
 from bot.handlers.songs_handler import router as songs_router
-from core.bot_i18n import help_text, t as bt
+from core.bot_i18n import help_text, premium_text, buy_text, t as bt
 from core.constants import MINI_APP_URL
+from core.languages import lang_flag, lang_name
 from scheduler.reminder import reminder_loop
 from scheduler.recurring_charges import recurring_charges_loop
 from webhook.server import app as webhook_app
@@ -68,49 +69,42 @@ async def cmd_start(message: Message):
     # Новий юзер або ще не обрав мову — запускаємо онбординг
     if not user.target_lang:
         await message.answer(
-            f"👋 Привіт, <b>{tg_user.first_name}</b>! Я <b>WordSnap</b> — "
-            f"твій AI-помічник у вивченні мов 🧠\n\n"
-            + ask_native_lang_text(),
+            f"{bt('start.hi', user.native_lang or 'uk', name=tg_user.first_name)} "
+            f"{bt('start.intro', user.native_lang or 'uk')}\n\n"
+            + ask_native_lang_text(user.native_lang or "uk"),
             reply_markup=native_lang_keyboard(),
         )
         logger.info(f"New user {tg_user.id} — started language setup")
         return
 
+    lang = user.native_lang or "uk"
     status = await get_user_status(user)
+    target = user.target_lang or "en"
 
     if status["is_trial"]:
-        plan_text = (
-            f"🎁 <b>У тебе TRIAL: {status['trial_days_left']} днів повного доступу!</b>\n"
-            f"Користуйся всім без обмежень — а потім вирішиш чи лишатись на Pro."
-        )
+        plan_text = bt("start.plan_trial", lang, days=status["trial_days_left"])
     elif status["plan"] == "pro":
-        plan_text = "💎 <b>План:</b> PRO"
+        plan_text = bt("start.plan_pro", lang)
     else:
-        plan_text = (
-            f"📊 <b>План:</b> FREE (10 слів/день)\n"
-            f"<i>Хочеш більше? /premium</i>"
-        )
+        plan_text = bt("start.plan_free", lang)
 
-    from core.languages import lang_flag, lang_name
-    target = user.target_lang or "en"
     welcome_text = (
-        f"👋 Привіт, <b>{tg_user.first_name}</b>!\n\n"
-        f"Я <b>WordSnap</b> — твій AI-помічник у вивченні мов 🧠\n\n"
-        f"<b>Як це працює:</b>\n"
-        f"1️⃣ Надішли слово або фразу {lang_name(target).lower()}\n"
-        f"2️⃣ Я зроблю переклад, приклади і memory tip\n"
-        f"3️⃣ Нагадаю повторити в правильний час 🔔\n\n"
-        f"🎯 Зараз вивчаємо: <b>{lang_flag(target)} {lang_name(target)}</b>\n\n"
+        f"{bt('start.hi', lang, name=tg_user.first_name)}\n\n"
+        f"{bt('start.intro', lang)}\n\n"
+        f"{bt('start.how_works', lang)}\n"
+        f"{bt('start.step1', lang, lang_name=lang_name(target))}\n"
+        f"{bt('start.step2', lang)}\n"
+        f"{bt('start.step3', lang)}\n\n"
+        f"{bt('start.learning', lang, flag=lang_flag(target), lang_name=lang_name(target))}\n\n"
         f"{plan_text}\n\n"
-        f"📝 Сьогодні додано: {status['used_today']}/{status['daily_limit']}\n\n"
-        f"<i>Змінити мову: /language</i>"
+        f"{bt('start.added_today', lang, used=status['used_today'], limit=status['daily_limit'])}\n\n"
+        f"{bt('start.change_hint', lang)}"
     )
 
-    mini_app_url = "https://miniapp-omega-three.vercel.app"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text="📱 Відкрити WordSnap App",
-            web_app=WebAppInfo(url=mini_app_url),
+            text=bt("setup.open_app", lang),
+            web_app=WebAppInfo(url=MINI_APP_URL),
         )]
     ])
     await message.answer(welcome_text, reply_markup=keyboard)
@@ -179,165 +173,124 @@ async def settings_language(callback: CallbackQuery):
 
 @dp.message(Command("stats"))
 async def cmd_stats(message: Message):
-    """Статистика юзера"""
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    
-    status = await get_user_status(user)
-    
+    lang = user.native_lang or "uk"
+    status = await get_user_status(user, lang)
+
     text = (
-        f"📊 <b>Твоя статистика</b>\n\n"
-        f"📝 Слів сьогодні: <b>{status['used_today']}/{status['daily_limit']}</b>\n"
-        f"📚 Всього слів: <b>{user.total_words}</b>\n"
-        f"🔄 Всього повторень: <b>{user.total_reviews}</b>\n"
-        f"⭐️ План: <b>{status['plan_label']}</b>\n"
+        f"{bt('stats.title', lang)}\n\n"
+        f"{bt('stats.today', lang, used=status['used_today'], limit=status['daily_limit'])}\n"
+        f"{bt('stats.total', lang, n=user.total_words)}\n"
+        f"{bt('stats.reviews', lang, n=user.total_reviews)}\n"
+        f"{bt('stats.plan_label', lang, label=status['plan_label'])}"
     )
-    
     if status["is_trial"]:
-        text += f"\n🎁 <i>Trial закінчиться через {status['trial_days_left']} днів</i>"
+        text += "\n\n" + bt("stats.trial_left", lang, days=status["trial_days_left"])
     elif status["plan"] != "pro":
-        text += f"\n💎 <i>Хочеш більше можливостей? /premium</i>"
-    
+        text += "\n\n" + bt("stats.want_more", lang)
+
     await message.answer(text)
 
 
 @dp.message(Command("premium"))
 async def cmd_premium(message: Message):
-    """Інформація про Pro підписку"""
-    text = (
-        "💎 <b>WordSnap Pro</b>\n\n"
-        "<b>Що отримуєш:</b>\n"
-        "✅ <b>100 слів на день</b> (замість 10)\n"
-        "✅ <b>Розширена статистика</b> прогресу\n"
-        "✅ <b>Тематичні набори</b> (скоро): Travel, Business, IT\n\n"
-        "💰 <b>$1.49/міс</b>\n"
-        "🔄 Автоматичне продовження\n"
-        "❌ Скасувати можна в будь-який момент: /unsubscribe\n\n"
-        "Натисни /buy щоб оформити 👇"
-    )
-    await message.answer(text)
-
-
-@dp.message(Command("buy"))
-async def cmd_buy(message: Message):
-    """Створює посилання на оплату Pro"""
-    user_id = message.from_user.id
-    
-    try:
-        payment = create_payment_link(
-            user_telegram_id=user_id,
-            amount=1.49,
-            currency="USD",
-        )
-        
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(
-                text="💳 Перейти до оплати",
-                url=payment["payment_url"],
-            )]
-        ])
-        
-        text = (
-            "💎 <b>Оплата WordSnap Pro</b>\n\n"
-            "💰 Сума: <b>$1.49</b>\n"
-            "📅 Період: 30 днів\n"
-            "🔄 Автопродовження: <b>так</b> (можна скасувати)\n"
-            "💳 Платіжна система: WayForPay\n\n"
-            "Натисни кнопку нижче, заповни дані картки і отримай Pro!\n\n"
-            "<i>Картка буде збережена для автоматичних щомісячних списань. "
-            "Скасувати в будь-який момент: /unsubscribe</i>"
-        )
-        
-        await message.answer(text, reply_markup=keyboard)
-        logger.info(f"Sent payment link to user {user_id}, order {payment['order_reference']}")
-        
-    except ValueError as e:
-        logger.error(f"WayForPay config error: {e}")
-        await message.answer(
-            "⚠️ Платіжна система тимчасово недоступна. Спробуй пізніше."
-        )
-    except Exception as e:
-        logger.error(f"Error creating payment: {e}", exc_info=True)
-        await message.answer("❌ Сталася помилка. Спробуй ще раз.")
-
-
-@dp.message(Command("subscription"))
-async def cmd_subscription(message: Message):
-    """Інфо про поточну підписку"""
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    
+    lang = user.native_lang or "uk"
+    await message.answer(premium_text(lang))
+
+
+@dp.message(Command("buy"))
+async def cmd_buy(message: Message):
+    user = await get_or_create_user(
+        telegram_id=message.from_user.id,
+        username=message.from_user.username,
+        first_name=message.from_user.first_name,
+    )
+    lang = user.native_lang or "uk"
+
+    try:
+        payment = create_payment_link(
+            user_telegram_id=user.telegram_id,
+            amount=1.49,
+            currency="USD",
+        )
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=bt("buy.btn", lang), url=payment["payment_url"])]
+        ])
+        await message.answer(buy_text(lang), reply_markup=keyboard)
+        logger.info(f"Sent payment link to user {user.telegram_id}, order {payment['order_reference']}")
+    except ValueError as e:
+        logger.error(f"WayForPay config error: {e}")
+        await message.answer(bt("buy.unavailable", lang))
+    except Exception as e:
+        logger.error(f"Error creating payment: {e}", exc_info=True)
+        await message.answer(bt("buy.error", lang))
+
+
+@dp.message(Command("subscription"))
+async def cmd_subscription(message: Message):
+    user = await get_or_create_user(
+        telegram_id=message.from_user.id,
+        username=message.from_user.username,
+        first_name=message.from_user.first_name,
+    )
+    lang = user.native_lang or "uk"
+
     if user.plan == "pro" and user.plan_expires_at:
         is_active = user.plan_expires_at > datetime.now(timezone.utc)
-        
         if is_active:
+            renew_state = bt("sub.autorenew.on" if user.auto_renew else "sub.autorenew.off", lang)
             text = (
-                "💎 <b>Твоя підписка: PRO</b>\n\n"
-                f"📅 Дійсна до: <b>{user.plan_expires_at.strftime('%d.%m.%Y')}</b>\n"
-                f"🔄 Автопродовження: <b>{'✅ ввімкнено' if user.auto_renew else '❌ вимкнено'}</b>\n"
+                f"{bt('sub.pro_title', lang)}\n\n"
+                f"{bt('sub.valid_until', lang, date=user.plan_expires_at.strftime('%d.%m.%Y'))}\n"
+                f"{bt('sub.autorenew_state', lang, state=renew_state)}\n"
             )
-            
             if user.auto_renew:
-                text += "\n<i>Підписка автоматично продовжиться за день до закінчення.</i>\n"
-                text += "\n/unsubscribe — скасувати автопродовження"
+                text += "\n" + bt("sub.will_renew", lang)
+                text += "\n\n" + bt("sub.cancel_hint", lang)
             else:
-                text += "\n<i>Автопродовження вимкнено. Підписка закінчиться у вказану дату.</i>\n"
-                text += "\n/buy — поновити"
+                text += "\n" + bt("sub.wont_renew", lang)
+                text += "\n\n" + bt("sub.renew_hint", lang)
         else:
-            text = (
-                "⚠️ <b>Твоя Pro підписка закінчилась</b>\n\n"
-                "/buy — оформити знов"
-            )
+            text = bt("sub.expired_title", lang) + "\n\n" + bt("sub.buy_again", lang)
     else:
-        text = (
-            "📊 <b>У тебе немає активної Pro підписки</b>\n\n"
-            "/premium — дізнатись про переваги\n"
-            "/buy — оформити"
-        )
-    
+        text = bt("sub.no_pro", lang)
+
     await message.answer(text)
 
 
 @dp.message(Command("unsubscribe"))
 async def cmd_unsubscribe(message: Message):
-    """Скасовує автопродовження"""
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    
+    lang = user.native_lang or "uk"
+
     if user.plan != "pro":
-        await message.answer(
-            "У тебе немає активної підписки.\n"
-            "/premium — дізнатись про Pro"
-        )
+        await message.answer(bt("unsub.no_active", lang))
         return
-    
+
     if not user.auto_renew:
-        await message.answer(
-            "🟡 Автопродовження вже вимкнено.\n\n"
-            f"Pro дійсна до: <b>{user.plan_expires_at.strftime('%d.%m.%Y')}</b>"
-        )
+        date_str = user.plan_expires_at.strftime('%d.%m.%Y') if user.plan_expires_at else "—"
+        await message.answer(bt("unsub.already_off", lang, date=date_str))
         return
-    
+
     cancelled = await cancel_subscription(user.telegram_id)
-    
     if cancelled:
-        await message.answer(
-            "✅ <b>Автопродовження скасовано</b>\n\n"
-            f"Pro залишається активною до: <b>{cancelled.plan_expires_at.strftime('%d.%m.%Y')}</b>\n\n"
-            "<i>Після цієї дати акаунт перейде на FREE план.</i>\n"
-            "Передумаєш — /buy щоб поновити."
-        )
+        date_str = cancelled.plan_expires_at.strftime('%d.%m.%Y') if cancelled.plan_expires_at else "—"
+        await message.answer(bt("unsub.cancelled", lang, date=date_str))
     else:
-        await message.answer("❌ Сталася помилка. Спробуй ще раз.")
+        await message.answer(bt("unsub.error", lang))
 
 
 # Підключаємо роутери (setup першим — має пріоритет над word_router)

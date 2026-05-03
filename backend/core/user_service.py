@@ -56,60 +56,62 @@ async def get_or_create_user(
         return user
 
 
-async def can_add_word(user: User) -> tuple[bool, str]:
-    """Перевіряє чи може юзер додати ще одне слово."""
-    # Pro з активною підпискою
+async def can_add_word(user: User, lang: str | None = None) -> tuple[bool, str]:
+    """
+    Перевіряє чи може юзер додати ще одне слово.
+    Повідомлення-причина повертається мовою юзера (lang або user.native_lang).
+    """
+    from .bot_i18n import t as bt
+    msg_lang = lang or user.native_lang or "uk"
+
     if user.plan == "pro":
         if user.plan_expires_at and user.plan_expires_at > datetime.now(timezone.utc):
             if user.words_added_today >= 100:
-                return False, "Ти досяг ліміту 100 слів/день навіть для Pro 😱"
+                return False, bt("limit.pro", msg_lang)
             return True, ""
-    
-    # Trial: перші 7 днів
+
     trial_active = False
     if user.created_at:
         trial_end = user.created_at + timedelta(days=7)
         if datetime.now(timezone.utc) < trial_end:
             trial_active = True
-    
+
     if trial_active:
         if user.words_added_today >= 100:
-            return False, "Ти досяг ліміту 100 слів/день. Завтра можна знову!"
+            return False, bt("limit.trial", msg_lang)
         return True, ""
-    
-    # Free після trial
+
     if user.words_added_today >= 10:
-        return False, (
-            "⛔️ Денний ліміт 10 слів вичерпано.\n\n"
-            "💎 Купи <b>Pro</b> за $1.49/міс і отримай 100 слів/день.\n"
-            "Команда /buy для оформлення."
-        )
-    
+        return False, bt("limit.free", msg_lang)
+
     return True, ""
 
 
-async def get_user_status(user: User) -> dict:
+async def get_user_status(user: User, lang: str | None = None) -> dict:
     """Повертає поточний статус юзера для відображення."""
+    from .bot_i18n import t as bt
+    msg_lang = lang or user.native_lang or "uk"
+
     is_trial = False
     trial_days_left = 0
-    
+
     if user.plan != "pro" and user.created_at:
         trial_end = user.created_at + timedelta(days=7)
         now = datetime.now(timezone.utc)
         if now < trial_end:
             is_trial = True
             trial_days_left = (trial_end - now).days + 1
-    
+
     if user.plan == "pro":
         daily_limit = 100
-        plan_label = "PRO"
+        plan_label = bt("stats.plan.pro", msg_lang)
     elif is_trial:
         daily_limit = 100
-        plan_label = f"TRIAL ({trial_days_left} дн)"
+        plan_label = bt("stats.plan.trial", msg_lang, days=trial_days_left)
     else:
         daily_limit = 10
-        plan_label = "FREE"
-    
+        plan_label = bt("stats.plan.free", msg_lang)
+
     return {
         "plan": user.plan,
         "plan_label": plan_label,

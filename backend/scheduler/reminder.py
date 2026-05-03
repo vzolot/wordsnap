@@ -11,6 +11,7 @@ from html import escape
 from sqlalchemy import select
 from aiogram import Bot
 
+from core.bot_i18n import t as bt
 from core.constants import REMINDER_COOLDOWN_HOURS
 from core.db import SessionLocal
 from core.models import User
@@ -35,12 +36,13 @@ async def check_and_send_reminders(bot: Bot):
                 if not word:
                     continue
 
+                lang = user.native_lang or "uk"
                 text = (
-                    f"🔔 <b>Час повторити слово!</b>\n\n"
+                    f"{bt('remind.title', lang)}\n\n"
                     f"📚 <b>{escape(word.word)}</b>\n\n"
-                    f"<i>Згадав переклад? Натисни щоб перевірити 👇</i>"
+                    f"{bt('remind.hint', lang)}"
                 )
-                keyboard = show_translation_keyboard(word.id, source="rem")
+                keyboard = show_translation_keyboard(word.id, source="rem", lang=lang)
 
                 await bot.send_message(
                     chat_id=user.telegram_id,

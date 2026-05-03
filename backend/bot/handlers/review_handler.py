@@ -1,42 +1,35 @@
 """
 Хендлер повторення слів.
-- /review — почати сесію повторення зараз
-- callback на 3 кнопки оцінки
 """
 import logging
 from html import escape
+
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 
-from core.user_service import get_or_create_user
-from core.word_service import get_words_due_review, get_word_by_id, process_review
-from core.srs import format_interval
+from core.bot_i18n import t as bt
 from core.languages import lang_flag
+from core.srs import format_interval
+from core.user_service import get_or_create_user
+from core.word_service import get_word_by_id, get_words_due_review, process_review
 from bot.keyboards.review_keyboards import review_answer_keyboard, show_translation_keyboard
 
 logger = logging.getLogger(__name__)
-
 router = Router()
 
 
 def format_review_question(word) -> str:
-    """Питання для повторення — слово без перекладу"""
     word_safe = escape(word.word)
     pos = escape(word.part_of_speech or "")
-    
-    text = f"🔄 <b>Час повторити!</b>\n\n"
+    text = ""  # title is set per-callback below
     text += f"📚 <b>{word_safe}</b>"
     if pos:
         text += f" <i>({pos})</i>"
-    text += "\n\n"
-    text += "<i>Згадай переклад, потім натисни кнопку 👇</i>"
-    
     return text
 
 
 def format_review_revealed(word, native_lang: str = "uk") -> str:
-    """Повна інформація про слово (після натискання 'показати')"""
     word_safe = escape(word.word)
     translation = escape(word.translation or "")
     pos = escape(word.part_of_speech or "")
@@ -47,71 +40,66 @@ def format_review_revealed(word, native_lang: str = "uk") -> str:
         text += f" <i>({pos})</i>"
     text += "\n"
     text += f"{lang_flag(native_lang)} <b>{translation}</b>\n\n"
-    
+
     if word.examples:
-        text += "📖 <b>Examples:</b>\n"
-        for i, ex in enumerate(word.examples[:2], 1):  # тільки 2 приклади на повторенні
-            sentence = escape(ex.get('sentence', '') if isinstance(ex, dict) else '')
+        text += bt("review.examples_label", native_lang) + "\n"
+        for i, ex in enumerate(word.examples[:2], 1):
+            sentence = escape(ex.get("sentence", "") if isinstance(ex, dict) else "")
             text += f"\n<b>{i}.</b> {sentence}\n"
-    
+
     if memory_tip:
         text += f"\n💡 <i>{memory_tip}</i>\n"
-    
-    text += "\n<b>Як добре ти пам'ятаєш?</b>"
-    
+
+    text += "\n" + bt("review.how_well", native_lang)
     return text
 
 
 @router.message(Command("review"))
 async def cmd_review(message: Message):
-    """Показати слова для повторення"""
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    
+    lang = user.native_lang or "uk"
+
     words = await get_words_due_review(user.id, limit=10)
-    
     if not words:
-        await message.answer(
-            "🌱 <b>Немає слів для повторення зараз!</b>\n\n"
-            "Додай нові слова, або зачекай поки прийде час повторити вже додані.\n\n"
-            "<i>Я нагадаю, коли буде час 🔔</i>"
-        )
+        await message.answer(bt("review.empty", lang))
         return
-    
-    await message.answer(
-        f"🎯 <b>{len(words)} слів готові для повторення</b>\n"
-        f"<i>Поїхали!</i>"
-    )
-    
-    # Показуємо перше слово
-    await send_review_word(message, words[0])
+
+    await message.answer(bt("review.ready", lang, n=len(words)))
+    await send_review_word(message, words[0], lang=lang)
 
 
-async def send_review_word(message: Message, word, source: str = "rev") -> None:
-    """Відправити слово для повторення"""
-    text = format_review_question(word)
-    keyboard = show_translation_keyboard(word.id, source=source)
+async def send_review_word(message: Message, word, source: str = "rev", lang: str = "uk") -> None:
+    word_safe = escape(word.word)
+    pos = escape(word.part_of_speech or "")
+    text = f"{bt('review.question_title', lang)}\n\n📚 <b>{word_safe}</b>"
+    if pos:
+        text += f" <i>({pos})</i>"
+    text += "\n\n" + bt("review.guess_hint", lang)
+
+    keyboard = show_translation_keyboard(word.id, source=source, lang=lang)
     await message.answer(text, reply_markup=keyboard)
 
 
 @router.callback_query(F.data.startswith("reveal:"))
 async def show_translation(callback: CallbackQuery):
-    """Юзер натиснув 'Показати переклад'"""
     parts = callback.data.split(":")
     word_id = int(parts[1])
     source = parts[2] if len(parts) > 2 else "rev"
 
+    user = await get_or_create_user(telegram_id=callback.from_user.id)
+    lang = user.native_lang or "uk"
+
     word = await get_word_by_id(word_id)
     if not word:
-        await callback.answer("Слово не знайдено", show_alert=True)
+        await callback.answer(bt("review.not_found", lang), show_alert=True)
         return
 
-    user = await get_or_create_user(telegram_id=callback.from_user.id)
-    text = format_review_revealed(word, native_lang=user.native_lang or "uk")
-    keyboard = review_answer_keyboard(word_id, source=source)
+    text = format_review_revealed(word, native_lang=lang)
+    keyboard = review_answer_keyboard(word_id, source=source, lang=lang)
 
     await callback.message.edit_text(text, reply_markup=keyboard)
     await callback.answer()
@@ -119,10 +107,12 @@ async def show_translation(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("review:"))
 async def handle_review_answer(callback: CallbackQuery):
-    """Юзер натиснув знав/згадав/забув"""
+    user = await get_or_create_user(telegram_id=callback.from_user.id)
+    lang = user.native_lang or "uk"
+
     parts = callback.data.split(":")
     if len(parts) < 3:
-        await callback.answer("Помилка", show_alert=True)
+        await callback.answer(bt("review.error", lang), show_alert=True)
         return
 
     _, result, word_id_str = parts[0], parts[1], parts[2]
@@ -130,49 +120,41 @@ async def handle_review_answer(callback: CallbackQuery):
     word_id = int(word_id_str)
 
     if result not in ("knew", "struggled", "forgot"):
-        await callback.answer("Помилка", show_alert=True)
+        await callback.answer(bt("review.error", lang), show_alert=True)
         return
 
     word, new_interval = await process_review(word_id, result)
-
     if not word:
-        await callback.answer("Слово не знайдено", show_alert=True)
+        await callback.answer(bt("review.not_found", lang), show_alert=True)
         return
 
     interval_text = format_interval(new_interval)
 
     if result == "knew":
-        emoji, praise = "✅", "Чудово!"
+        emoji, praise = "✅", bt("review.praise.knew", lang)
     elif result == "struggled":
-        emoji, praise = "🤔", "Молодець!"
+        emoji, praise = "🤔", bt("review.praise.struggled", lang)
     else:
-        emoji, praise = "❌", "Нічого, повторимо!"
+        emoji, praise = "❌", bt("review.praise.forgot", lang)
 
     text = (
         f"{emoji} <b>{praise}</b>\n\n"
         f"📚 <b>{escape(word.word)}</b> — {escape(word.translation)}\n"
-        f"🔔 <i>Наступне повторення через {interval_text}</i>"
+        f"{bt('review.next_in', lang, interval=interval_text)}"
     )
 
     await callback.message.edit_text(text)
     await callback.answer()
 
-    # Авто-продовження тільки для /review сесії, не для нагадувань
     if source != "rev":
         logger.info(f"User answered '{result}' for word_id={word_id} (from reminder)")
         return
 
     words = await get_words_due_review(word.user_id, limit=10)
-
     if words:
-        await callback.message.answer(
-            f"<i>Залишилось ще {len(words)} слів для повторення</i>"
-        )
-        await send_review_word(callback.message, words[0], source="rev")
+        await callback.message.answer(bt("review.left_more", lang, n=len(words)))
+        await send_review_word(callback.message, words[0], source="rev", lang=lang)
     else:
-        await callback.message.answer(
-            "🎉 <b>Всі слова повторені!</b>\n"
-            "<i>Чудова робота. Я нагадаю коли буде час знову 🔔</i>"
-        )
+        await callback.message.answer(bt("review.all_done", lang))
 
     logger.info(f"User answered '{result}' for word_id={word_id}")

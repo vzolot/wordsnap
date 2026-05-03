@@ -1,10 +1,16 @@
 """
 Локалізація бот-повідомлень для 5 мов.
+
+Шаблони рядків використовують {var}-синтаксис. Для багатих текстів
+є builder-функції внизу файлу.
 """
 from typing import Any
 
-T = {
+
+T: dict[str, dict[str, str]] = {
+    # =========================================================
     "uk": {
+        # — setup —
         "setup.saved": "✅ <b>Налаштування збережено!</b>",
         "setup.native": "🏠 Рідна мова",
         "setup.target": "🎯 Вивчаємо",
@@ -17,6 +23,7 @@ T = {
         "setup.ask_native": "🌍 <b>Яка твоя рідна мова?</b>\n\n<i>Переклади будуть показані цією мовою.</i>",
         "setup.ask_target": "✅ Рідна мова: <b>{flag} {name}</b>\n\n🎯 <b>Яку мову хочеш вивчати?</b>",
 
+        # — help —
         "help.title": "❓ <b>Команди WordSnap</b>",
         "help.learning": "<b>Навчання:</b>",
         "help.send_words": "• Просто надсилай слова — я перекладу",
@@ -32,11 +39,13 @@ T = {
         "help.unsubscribe": "• /unsubscribe — скасувати автопродовження",
         "help.plans": "<b>Free:</b> 10 слів/день\n<b>Pro:</b> 100 слів/день, $1.49/міс",
 
+        # — app / settings —
         "app.intro": "📱 <b>Відкрий WordSnap App</b>\n\nДодавай слова, повторюй у зручному інтерфейсі, відстежуй прогрес.",
         "settings.title": "⚙️ <b>Налаштування</b>",
         "settings.lang_btn": "🌐 Мова навчання",
         "settings.app_btn": "📱 Відкрити додаток",
 
+        # — songs —
         "songs.title": "🎵 <b>Слова з популярних пісень</b>\n\nТапни на пісню — побачиш ключові слова. Натиснеш на слово — додам у твій словник.",
         "songs.empty": "🎵 Поки немає підборок для цієї мови. Скоро додамо!",
         "songs.song_intro": "{emoji} <b>{title}</b>\n<i>{artist}</i>\n\nТапни слово, щоб додати у твій словник:",
@@ -45,7 +54,129 @@ T = {
         "songs.limit_alert": "Денний ліміт вичерпано",
         "songs.adding": "Додаю…",
         "songs.added_inline": "✅ Додано: {word}",
+
+        # — start —
+        "start.hi": "👋 Привіт, <b>{name}</b>!",
+        "start.intro": "Я <b>WordSnap</b> — твій AI-помічник у вивченні мов 🧠",
+        "start.how_works": "<b>Як це працює:</b>",
+        "start.step1": "1️⃣ Надішли слово або фразу {lang_name}",
+        "start.step2": "2️⃣ Я зроблю переклад, приклади і memory tip",
+        "start.step3": "3️⃣ Нагадаю повторити в правильний час 🔔",
+        "start.learning": "🎯 Зараз вивчаємо: <b>{flag} {lang_name}</b>",
+        "start.plan_trial": "🎁 <b>У тебе TRIAL: {days} днів повного доступу!</b>\nКористуйся всім без обмежень — а потім вирішиш чи лишатись на Pro.",
+        "start.plan_pro": "💎 <b>План:</b> PRO",
+        "start.plan_free": "📊 <b>План:</b> FREE (10 слів/день)\n<i>Хочеш більше? /premium</i>",
+        "start.added_today": "📝 Сьогодні додано: {used}/{limit}",
+        "start.change_hint": "<i>Змінити мову: /language</i>",
+
+        # — stats —
+        "stats.title": "📊 <b>Твоя статистика</b>",
+        "stats.today": "📝 Слів сьогодні: <b>{used}/{limit}</b>",
+        "stats.total": "📚 Всього слів: <b>{n}</b>",
+        "stats.reviews": "🔄 Всього повторень: <b>{n}</b>",
+        "stats.plan_label": "⭐️ План: <b>{label}</b>",
+        "stats.trial_left": "🎁 <i>Trial закінчиться через {days} днів</i>",
+        "stats.want_more": "💎 <i>Хочеш більше можливостей? /premium</i>",
+        "stats.plan.pro": "PRO",
+        "stats.plan.free": "FREE",
+        "stats.plan.trial": "TRIAL ({days} дн)",
+
+        # — premium —
+        "premium.title": "💎 <b>WordSnap Pro</b>",
+        "premium.benefits_title": "<b>Що отримуєш:</b>",
+        "premium.b1": "✅ <b>100 слів на день</b> (замість 10)",
+        "premium.b2": "✅ <b>Розширена статистика</b> прогресу",
+        "premium.b3": "✅ <b>Тематичні набори</b>: Travel, Business, IT",
+        "premium.price": "💰 <b>$1.49/міс</b>",
+        "premium.autorenew": "🔄 Автоматичне продовження",
+        "premium.cancel_any": "❌ Скасувати можна в будь-який момент: /unsubscribe",
+        "premium.cta": "Натисни /buy щоб оформити 👇",
+
+        # — buy —
+        "buy.title": "💎 <b>Оплата WordSnap Pro</b>",
+        "buy.amount": "💰 Сума: <b>$1.49</b>",
+        "buy.period": "📅 Період: 30 днів",
+        "buy.autorenew_yes": "🔄 Автопродовження: <b>так</b> (можна скасувати)",
+        "buy.system": "💳 Платіжна система: WayForPay",
+        "buy.cta_text": "Натисни кнопку нижче, заповни дані картки і отримай Pro!",
+        "buy.fineprint": "<i>Картка буде збережена для автоматичних щомісячних списань. Скасувати в будь-який момент: /unsubscribe</i>",
+        "buy.btn": "💳 Перейти до оплати",
+        "buy.unavailable": "⚠️ Платіжна система тимчасово недоступна. Спробуй пізніше.",
+        "buy.error": "❌ Сталася помилка. Спробуй ще раз.",
+
+        # — subscription —
+        "sub.pro_title": "💎 <b>Твоя підписка: PRO</b>",
+        "sub.valid_until": "📅 Дійсна до: <b>{date}</b>",
+        "sub.autorenew_state": "🔄 Автопродовження: <b>{state}</b>",
+        "sub.autorenew.on": "✅ ввімкнено",
+        "sub.autorenew.off": "❌ вимкнено",
+        "sub.will_renew": "<i>Підписка автоматично продовжиться за день до закінчення.</i>",
+        "sub.cancel_hint": "/unsubscribe — скасувати автопродовження",
+        "sub.wont_renew": "<i>Автопродовження вимкнено. Підписка закінчиться у вказану дату.</i>",
+        "sub.renew_hint": "/buy — поновити",
+        "sub.expired_title": "⚠️ <b>Твоя Pro підписка закінчилась</b>",
+        "sub.buy_again": "/buy — оформити знов",
+        "sub.no_pro": "📊 <b>У тебе немає активної Pro підписки</b>\n\n/premium — дізнатись про переваги\n/buy — оформити",
+
+        # — unsubscribe —
+        "unsub.no_active": "У тебе немає активної підписки.\n/premium — дізнатись про Pro",
+        "unsub.already_off": "🟡 Автопродовження вже вимкнено.\n\nPro дійсна до: <b>{date}</b>",
+        "unsub.cancelled": "✅ <b>Автопродовження скасовано</b>\n\nPro залишається активною до: <b>{date}</b>\n\n<i>Після цієї дати акаунт перейде на FREE план.</i>\nПередумаєш — /buy щоб поновити.",
+        "unsub.error": "❌ Сталася помилка. Спробуй ще раз.",
+
+        # — add (instructions for /add command) —
+        "add.title": "➕ <b>Як додати слово</b>",
+        "add.body": "Просто надішли мені слово або фразу {lang_name} — я перекладу і зроблю приклади!",
+        "add.example": "<i>Приклад: ephemeral, take advantage of, look forward to</i>",
+
+        # — word handler errors —
+        "word.too_long": "⚠️ Слово або фраза задовге. Максимум 100 символів.",
+        "word.too_short": "⚠️ Слово закоротке. Спробуй щось довше.",
+        "word.duplicate": "♻️ Слово <b>{word}</b> вже є у твоєму словнику!\n<i>Я нагадаю тобі про нього у потрібний час.</i>",
+        "word.ai_failed": "❌ Не зміг обробити це слово. Спробуй інше або повтори через хвилину.",
+        "word.save_failed": "❌ Не вдалось зберегти слово. Спробуй ще раз.",
+        "word.error": "❌ Сталася помилка. Спробуй пізніше.",
+        "word.setup_first": "⚙️ Спочатку обери мову для вивчення — надішли /start",
+
+        # — word card (after add) —
+        "word.examples_label": "📖 <b>Examples:</b>",
+        "word.tip_label": "💡 <b>Memory tip:</b>",
+        "word.remind_in_1d": "🔔 <i>Нагадаю про це слово через 1 день</i>",
+
+        # — limits —
+        "limit.pro": "Ти досяг ліміту 100 слів/день навіть для Pro 😱",
+        "limit.trial": "Ти досяг ліміту 100 слів/день. Завтра можна знову!",
+        "limit.free": "⛔️ Денний ліміт 10 слів вичерпано.\n\n💎 Купи <b>Pro</b> за $1.49/міс і отримай 100 слів/день.\nКоманда /buy для оформлення.",
+
+        # — review —
+        "review.empty": "🌱 <b>Немає слів для повторення зараз!</b>\n\nДодай нові слова, або зачекай поки прийде час повторити вже додані.\n\n<i>Я нагадаю, коли буде час 🔔</i>",
+        "review.ready": "🎯 <b>{n} слів готові для повторення</b>\n<i>Поїхали!</i>",
+        "review.question_title": "🔄 <b>Час повторити!</b>",
+        "review.guess_hint": "<i>Згадай переклад, потім натисни кнопку 👇</i>",
+        "review.examples_label": "📖 <b>Examples:</b>",
+        "review.how_well": "<b>Як добре ти пам'ятаєш?</b>",
+        "review.praise.knew": "Чудово!",
+        "review.praise.struggled": "Молодець!",
+        "review.praise.forgot": "Нічого, повторимо!",
+        "review.next_in": "🔔 <i>Наступне повторення через {interval}</i>",
+        "review.left_more": "<i>Залишилось ще {n} слів для повторення</i>",
+        "review.all_done": "🎉 <b>Всі слова повторені!</b>\n<i>Чудова робота. Я нагадаю коли буде час знову 🔔</i>",
+        "review.not_found": "Слово не знайдено",
+        "review.error": "Помилка",
+
+        # — review keyboards —
+        "rev.btn.knew": "✅ Знав",
+        "rev.btn.struggled": "🤔 Згадав",
+        "rev.btn.forgot": "❌ Забув",
+        "rev.btn.reveal": "👁 Показати переклад",
+        "rev.btn.open_app": "📱 Відкрити App",
+
+        # — reminders —
+        "remind.title": "🔔 <b>Час повторити слово!</b>",
+        "remind.hint": "<i>Згадав переклад? Натисни щоб перевірити 👇</i>",
     },
+
+    # =========================================================
     "en": {
         "setup.saved": "✅ <b>Setup saved!</b>",
         "setup.native": "🏠 Native language",
@@ -87,7 +218,116 @@ T = {
         "songs.limit_alert": "Daily limit reached",
         "songs.adding": "Adding…",
         "songs.added_inline": "✅ Added: {word}",
+
+        "start.hi": "👋 Hi <b>{name}</b>!",
+        "start.intro": "I'm <b>WordSnap</b> — your AI helper for learning languages 🧠",
+        "start.how_works": "<b>How it works:</b>",
+        "start.step1": "1️⃣ Send a word or phrase in {lang_name}",
+        "start.step2": "2️⃣ I'll give translation, examples, and memory tip",
+        "start.step3": "3️⃣ I'll remind you to review at the right time 🔔",
+        "start.learning": "🎯 Learning: <b>{flag} {lang_name}</b>",
+        "start.plan_trial": "🎁 <b>You're on TRIAL: {days} days of full access!</b>\nUse everything without limits — then decide whether to stay on Pro.",
+        "start.plan_pro": "💎 <b>Plan:</b> PRO",
+        "start.plan_free": "📊 <b>Plan:</b> FREE (10 words/day)\n<i>Want more? /premium</i>",
+        "start.added_today": "📝 Added today: {used}/{limit}",
+        "start.change_hint": "<i>Change language: /language</i>",
+
+        "stats.title": "📊 <b>Your stats</b>",
+        "stats.today": "📝 Words today: <b>{used}/{limit}</b>",
+        "stats.total": "📚 Total words: <b>{n}</b>",
+        "stats.reviews": "🔄 Total reviews: <b>{n}</b>",
+        "stats.plan_label": "⭐️ Plan: <b>{label}</b>",
+        "stats.trial_left": "🎁 <i>Trial ends in {days} days</i>",
+        "stats.want_more": "💎 <i>Want more features? /premium</i>",
+        "stats.plan.pro": "PRO",
+        "stats.plan.free": "FREE",
+        "stats.plan.trial": "TRIAL ({days} d)",
+
+        "premium.title": "💎 <b>WordSnap Pro</b>",
+        "premium.benefits_title": "<b>What you get:</b>",
+        "premium.b1": "✅ <b>100 words/day</b> (instead of 10)",
+        "premium.b2": "✅ <b>Detailed progress stats</b>",
+        "premium.b3": "✅ <b>Themed packs</b>: Travel, Business, IT",
+        "premium.price": "💰 <b>$1.49/mo</b>",
+        "premium.autorenew": "🔄 Auto-renewal",
+        "premium.cancel_any": "❌ Cancel anytime: /unsubscribe",
+        "premium.cta": "Tap /buy to subscribe 👇",
+
+        "buy.title": "💎 <b>Pay for WordSnap Pro</b>",
+        "buy.amount": "💰 Amount: <b>$1.49</b>",
+        "buy.period": "📅 Period: 30 days",
+        "buy.autorenew_yes": "🔄 Auto-renewal: <b>yes</b> (can be cancelled)",
+        "buy.system": "💳 Payment provider: WayForPay",
+        "buy.cta_text": "Tap the button below, fill in card details and get Pro!",
+        "buy.fineprint": "<i>Card will be saved for automatic monthly charges. Cancel anytime: /unsubscribe</i>",
+        "buy.btn": "💳 Go to payment",
+        "buy.unavailable": "⚠️ Payment system temporarily unavailable. Try later.",
+        "buy.error": "❌ Something went wrong. Try again.",
+
+        "sub.pro_title": "💎 <b>Your subscription: PRO</b>",
+        "sub.valid_until": "📅 Valid until: <b>{date}</b>",
+        "sub.autorenew_state": "🔄 Auto-renewal: <b>{state}</b>",
+        "sub.autorenew.on": "✅ enabled",
+        "sub.autorenew.off": "❌ disabled",
+        "sub.will_renew": "<i>Subscription will renew automatically a day before expiration.</i>",
+        "sub.cancel_hint": "/unsubscribe — cancel auto-renewal",
+        "sub.wont_renew": "<i>Auto-renewal disabled. Subscription will end on the date above.</i>",
+        "sub.renew_hint": "/buy — renew",
+        "sub.expired_title": "⚠️ <b>Your Pro subscription has ended</b>",
+        "sub.buy_again": "/buy — subscribe again",
+        "sub.no_pro": "📊 <b>You don't have an active Pro subscription</b>\n\n/premium — see benefits\n/buy — subscribe",
+
+        "unsub.no_active": "You don't have an active subscription.\n/premium — learn about Pro",
+        "unsub.already_off": "🟡 Auto-renewal is already off.\n\nPro valid until: <b>{date}</b>",
+        "unsub.cancelled": "✅ <b>Auto-renewal cancelled</b>\n\nPro stays active until: <b>{date}</b>\n\n<i>After that, the account moves to FREE.</i>\nChanged your mind? /buy to resubscribe.",
+        "unsub.error": "❌ Something went wrong. Try again.",
+
+        "add.title": "➕ <b>How to add a word</b>",
+        "add.body": "Just send me a word or phrase in {lang_name} — I'll translate and provide examples!",
+        "add.example": "<i>Example: ephemeral, take advantage of, look forward to</i>",
+
+        "word.too_long": "⚠️ Word/phrase is too long. Max 100 characters.",
+        "word.too_short": "⚠️ Word is too short. Try something longer.",
+        "word.duplicate": "♻️ Word <b>{word}</b> is already in your vocabulary!\n<i>I'll remind you about it at the right time.</i>",
+        "word.ai_failed": "❌ Couldn't process this word. Try another, or retry in a minute.",
+        "word.save_failed": "❌ Failed to save the word. Try again.",
+        "word.error": "❌ An error occurred. Try later.",
+        "word.setup_first": "⚙️ First choose a language to learn — send /start",
+
+        "word.examples_label": "📖 <b>Examples:</b>",
+        "word.tip_label": "💡 <b>Memory tip:</b>",
+        "word.remind_in_1d": "🔔 <i>I'll remind you about this word in 1 day</i>",
+
+        "limit.pro": "You hit the 100 words/day limit, even on Pro 😱",
+        "limit.trial": "You hit the 100 words/day limit. Try again tomorrow!",
+        "limit.free": "⛔️ Daily limit of 10 words is up.\n\n💎 Get <b>Pro</b> for $1.49/mo and unlock 100 words/day.\nUse /buy to subscribe.",
+
+        "review.empty": "🌱 <b>No words to review right now!</b>\n\nAdd new words, or wait until it's time to review existing ones.\n\n<i>I'll remind you when the time comes 🔔</i>",
+        "review.ready": "🎯 <b>{n} words ready to review</b>\n<i>Let's go!</i>",
+        "review.question_title": "🔄 <b>Time to review!</b>",
+        "review.guess_hint": "<i>Recall the translation, then tap a button 👇</i>",
+        "review.examples_label": "📖 <b>Examples:</b>",
+        "review.how_well": "<b>How well do you remember?</b>",
+        "review.praise.knew": "Excellent!",
+        "review.praise.struggled": "Nice!",
+        "review.praise.forgot": "No problem, we'll repeat!",
+        "review.next_in": "🔔 <i>Next review in {interval}</i>",
+        "review.left_more": "<i>{n} more words to review</i>",
+        "review.all_done": "🎉 <b>All words reviewed!</b>\n<i>Great job. I'll remind you when it's time again 🔔</i>",
+        "review.not_found": "Word not found",
+        "review.error": "Error",
+
+        "rev.btn.knew": "✅ Knew",
+        "rev.btn.struggled": "🤔 Recalled",
+        "rev.btn.forgot": "❌ Forgot",
+        "rev.btn.reveal": "👁 Show translation",
+        "rev.btn.open_app": "📱 Open App",
+
+        "remind.title": "🔔 <b>Time to review a word!</b>",
+        "remind.hint": "<i>Remember the translation? Tap to check 👇</i>",
     },
+
+    # =========================================================
     "es": {
         "setup.saved": "✅ <b>¡Configuración guardada!</b>",
         "setup.native": "🏠 Idioma nativo",
@@ -129,7 +369,116 @@ T = {
         "songs.limit_alert": "Límite diario alcanzado",
         "songs.adding": "Añadiendo…",
         "songs.added_inline": "✅ Añadida: {word}",
+
+        "start.hi": "👋 ¡Hola, <b>{name}</b>!",
+        "start.intro": "Soy <b>WordSnap</b> — tu asistente de IA para aprender idiomas 🧠",
+        "start.how_works": "<b>Cómo funciona:</b>",
+        "start.step1": "1️⃣ Envía una palabra o frase en {lang_name}",
+        "start.step2": "2️⃣ Te daré traducción, ejemplos y truco para recordar",
+        "start.step3": "3️⃣ Te recordaré repasar en el momento adecuado 🔔",
+        "start.learning": "🎯 Aprendiendo: <b>{flag} {lang_name}</b>",
+        "start.plan_trial": "🎁 <b>Estás en TRIAL: ¡{days} días de acceso completo!</b>\nUsa todo sin límites — luego decides si te quedas en Pro.",
+        "start.plan_pro": "💎 <b>Plan:</b> PRO",
+        "start.plan_free": "📊 <b>Plan:</b> FREE (10 palabras/día)\n<i>¿Quieres más? /premium</i>",
+        "start.added_today": "📝 Añadidas hoy: {used}/{limit}",
+        "start.change_hint": "<i>Cambiar idioma: /language</i>",
+
+        "stats.title": "📊 <b>Tus estadísticas</b>",
+        "stats.today": "📝 Palabras hoy: <b>{used}/{limit}</b>",
+        "stats.total": "📚 Total: <b>{n}</b>",
+        "stats.reviews": "🔄 Repasos totales: <b>{n}</b>",
+        "stats.plan_label": "⭐️ Plan: <b>{label}</b>",
+        "stats.trial_left": "🎁 <i>Trial termina en {days} días</i>",
+        "stats.want_more": "💎 <i>¿Quieres más? /premium</i>",
+        "stats.plan.pro": "PRO",
+        "stats.plan.free": "FREE",
+        "stats.plan.trial": "TRIAL ({days} d)",
+
+        "premium.title": "💎 <b>WordSnap Pro</b>",
+        "premium.benefits_title": "<b>Qué obtienes:</b>",
+        "premium.b1": "✅ <b>100 palabras/día</b> (en lugar de 10)",
+        "premium.b2": "✅ <b>Estadísticas detalladas</b> de progreso",
+        "premium.b3": "✅ <b>Packs temáticos</b>: Travel, Business, IT",
+        "premium.price": "💰 <b>$1.49/mes</b>",
+        "premium.autorenew": "🔄 Renovación automática",
+        "premium.cancel_any": "❌ Cancela cuando quieras: /unsubscribe",
+        "premium.cta": "Pulsa /buy para suscribirte 👇",
+
+        "buy.title": "💎 <b>Pago de WordSnap Pro</b>",
+        "buy.amount": "💰 Importe: <b>$1.49</b>",
+        "buy.period": "📅 Período: 30 días",
+        "buy.autorenew_yes": "🔄 Renovación automática: <b>sí</b> (cancelable)",
+        "buy.system": "💳 Pasarela: WayForPay",
+        "buy.cta_text": "¡Pulsa el botón abajo, completa los datos de tu tarjeta y obtén Pro!",
+        "buy.fineprint": "<i>La tarjeta se guardará para los cobros mensuales automáticos. Cancela cuando quieras: /unsubscribe</i>",
+        "buy.btn": "💳 Ir al pago",
+        "buy.unavailable": "⚠️ Pasarela no disponible. Inténtalo más tarde.",
+        "buy.error": "❌ Algo salió mal. Inténtalo de nuevo.",
+
+        "sub.pro_title": "💎 <b>Tu suscripción: PRO</b>",
+        "sub.valid_until": "📅 Válida hasta: <b>{date}</b>",
+        "sub.autorenew_state": "🔄 Renovación automática: <b>{state}</b>",
+        "sub.autorenew.on": "✅ activada",
+        "sub.autorenew.off": "❌ desactivada",
+        "sub.will_renew": "<i>La suscripción se renovará automáticamente un día antes de expirar.</i>",
+        "sub.cancel_hint": "/unsubscribe — cancelar renovación",
+        "sub.wont_renew": "<i>Renovación desactivada. La suscripción terminará en la fecha indicada.</i>",
+        "sub.renew_hint": "/buy — renovar",
+        "sub.expired_title": "⚠️ <b>Tu suscripción Pro ha terminado</b>",
+        "sub.buy_again": "/buy — suscribirse otra vez",
+        "sub.no_pro": "📊 <b>No tienes una suscripción Pro activa</b>\n\n/premium — ver beneficios\n/buy — suscribirse",
+
+        "unsub.no_active": "No tienes una suscripción activa.\n/premium — info Pro",
+        "unsub.already_off": "🟡 La renovación ya está desactivada.\n\nPro válida hasta: <b>{date}</b>",
+        "unsub.cancelled": "✅ <b>Renovación cancelada</b>\n\nPro sigue activa hasta: <b>{date}</b>\n\n<i>Después de esta fecha, la cuenta pasará a FREE.</i>\n¿Cambiaste de opinión? /buy para resuscribir.",
+        "unsub.error": "❌ Algo salió mal. Inténtalo de nuevo.",
+
+        "add.title": "➕ <b>Cómo añadir una palabra</b>",
+        "add.body": "Solo envíame una palabra o frase en {lang_name} — yo traduciré y daré ejemplos!",
+        "add.example": "<i>Ejemplo: ephemeral, take advantage of, look forward to</i>",
+
+        "word.too_long": "⚠️ Palabra/frase demasiado larga. Máx. 100 caracteres.",
+        "word.too_short": "⚠️ Palabra muy corta. Prueba algo más largo.",
+        "word.duplicate": "♻️ La palabra <b>{word}</b> ya está en tu vocabulario!\n<i>Te recordaré cuando sea el momento.</i>",
+        "word.ai_failed": "❌ No pude procesar esta palabra. Prueba otra o reintenta en un minuto.",
+        "word.save_failed": "❌ No se pudo guardar la palabra. Inténtalo de nuevo.",
+        "word.error": "❌ Ha ocurrido un error. Inténtalo más tarde.",
+        "word.setup_first": "⚙️ Primero elige un idioma para aprender — envía /start",
+
+        "word.examples_label": "📖 <b>Ejemplos:</b>",
+        "word.tip_label": "💡 <b>Truco:</b>",
+        "word.remind_in_1d": "🔔 <i>Te recordaré esta palabra en 1 día</i>",
+
+        "limit.pro": "Has alcanzado el límite de 100 palabras/día, incluso en Pro 😱",
+        "limit.trial": "Has alcanzado el límite de 100 palabras/día. ¡Mañana otra vez!",
+        "limit.free": "⛔️ Límite diario de 10 palabras agotado.\n\n💎 Obtén <b>Pro</b> por $1.49/mes y consigue 100 palabras/día.\nUsa /buy.",
+
+        "review.empty": "🌱 <b>¡No hay palabras para repasar ahora!</b>\n\nAñade más palabras o espera hasta que sea hora.\n\n<i>Te recordaré 🔔</i>",
+        "review.ready": "🎯 <b>{n} palabras listas para repasar</b>\n<i>¡Vamos!</i>",
+        "review.question_title": "🔄 <b>¡Hora de repasar!</b>",
+        "review.guess_hint": "<i>Recuerda la traducción y luego pulsa un botón 👇</i>",
+        "review.examples_label": "📖 <b>Ejemplos:</b>",
+        "review.how_well": "<b>¿Qué tan bien la recuerdas?</b>",
+        "review.praise.knew": "¡Excelente!",
+        "review.praise.struggled": "¡Bien!",
+        "review.praise.forgot": "Tranquilo, la repasaremos.",
+        "review.next_in": "🔔 <i>Próximo repaso en {interval}</i>",
+        "review.left_more": "<i>Quedan {n} palabras para repasar</i>",
+        "review.all_done": "🎉 <b>¡Todas las palabras repasadas!</b>\n<i>¡Buen trabajo! Te recordaré cuando sea el momento de nuevo 🔔</i>",
+        "review.not_found": "Palabra no encontrada",
+        "review.error": "Error",
+
+        "rev.btn.knew": "✅ Sabía",
+        "rev.btn.struggled": "🤔 Recordé",
+        "rev.btn.forgot": "❌ Olvidé",
+        "rev.btn.reveal": "👁 Mostrar traducción",
+        "rev.btn.open_app": "📱 Abrir App",
+
+        "remind.title": "🔔 <b>¡Hora de repasar una palabra!</b>",
+        "remind.hint": "<i>¿Recuerdas la traducción? Pulsa para verificar 👇</i>",
     },
+
+    # =========================================================
     "pl": {
         "setup.saved": "✅ <b>Ustawienia zapisane!</b>",
         "setup.native": "🏠 Język ojczysty",
@@ -171,7 +520,116 @@ T = {
         "songs.limit_alert": "Dzienny limit wyczerpany",
         "songs.adding": "Dodaję…",
         "songs.added_inline": "✅ Dodano: {word}",
+
+        "start.hi": "👋 Cześć, <b>{name}</b>!",
+        "start.intro": "Jestem <b>WordSnap</b> — twój asystent AI do nauki języków 🧠",
+        "start.how_works": "<b>Jak to działa:</b>",
+        "start.step1": "1️⃣ Wyślij słowo lub frazę po {lang_name}",
+        "start.step2": "2️⃣ Dam tłumaczenie, przykłady i wskazówkę",
+        "start.step3": "3️⃣ Przypomnę o powtórce w odpowiednim czasie 🔔",
+        "start.learning": "🎯 Uczę: <b>{flag} {lang_name}</b>",
+        "start.plan_trial": "🎁 <b>Masz TRIAL: {days} dni pełnego dostępu!</b>\nKorzystaj bez ograniczeń — potem zdecydujesz o Pro.",
+        "start.plan_pro": "💎 <b>Plan:</b> PRO",
+        "start.plan_free": "📊 <b>Plan:</b> FREE (10 słów/dzień)\n<i>Chcesz więcej? /premium</i>",
+        "start.added_today": "📝 Dodano dziś: {used}/{limit}",
+        "start.change_hint": "<i>Zmień język: /language</i>",
+
+        "stats.title": "📊 <b>Twoje statystyki</b>",
+        "stats.today": "📝 Słów dziś: <b>{used}/{limit}</b>",
+        "stats.total": "📚 Łącznie słów: <b>{n}</b>",
+        "stats.reviews": "🔄 Wszystkich powtórzeń: <b>{n}</b>",
+        "stats.plan_label": "⭐️ Plan: <b>{label}</b>",
+        "stats.trial_left": "🎁 <i>Trial kończy się za {days} dni</i>",
+        "stats.want_more": "💎 <i>Chcesz więcej? /premium</i>",
+        "stats.plan.pro": "PRO",
+        "stats.plan.free": "FREE",
+        "stats.plan.trial": "TRIAL ({days} dni)",
+
+        "premium.title": "💎 <b>WordSnap Pro</b>",
+        "premium.benefits_title": "<b>Co dostajesz:</b>",
+        "premium.b1": "✅ <b>100 słów/dzień</b> (zamiast 10)",
+        "premium.b2": "✅ <b>Szczegółowe statystyki</b> postępów",
+        "premium.b3": "✅ <b>Tematyczne paczki</b>: Travel, Business, IT",
+        "premium.price": "💰 <b>$1.49/mc</b>",
+        "premium.autorenew": "🔄 Automatyczne odnawianie",
+        "premium.cancel_any": "❌ Anuluj kiedy chcesz: /unsubscribe",
+        "premium.cta": "Wpisz /buy, by się zapisać 👇",
+
+        "buy.title": "💎 <b>Płatność za WordSnap Pro</b>",
+        "buy.amount": "💰 Kwota: <b>$1.49</b>",
+        "buy.period": "📅 Okres: 30 dni",
+        "buy.autorenew_yes": "🔄 Auto-odnawianie: <b>tak</b> (można anulować)",
+        "buy.system": "💳 System: WayForPay",
+        "buy.cta_text": "Naciśnij przycisk, podaj dane karty i odbierz Pro!",
+        "buy.fineprint": "<i>Karta zostanie zapisana do automatycznych miesięcznych obciążeń. Anulowanie: /unsubscribe</i>",
+        "buy.btn": "💳 Przejdź do płatności",
+        "buy.unavailable": "⚠️ System płatności chwilowo niedostępny. Spróbuj później.",
+        "buy.error": "❌ Coś poszło nie tak. Spróbuj ponownie.",
+
+        "sub.pro_title": "💎 <b>Twoja subskrypcja: PRO</b>",
+        "sub.valid_until": "📅 Ważna do: <b>{date}</b>",
+        "sub.autorenew_state": "🔄 Auto-odnawianie: <b>{state}</b>",
+        "sub.autorenew.on": "✅ włączone",
+        "sub.autorenew.off": "❌ wyłączone",
+        "sub.will_renew": "<i>Subskrypcja zostanie odnowiona dzień przed wygaśnięciem.</i>",
+        "sub.cancel_hint": "/unsubscribe — anuluj odnawianie",
+        "sub.wont_renew": "<i>Auto-odnawianie wyłączone. Subskrypcja wygaśnie w podanej dacie.</i>",
+        "sub.renew_hint": "/buy — odnów",
+        "sub.expired_title": "⚠️ <b>Twoja subskrypcja Pro wygasła</b>",
+        "sub.buy_again": "/buy — kup ponownie",
+        "sub.no_pro": "📊 <b>Nie masz aktywnej subskrypcji Pro</b>\n\n/premium — zobacz korzyści\n/buy — zapisz się",
+
+        "unsub.no_active": "Nie masz aktywnej subskrypcji.\n/premium — informacje o Pro",
+        "unsub.already_off": "🟡 Auto-odnawianie już wyłączone.\n\nPro ważna do: <b>{date}</b>",
+        "unsub.cancelled": "✅ <b>Auto-odnawianie anulowane</b>\n\nPro pozostaje aktywna do: <b>{date}</b>\n\n<i>Po tej dacie konto przejdzie na FREE.</i>\nZmieniasz zdanie? /buy by wrócić.",
+        "unsub.error": "❌ Coś poszło nie tak. Spróbuj ponownie.",
+
+        "add.title": "➕ <b>Jak dodać słowo</b>",
+        "add.body": "Po prostu wyślij mi słowo lub frazę po {lang_name} — przetłumaczę i podam przykłady!",
+        "add.example": "<i>Przykład: ephemeral, take advantage of, look forward to</i>",
+
+        "word.too_long": "⚠️ Słowo/fraza za długie. Maks. 100 znaków.",
+        "word.too_short": "⚠️ Słowo za krótkie. Spróbuj coś dłuższego.",
+        "word.duplicate": "♻️ Słowo <b>{word}</b> już jest w słowniku!\n<i>Przypomnę o nim w odpowiednim momencie.</i>",
+        "word.ai_failed": "❌ Nie udało się przetworzyć tego słowa. Spróbuj inne lub powtórz za minutę.",
+        "word.save_failed": "❌ Nie udało się zapisać słowa. Spróbuj ponownie.",
+        "word.error": "❌ Wystąpił błąd. Spróbuj później.",
+        "word.setup_first": "⚙️ Najpierw wybierz język nauki — wyślij /start",
+
+        "word.examples_label": "📖 <b>Przykłady:</b>",
+        "word.tip_label": "💡 <b>Wskazówka:</b>",
+        "word.remind_in_1d": "🔔 <i>Przypomnę o tym słowie za 1 dzień</i>",
+
+        "limit.pro": "Osiągnięto limit 100 słów/dzień nawet na Pro 😱",
+        "limit.trial": "Osiągnięto limit 100 słów/dzień. Jutro znów można!",
+        "limit.free": "⛔️ Dzienny limit 10 słów wyczerpany.\n\n💎 Kup <b>Pro</b> za $1.49/mc i miej 100 słów/dzień.\nWpisz /buy.",
+
+        "review.empty": "🌱 <b>Brak słów do powtórki!</b>\n\nDodaj nowe słowa lub poczekaj na właściwy czas.\n\n<i>Przypomnę 🔔</i>",
+        "review.ready": "🎯 <b>{n} słów gotowych do powtórki</b>\n<i>Jedziemy!</i>",
+        "review.question_title": "🔄 <b>Czas na powtórkę!</b>",
+        "review.guess_hint": "<i>Przypomnij sobie tłumaczenie, potem naciśnij 👇</i>",
+        "review.examples_label": "📖 <b>Przykłady:</b>",
+        "review.how_well": "<b>Jak dobrze pamiętasz?</b>",
+        "review.praise.knew": "Świetnie!",
+        "review.praise.struggled": "Brawo!",
+        "review.praise.forgot": "Spokojnie, powtórzymy!",
+        "review.next_in": "🔔 <i>Następna powtórka za {interval}</i>",
+        "review.left_more": "<i>Zostało jeszcze {n} słów do powtórzenia</i>",
+        "review.all_done": "🎉 <b>Wszystkie słowa powtórzone!</b>\n<i>Świetna robota. Przypomnę, gdy będzie czas znów 🔔</i>",
+        "review.not_found": "Nie znaleziono słowa",
+        "review.error": "Błąd",
+
+        "rev.btn.knew": "✅ Wiedziałem",
+        "rev.btn.struggled": "🤔 Przypomniałem",
+        "rev.btn.forgot": "❌ Zapomniałem",
+        "rev.btn.reveal": "👁 Pokaż tłumaczenie",
+        "rev.btn.open_app": "📱 Otwórz App",
+
+        "remind.title": "🔔 <b>Czas na powtórkę słowa!</b>",
+        "remind.hint": "<i>Pamiętasz tłumaczenie? Naciśnij, by sprawdzić 👇</i>",
     },
+
+    # =========================================================
     "de": {
         "setup.saved": "✅ <b>Einstellungen gespeichert!</b>",
         "setup.native": "🏠 Muttersprache",
@@ -213,6 +671,113 @@ T = {
         "songs.limit_alert": "Tageslimit erreicht",
         "songs.adding": "Hinzufügen…",
         "songs.added_inline": "✅ Hinzugefügt: {word}",
+
+        "start.hi": "👋 Hallo, <b>{name}</b>!",
+        "start.intro": "Ich bin <b>WordSnap</b> — dein KI-Helfer beim Sprachenlernen 🧠",
+        "start.how_works": "<b>So funktioniert es:</b>",
+        "start.step1": "1️⃣ Sende ein Wort oder Phrase auf {lang_name}",
+        "start.step2": "2️⃣ Ich gebe Übersetzung, Beispiele und Merkhilfe",
+        "start.step3": "3️⃣ Ich erinnere dich zur richtigen Zeit ans Wiederholen 🔔",
+        "start.learning": "🎯 Lerne: <b>{flag} {lang_name}</b>",
+        "start.plan_trial": "🎁 <b>Du hast TRIAL: {days} Tage voller Zugang!</b>\nNutze alles ohne Limits — danach entscheidest du über Pro.",
+        "start.plan_pro": "💎 <b>Plan:</b> PRO",
+        "start.plan_free": "📊 <b>Plan:</b> FREE (10 Wörter/Tag)\n<i>Mehr willst du? /premium</i>",
+        "start.added_today": "📝 Heute hinzugefügt: {used}/{limit}",
+        "start.change_hint": "<i>Sprache ändern: /language</i>",
+
+        "stats.title": "📊 <b>Deine Statistik</b>",
+        "stats.today": "📝 Wörter heute: <b>{used}/{limit}</b>",
+        "stats.total": "📚 Wörter insgesamt: <b>{n}</b>",
+        "stats.reviews": "🔄 Wiederholungen insgesamt: <b>{n}</b>",
+        "stats.plan_label": "⭐️ Plan: <b>{label}</b>",
+        "stats.trial_left": "🎁 <i>Trial endet in {days} Tagen</i>",
+        "stats.want_more": "💎 <i>Mehr Funktionen? /premium</i>",
+        "stats.plan.pro": "PRO",
+        "stats.plan.free": "FREE",
+        "stats.plan.trial": "TRIAL ({days} T)",
+
+        "premium.title": "💎 <b>WordSnap Pro</b>",
+        "premium.benefits_title": "<b>Was du bekommst:</b>",
+        "premium.b1": "✅ <b>100 Wörter/Tag</b> (statt 10)",
+        "premium.b2": "✅ <b>Detaillierte Statistik</b>",
+        "premium.b3": "✅ <b>Themen-Packs</b>: Travel, Business, IT",
+        "premium.price": "💰 <b>$1.49/Mon.</b>",
+        "premium.autorenew": "🔄 Automatische Verlängerung",
+        "premium.cancel_any": "❌ Jederzeit kündbar: /unsubscribe",
+        "premium.cta": "Tippe /buy, um zu abonnieren 👇",
+
+        "buy.title": "💎 <b>WordSnap Pro bezahlen</b>",
+        "buy.amount": "💰 Betrag: <b>$1.49</b>",
+        "buy.period": "📅 Zeitraum: 30 Tage",
+        "buy.autorenew_yes": "🔄 Auto-Verlängerung: <b>ja</b> (kündbar)",
+        "buy.system": "💳 Bezahldienst: WayForPay",
+        "buy.cta_text": "Tippe unten, gib deine Kartendaten ein und hol dir Pro!",
+        "buy.fineprint": "<i>Die Karte wird für monatliche Abbuchungen gespeichert. Kündigen jederzeit: /unsubscribe</i>",
+        "buy.btn": "💳 Zur Zahlung",
+        "buy.unavailable": "⚠️ Zahlungssystem vorübergehend nicht verfügbar. Versuche es später.",
+        "buy.error": "❌ Etwas ist schiefgelaufen. Versuche es erneut.",
+
+        "sub.pro_title": "💎 <b>Dein Abo: PRO</b>",
+        "sub.valid_until": "📅 Gültig bis: <b>{date}</b>",
+        "sub.autorenew_state": "🔄 Auto-Verlängerung: <b>{state}</b>",
+        "sub.autorenew.on": "✅ aktiviert",
+        "sub.autorenew.off": "❌ deaktiviert",
+        "sub.will_renew": "<i>Das Abo verlängert sich automatisch einen Tag vor Ablauf.</i>",
+        "sub.cancel_hint": "/unsubscribe — Auto-Verlängerung kündigen",
+        "sub.wont_renew": "<i>Auto-Verlängerung deaktiviert. Das Abo endet am angegebenen Datum.</i>",
+        "sub.renew_hint": "/buy — verlängern",
+        "sub.expired_title": "⚠️ <b>Dein Pro-Abo ist abgelaufen</b>",
+        "sub.buy_again": "/buy — erneut abonnieren",
+        "sub.no_pro": "📊 <b>Du hast kein aktives Pro-Abo</b>\n\n/premium — Vorteile sehen\n/buy — abonnieren",
+
+        "unsub.no_active": "Du hast kein aktives Abo.\n/premium — über Pro erfahren",
+        "unsub.already_off": "🟡 Auto-Verlängerung ist bereits aus.\n\nPro gültig bis: <b>{date}</b>",
+        "unsub.cancelled": "✅ <b>Auto-Verlängerung gekündigt</b>\n\nPro bleibt aktiv bis: <b>{date}</b>\n\n<i>Danach wird das Konto auf FREE umgestellt.</i>\nUmentschieden? /buy zum Reaktivieren.",
+        "unsub.error": "❌ Etwas ist schiefgelaufen. Versuche es erneut.",
+
+        "add.title": "➕ <b>Wie man ein Wort hinzufügt</b>",
+        "add.body": "Sende mir einfach ein Wort oder Phrase auf {lang_name} — ich übersetze und gebe Beispiele!",
+        "add.example": "<i>Beispiel: ephemeral, take advantage of, look forward to</i>",
+
+        "word.too_long": "⚠️ Wort/Phrase zu lang. Max. 100 Zeichen.",
+        "word.too_short": "⚠️ Wort zu kurz. Versuche etwas Längeres.",
+        "word.duplicate": "♻️ Das Wort <b>{word}</b> ist schon im Wortschatz!\n<i>Ich erinnere dich rechtzeitig daran.</i>",
+        "word.ai_failed": "❌ Konnte dieses Wort nicht verarbeiten. Versuche ein anderes oder in einer Minute erneut.",
+        "word.save_failed": "❌ Wort konnte nicht gespeichert werden. Versuche es erneut.",
+        "word.error": "❌ Ein Fehler ist aufgetreten. Versuche es später.",
+        "word.setup_first": "⚙️ Wähle zuerst eine Lernsprache — sende /start",
+
+        "word.examples_label": "📖 <b>Beispiele:</b>",
+        "word.tip_label": "💡 <b>Merkhilfe:</b>",
+        "word.remind_in_1d": "🔔 <i>Ich erinnere dich in 1 Tag an dieses Wort</i>",
+
+        "limit.pro": "Du hast das 100-Wörter-Tageslimit erreicht — sogar als Pro 😱",
+        "limit.trial": "Du hast das 100-Wörter-Tageslimit erreicht. Morgen geht's weiter!",
+        "limit.free": "⛔️ Tageslimit von 10 Wörtern erreicht.\n\n💎 Hol dir <b>Pro</b> für $1.49/Mon. und 100 Wörter/Tag.\nMit /buy.",
+
+        "review.empty": "🌱 <b>Keine Wörter zum Wiederholen!</b>\n\nFüge neue Wörter hinzu oder warte, bis es Zeit ist.\n\n<i>Ich erinnere dich 🔔</i>",
+        "review.ready": "🎯 <b>{n} Wörter sind bereit zur Wiederholung</b>\n<i>Los geht's!</i>",
+        "review.question_title": "🔄 <b>Zeit für die Wiederholung!</b>",
+        "review.guess_hint": "<i>Erinnere dich an die Übersetzung und tippe dann 👇</i>",
+        "review.examples_label": "📖 <b>Beispiele:</b>",
+        "review.how_well": "<b>Wie gut erinnerst du dich?</b>",
+        "review.praise.knew": "Ausgezeichnet!",
+        "review.praise.struggled": "Gut!",
+        "review.praise.forgot": "Kein Problem, wir wiederholen!",
+        "review.next_in": "🔔 <i>Nächste Wiederholung in {interval}</i>",
+        "review.left_more": "<i>Noch {n} Wörter zur Wiederholung</i>",
+        "review.all_done": "🎉 <b>Alle Wörter wiederholt!</b>\n<i>Tolle Arbeit. Ich erinnere dich, wenn es wieder Zeit ist 🔔</i>",
+        "review.not_found": "Wort nicht gefunden",
+        "review.error": "Fehler",
+
+        "rev.btn.knew": "✅ Wusste",
+        "rev.btn.struggled": "🤔 Erinnert",
+        "rev.btn.forgot": "❌ Vergessen",
+        "rev.btn.reveal": "👁 Übersetzung zeigen",
+        "rev.btn.open_app": "📱 App öffnen",
+
+        "remind.title": "🔔 <b>Zeit für eine Wiederholung!</b>",
+        "remind.hint": "<i>Erinnerst du dich an die Übersetzung? Tippe zum Prüfen 👇</i>",
     },
 }
 
@@ -241,4 +806,30 @@ def help_text(lang: str = "uk") -> str:
         f"{t('help.subscription', lang)}\n"
         f"{t('help.unsubscribe', lang)}\n\n"
         f"{t('help.plans', lang)}"
+    )
+
+
+def premium_text(lang: str = "uk") -> str:
+    return (
+        f"{t('premium.title', lang)}\n\n"
+        f"{t('premium.benefits_title', lang)}\n"
+        f"{t('premium.b1', lang)}\n"
+        f"{t('premium.b2', lang)}\n"
+        f"{t('premium.b3', lang)}\n\n"
+        f"{t('premium.price', lang)}\n"
+        f"{t('premium.autorenew', lang)}\n"
+        f"{t('premium.cancel_any', lang)}\n\n"
+        f"{t('premium.cta', lang)}"
+    )
+
+
+def buy_text(lang: str = "uk") -> str:
+    return (
+        f"{t('buy.title', lang)}\n\n"
+        f"{t('buy.amount', lang)}\n"
+        f"{t('buy.period', lang)}\n"
+        f"{t('buy.autorenew_yes', lang)}\n"
+        f"{t('buy.system', lang)}\n\n"
+        f"{t('buy.cta_text', lang)}\n\n"
+        f"{t('buy.fineprint', lang)}"
     )

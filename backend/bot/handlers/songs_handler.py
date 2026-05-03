@@ -162,7 +162,7 @@ async def add_word_from_pack(callback: CallbackQuery):
         await callback.answer(bt("songs.duplicate_alert", lang), show_alert=True)
         return
 
-    can, reason = await can_add_word(user)
+    can, reason = await can_add_word(user, lang)
     if not can:
         await callback.answer(reason or bt("songs.limit_alert", lang), show_alert=True)
         return
