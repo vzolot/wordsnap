@@ -256,7 +256,7 @@ async def _show_demo(callback: CallbackQuery, native_code: str, target_code: str
         if explanation:
             card += f"   <i>→ {explanation}</i>\n"
     if demo.get("memory_tip"):
-        card += f"\n💡 <b>{bt('word.tip_label', native_code).rstrip(':</b>')}:</b> <i>{escape(demo['memory_tip'])}</i>"
+        card += f"\n💡 <i>{escape(demo['memory_tip'])}</i>"
 
     await callback.message.answer(card, reply_markup=demo_keyboard(target_code, native_code))
 

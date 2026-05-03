@@ -310,7 +310,7 @@ dp.include_router(word_router)
 
 
 async def setup_bot_commands():
-    """Оновлює меню команд бота. Викликається на старті."""
+    """Оновлює меню команд та опис бота. Викликається на старті."""
     commands = [
         BotCommand(command="start", description="Почати або змінити налаштування"),
         BotCommand(command="songs", description="🎵 Слова з популярних пісень"),
@@ -322,6 +322,39 @@ async def setup_bot_commands():
         BotCommand(command="help", description="Як користуватись"),
     ]
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+
+    # Опис у профілі бота (видно при пошуку та коли користувач натискає на ім'я)
+    description_uk = (
+        "WordSnap — слова, які ти зустрічаєш у житті за кордоном.\n\n"
+        "Не вчу мову з нуля. Просто не даю забути слова, які ти вже чуєш на вулиці чи бачиш у листах.\n\n"
+        "✅ 5 мов: 🇬🇧 🇪🇸 🇵🇱 🇩🇪 🇺🇦\n"
+        "✅ Інтервальне повторення (нагадаю через 1, 3, 7, 14 днів)\n"
+        "✅ Набори слів з пісень\n"
+        "✅ XP-система і нагороди\n\n"
+        "Натисни START — далі за 60 секунд."
+    )
+    description_en = (
+        "WordSnap — for words you meet in real life abroad.\n\n"
+        "I don't teach you a language from scratch. I just stop you from forgetting words "
+        "you already hear on the street or read in messages.\n\n"
+        "✅ 5 languages: 🇬🇧 🇪🇸 🇵🇱 🇩🇪 🇺🇦\n"
+        "✅ Spaced repetition (1, 3, 7, 14 days)\n"
+        "✅ Word packs from popular songs\n"
+        "✅ XP system & rewards\n\n"
+        "Tap START — done in 60 seconds."
+    )
+    short_uk = "Слова, що ти чуєш за кордоном. 5 мов. Інтервальне повторення. Набори з пісень."
+    short_en = "Words you meet abroad. 5 languages. Spaced repetition. Songs vocab."
+
+    try:
+        await bot.set_my_description(description=description_uk, language_code="uk")
+        await bot.set_my_description(description=description_en, language_code="en")
+        await bot.set_my_description(description=description_en)  # default
+        await bot.set_my_short_description(short_description=short_uk, language_code="uk")
+        await bot.set_my_short_description(short_description=short_en, language_code="en")
+        await bot.set_my_short_description(short_description=short_en)  # default
+    except Exception as e:
+        logger.warning(f"Failed to set bot description: {e}")
 
 
 async def main():
