@@ -95,7 +95,7 @@ function WordDetailModal({ open, word, onClose, onDeleted, nativeLang }) {
         <div className="day-modal-actions" style={{ marginTop: 18 }}>
           {!confirming ? (
             <>
-              <button className="btn btn-danger" onClick={() => setConfirming(true)}>
+              <button className="btn btn-gradient" onClick={() => setConfirming(true)}>
                 🗑 {t('word_detail.delete')}
               </button>
               <button className="btn btn-ghost" onClick={closeAndReset}>
@@ -104,7 +104,7 @@ function WordDetailModal({ open, word, onClose, onDeleted, nativeLang }) {
             </>
           ) : (
             <>
-              <button className="btn btn-danger" disabled={deleting} onClick={handleDelete}>
+              <button className="btn btn-gradient" disabled={deleting} onClick={handleDelete}>
                 {deleting ? '…' : t('word_detail.delete_confirm')}
               </button>
               <button className="btn btn-ghost" disabled={deleting} onClick={() => setConfirming(false)}>
