@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { addWord, clearCache } from '../api/client';
+import { useEffect, useRef, useState } from 'react';
+import { addWord, clearCache, getWords } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import WordResult from './WordResult';
 
@@ -9,6 +9,30 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  // Поточне очікуване слово для полінгу картинки. Скидається при reset/submit.
+  const activeWordIdRef = useRef(null);
+  const unmountedRef = useRef(false);
+
+  useEffect(() => () => { unmountedRef.current = true; }, []);
+
+  // Картинка довантажується на бекенді у фоні (Unsplash). Дочекаємось її
+  // 2-3 разами щоб юзер побачив на цій же карточці без переходу у Words.
+  const pollImage = async (wordId) => {
+    const delays = [1500, 2500, 3500];
+    for (const d of delays) {
+      await new Promise(r => setTimeout(r, d));
+      if (unmountedRef.current || activeWordIdRef.current !== wordId) return;
+      try {
+        const r = await getWords();
+        if (unmountedRef.current || activeWordIdRef.current !== wordId) return;
+        const found = (r.data || []).find(w => w.id === wordId);
+        if (found?.image_url) {
+          setResult(prev => (prev ? { ...prev, image_url: found.image_url } : prev));
+          return;
+        }
+      } catch { /* try again next tick */ }
+    }
+  };
 
   const submit = async (e) => {
     e?.preventDefault();
@@ -16,6 +40,7 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
     if (!word || loading) return;
     setLoading(true);
     setError('');
+    activeWordIdRef.current = null;
     try {
       const r = await addWord(word);
       const data = r.data || {};
@@ -24,6 +49,7 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
       if (data.error === 'setup_required') { setError(t('snap.setup_required')); return; }
       if (!data.ok) { setError(t('snap.error')); return; }
       const merged = { ...(data.ai_data || {}), ...(data.word || {}) };
+      const wordId = data.word?.id;
       setResult({
         word: merged.word || word,
         translation: merged.translation,
@@ -38,6 +64,10 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
       clearCache('stats');
       clearCache('words');
       onAdded?.();
+      if (wordId) {
+        activeWordIdRef.current = wordId;
+        pollImage(wordId);
+      }
     } catch (err) {
       const status = err?.response?.status;
       const detail = err?.response?.data?.detail;
@@ -50,7 +80,11 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
     }
   };
 
-  const reset = () => { setResult(null); setError(''); };
+  const reset = () => {
+    activeWordIdRef.current = null;
+    setResult(null);
+    setError('');
+  };
 
   return (
     <div className="snap-card">
