@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from core.db import engine
@@ -17,9 +18,13 @@ app.add_middleware(
 app.include_router(api_router)
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
-    """Liveness/readiness — пінгує БД. Використовується UptimeRobot/Railway."""
+    """Liveness/readiness — пінгує БД. Використовується UptimeRobot/Railway.
+
+    HEAD підтримано, щоб UptimeRobot free tier (HEAD-only) працював.
+    503 при недоступній БД, щоб алерт спрацював без keyword-моніторингу.
+    """
     db_ok = False
     db_error = None
     try:
@@ -29,9 +34,9 @@ async def health():
     except Exception as e:
         db_error = str(e)[:200]
 
-    status = "ok" if db_ok else "degraded"
-    return {
-        "status": status,
+    payload = {
+        "status": "ok" if db_ok else "degraded",
         "db": "ok" if db_ok else "fail",
         "db_error": db_error,
     }
+    return JSONResponse(payload, status_code=200 if db_ok else 503)
