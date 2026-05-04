@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStats, getReviewWords, readCache, writeCache } from '../api/client';
+import { getStats, getReviewWords, getWords, readCache, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
+import DayCompletionModal from '../components/DayCompletionModal';
 import SnapCard from '../components/SnapCard';
 
 const greetingKey = () => {
@@ -45,6 +46,31 @@ function HomePage() {
   const isPro = stats?.plan === 'pro';
   const usedToday = stats?.used_today ?? 0;
   const dailyLimit = stats?.daily_limit ?? (isPro ? 100 : 10);
+
+  // Day completion: показуємо модалку коли юзер вперше за сьогодні досяг
+  // ліміту. localStorage-флаг гарантує що при reload вона не повторюється.
+  const [dayModalOpen, setDayModalOpen] = useState(false);
+  const [todayWords, setTodayWords] = useState([]);
+  const prevUsedRef = useRef(null);
+
+  useEffect(() => {
+    if (!stats || dailyLimit <= 0) return;
+    const prev = prevUsedRef.current;
+    prevUsedRef.current = usedToday;
+    if (prev === null) return; // перший рендер після завантаження stats — не тригеримо
+    if (prev < dailyLimit && usedToday >= dailyLimit) {
+      const today = new Date().toISOString().slice(0, 10);
+      const flagKey = `wordsnap.day_completed.${today}`;
+      if (!localStorage.getItem(flagKey)) {
+        localStorage.setItem(flagKey, '1');
+        // Тягнемо саме сьогоднішні слова — getWords сортує за created_at desc
+        getWords().then(r => {
+          setTodayWords((r.data || []).slice(0, usedToday));
+          setDayModalOpen(true);
+        }).catch(() => setDayModalOpen(true));
+      }
+    }
+  }, [stats, usedToday, dailyLimit]);
 
   const dayWord = plural(streak, 'unit.day');
   const wordWord = plural(dueCount, 'unit.word');
@@ -122,6 +148,17 @@ function HomePage() {
           </button>
         )}
       </div>
+
+      <DayCompletionModal
+        open={dayModalOpen}
+        onClose={() => setDayModalOpen(false)}
+        onOpenReview={() => { setDayModalOpen(false); navigate('/review'); }}
+        todayWords={todayWords}
+        streak={streak}
+        dueCount={dueCount}
+        dailyLimit={dailyLimit}
+        nativeLang={stats?.native_lang || 'uk'}
+      />
     </>
   );
 }
