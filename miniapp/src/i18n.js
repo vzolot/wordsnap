@@ -102,6 +102,8 @@ const T = {
     'stats.reviewed_today': 'Reviewed today',
     'stats.streak_days': 'Streak days',
     'stats.total_spent': 'Total spent',
+    'stats.chart_xp_30d': 'XP last 30 days',
+    'stats.chart_activity_30d': 'Activity last 30 days',
 
     'pro.eyebrow': 'Pro',
     'pro.headline.main': 'Snap unlimited',
@@ -228,6 +230,8 @@ const T = {
     'stats.reviewed_today': 'Повторено сьогодні',
     'stats.streak_days': 'Днів серії',
     'stats.total_spent': 'Витрачено всього',
+    'stats.chart_xp_30d': 'XP за 30 днів',
+    'stats.chart_activity_30d': 'Активність за 30 днів',
 
     'pro.eyebrow': 'Pro',
     'pro.headline.main': 'Без лімітів',
@@ -354,6 +358,8 @@ const T = {
     'stats.reviewed_today': 'Repasadas hoy',
     'stats.streak_days': 'Días de racha',
     'stats.total_spent': 'Gasto total',
+    'stats.chart_xp_30d': 'XP últimos 30 días',
+    'stats.chart_activity_30d': 'Actividad últimos 30 días',
 
     'pro.eyebrow': 'Pro',
     'pro.headline.main': 'Sin límites',
@@ -480,6 +486,8 @@ const T = {
     'stats.reviewed_today': 'Dziś powtórzono',
     'stats.streak_days': 'Dni serii',
     'stats.total_spent': 'Wydano łącznie',
+    'stats.chart_xp_30d': 'XP z ostatnich 30 dni',
+    'stats.chart_activity_30d': 'Aktywność z ostatnich 30 dni',
 
     'pro.eyebrow': 'Pro',
     'pro.headline.main': 'Bez limitu',
@@ -564,6 +572,8 @@ const T = {
     'stats.reviewed_today': 'Heute wiederholt',
     'stats.streak_days': 'Serien-Tage',
     'stats.total_spent': 'Insgesamt ausgegeben',
+    'stats.chart_xp_30d': 'XP der letzten 30 Tage',
+    'stats.chart_activity_30d': 'Aktivität der letzten 30 Tage',
 
     'pro.eyebrow': 'Pro',
     'pro.headline.main': 'Unbegrenzt schnappen',
