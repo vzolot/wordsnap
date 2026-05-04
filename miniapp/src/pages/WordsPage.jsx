@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { getWords, readCache, writeCache } from '../api/client';
+import { getStats, getWords, readCache, writeCache, clearCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 import SpeakButton from '../components/SpeakButton';
+import WordDetailModal from '../components/WordDetailModal';
 
 function badge(word, t) {
   if (word.status === 'mastered') return { cls: 'badge-mastered', text: t('badge.mastered') };
@@ -12,9 +13,12 @@ function badge(word, t) {
 
 function WordsPage() {
   const cached = readCache('words');
+  const cachedStats = readCache('stats');
   const [words, setWords] = useState(Array.isArray(cached) ? cached : []);
   const [loading, setLoading] = useState(!cached);
   const [search, setSearch] = useState('');
+  const [active, setActive] = useState(null);
+  const [nativeLang, setNativeLang] = useState(cachedStats?.native_lang || 'uk');
   const { t } = useT();
 
   useEffect(() => {
@@ -24,12 +28,25 @@ function WordsPage() {
       writeCache('words', list);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+    if (!cachedStats?.native_lang) {
+      getStats().then(r => {
+        if (r.data?.native_lang) setNativeLang(r.data.native_lang);
+      }).catch(() => {});
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = words.filter(w =>
     w.word.toLowerCase().includes(search.toLowerCase()) ||
     (w.translation || '').toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleDeleted = (deletedId) => {
+    setWords(prev => prev.filter(w => w.id !== deletedId));
+    clearCache('words');
+    clearCache('stats');
+    clearCache('review');
+    setActive(null);
+  };
 
   return (
     <>
@@ -57,7 +74,14 @@ function WordsPage() {
           filtered.map(w => {
             const b = badge(w, t);
             return (
-              <div key={w.id} className="word-row">
+              <div
+                key={w.id}
+                className="word-row word-row-clickable"
+                role="button"
+                tabIndex={0}
+                onClick={() => setActive(w)}
+                onKeyDown={(e) => { if (e.key === 'Enter') setActive(w); }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
                   <SpeakButton text={w.word} lang={w.target_lang} size="sm" />
                   <div style={{ minWidth: 0 }}>
@@ -71,6 +95,14 @@ function WordsPage() {
           })
         )}
       </div>
+
+      <WordDetailModal
+        open={!!active}
+        word={active}
+        onClose={() => setActive(null)}
+        onDeleted={handleDeleted}
+        nativeLang={nativeLang}
+      />
     </>
   );
 }

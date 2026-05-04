@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from sqlalchemy import delete, select, func
 
 from sqlalchemy import or_
 
@@ -59,6 +59,33 @@ async def get_words(telegram_id: int = Query(...)):
             select(Word).where(Word.user_id == user.id).order_by(Word.created_at.desc())
         )
         return [_serialize_word(w) for w in result.scalars().all()]
+
+
+@router.delete("/api/words/{word_id}")
+async def delete_word(word_id: int, telegram_id: int = Query(...)):
+    """Видаляє слово (тільки якщо воно належить юзеру). Reviews видаляються
+    каскадом через FK ondelete=CASCADE."""
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        word = (await session.execute(
+            select(Word).where(Word.id == word_id, Word.user_id == user.id)
+        )).scalar_one_or_none()
+        if not word:
+            raise HTTPException(status_code=404, detail="Word not found")
+        await session.execute(delete(Word).where(Word.id == word_id))
+        # Декрементуємо лічильник total_words. Денний лічильник не чіпаємо
+        # — він прив'язаний до того скільки юзер додав за день, не що залишилось.
+        if user.total_words and user.total_words > 0:
+            from sqlalchemy import update as sa_update
+            await session.execute(
+                sa_update(User).where(User.id == user.id).values(
+                    total_words=user.total_words - 1
+                )
+            )
+        await session.commit()
+        return {"ok": True}
 
 
 async def _calculate_streak(session, user_id: int) -> int:
