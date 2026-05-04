@@ -1207,77 +1207,129 @@
   margin-top: 8px;
 }
 
-/* ── Stats charts ───────────────────────────────────── */
-.chart-card {
+/* ── Tier ladder (XP rewards visualization) ────────── */
+.tier-ladder {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  padding: 14px 14px 10px;
-  margin-bottom: 10px;
+  padding: 16px 16px 8px;
 }
-.chart-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-.chart-eyebrow {
+.tier-ladder-label {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1.4px;
   text-transform: uppercase;
   color: var(--text-2);
+  margin-bottom: 14px;
 }
-.chart-num {
-  font-size: 18px;
+.tier-list { list-style: none; padding: 0; margin: 0; }
+
+.tier-item {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  min-height: 64px;
+}
+.tier-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 22px;
+}
+.tier-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--bg-card-2);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
   font-weight: 800;
+  color: transparent;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+.tier-dot.on {
+  background: var(--violet);
+  border-color: var(--violet);
+  color: #fff;
+}
+.tier-dot.glow {
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.18);
+  border-color: var(--violet);
+  background: var(--bg-card);
   color: var(--violet);
 }
-[data-theme="dark"] .chart-num { color: #C4A8FF; }
-.chart-svg {
-  width: 100%;
-  height: 90px;
-  display: block;
+.tier-dot.glow.on { background: var(--violet); color: #fff; }
+
+.tier-line {
+  width: 2px;
+  flex: 1;
+  background: var(--border);
+  margin: 2px 0;
+  border-radius: 2px;
+  min-height: 24px;
 }
-.chart-foot {
+.tier-line.on { background: var(--violet); }
+.tier-line.partial {
+  background: linear-gradient(to bottom, var(--violet) 50%, var(--border) 50%);
+}
+
+.tier-body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 14px;
+}
+.tier-row-1 {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 10px;
+  align-items: baseline;
+  gap: 8px;
+}
+.tier-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.tier-xp {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+}
+.tier-item:not(.achieved) .tier-name { color: var(--text-2); }
+.tier-item.current .tier-name { color: var(--violet); }
+[data-theme="dark"] .tier-item.current .tier-name { color: #C4A8FF; }
+
+.tier-reward {
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-2);
-  margin-top: 4px;
-  letter-spacing: 0.4px;
+  margin-top: 2px;
 }
+.tier-reward.muted { color: var(--text-3, var(--text-2)); opacity: 0.4; }
 
-.heatmap-grid {
-  display: grid;
-  grid-template-columns: repeat(15, 1fr);
-  gap: 4px;
-  padding: 6px 0 8px;
-}
-.heatmap-cell {
-  aspect-ratio: 1;
-  border-radius: 3px;
+.tier-progress { margin-top: 8px; }
+.tier-progress-track {
+  height: 5px;
   background: var(--bg-card-2);
+  border-radius: 999px;
+  overflow: hidden;
 }
-.heatmap-cell.lvl-0 { background: var(--bg-card-2); }
-.heatmap-cell.lvl-1 { background: rgba(124, 58, 237, 0.25); }
-.heatmap-cell.lvl-2 { background: rgba(124, 58, 237, 0.5); }
-.heatmap-cell.lvl-3 { background: rgba(124, 58, 237, 0.75); }
-.heatmap-cell.lvl-4 { background: var(--violet); }
-[data-theme="dark"] .heatmap-cell.lvl-0 { background: rgba(255, 255, 255, 0.05); }
-
-.heatmap-legend {
-  display: inline-flex;
-  gap: 3px;
-  align-items: center;
+.tier-progress-fill {
+  height: 100%;
+  background: var(--gradient);
+  transition: width 0.4s ease;
 }
-.heatmap-legend .heatmap-cell {
-  width: 9px;
-  height: 9px;
-  aspect-ratio: auto;
-  border-radius: 2px;
+.tier-progress-text {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-top: 3px;
+  font-weight: 600;
 }
 
 /* ── Speak (TTS) button ─────────────────────────────── */

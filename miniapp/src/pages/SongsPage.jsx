@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { addWord, clearCache, getSongs } from '../api/client';
+import { addWord, clearCache, getSongs, readCache, writeCache } from '../api/client';
 import { pollImage } from '../utils/pollImage';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 import WordResult from '../components/WordResult';
 
 function SongsPage() {
-  const [packs, setPacks] = useState([]);
-  const [targetLang, setTargetLang] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const cached = readCache('songs');
+  const [packs, setPacks] = useState(cached?.packs || []);
+  const [targetLang, setTargetLang] = useState(cached?.target_lang || null);
+  const [loading, setLoading] = useState(!cached);
   const [active, setActive] = useState(null);
   const { t } = useT();
 
@@ -16,6 +17,7 @@ function SongsPage() {
     getSongs().then(r => {
       setPacks(r.data?.packs || []);
       setTargetLang(r.data?.target_lang || null);
+      writeCache('songs', r.data);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);

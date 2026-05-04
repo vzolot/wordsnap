@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
-import { getStats, getStatsTimeline, readCache, writeCache } from '../api/client';
+import { getStats, readCache, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
-import { ActivityHeatmap, XpLineChart } from '../components/StatsCharts';
+import TierLadder from '../components/TierLadder';
 import { replayWelcome } from '../components/WelcomeStories';
 
 function StatsPage() {
   const cached = readCache('stats');
-  const cachedTimeline = readCache('timeline');
   const [stats, setStats] = useState(cached);
-  const [timeline, setTimeline] = useState(Array.isArray(cachedTimeline) ? cachedTimeline : []);
   const [loading, setLoading] = useState(!cached);
   const { t } = useT();
 
@@ -19,11 +17,6 @@ function StatsPage() {
       writeCache('stats', r.data);
       setLoading(false);
     }).catch(() => setLoading(false));
-    getStatsTimeline(30).then(r => {
-      const list = r.data?.by_day || [];
-      setTimeline(list);
-      writeCache('timeline', list);
-    }).catch(() => {});
   }, []);
 
   if (loading) return <div className="page"><div className="center-loader"><span className="spinner" /></div></div>;
@@ -94,10 +87,9 @@ function StatsPage() {
           ))}
         </div>
 
-        {timeline.length > 0 && (
+        {stats?.tiers?.length > 0 && (
           <div style={{ marginTop: 14 }}>
-            <XpLineChart timeline={timeline} label={t('stats.chart_xp_30d')} />
-            <ActivityHeatmap timeline={timeline} label={t('stats.chart_activity_30d')} />
+            <TierLadder tiers={stats.tiers} totalXp={xp} label={t('stats.tiers_label')} />
           </div>
         )}
 

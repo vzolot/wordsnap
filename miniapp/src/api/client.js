@@ -41,7 +41,6 @@ api.interceptors.request.use((config) => {
 
 export const getWords = () => api.get('/api/words');
 export const getStats = () => api.get('/api/stats');
-export const getStatsTimeline = (days = 30) => api.get('/api/stats/timeline', { params: { days } });
 export const getReviewWords = () => api.get('/api/review');
 export const submitReview = (wordId, quality) =>
   api.post('/api/review', { word_id: wordId, quality });
@@ -87,6 +86,7 @@ export function prefetchAll() {
   getStats().then(r => writeCache('stats', r.data)).catch(() => {});
   getWords().then(r => writeCache('words', r.data)).catch(() => {});
   getReviewWords().then(r => writeCache('review', r.data)).catch(() => {});
+  getSongs().then(r => writeCache('songs', r.data)).catch(() => {});
 }
 
 export default api;

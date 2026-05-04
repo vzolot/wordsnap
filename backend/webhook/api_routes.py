@@ -11,7 +11,7 @@ from sqlalchemy import or_
 
 from core.db import SessionLocal
 from core.models import PaymentHistory, Review, User, Word
-from core.rewards import current_tier, next_tier, xp_for_result
+from core.rewards import TIERS, current_tier, next_tier
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +157,10 @@ async def get_stats(telegram_id: int = Query(...)):
         xp = user.total_xp or 0
         tier = current_tier(xp)
         nxt = next_tier(xp)
+        tiers_payload = [
+            {"xp": t[0], "key": t[1], "reward_key": t[2], "achieved": xp >= t[0]}
+            for t in TIERS
+        ]
 
         return {
             "total_words": user.total_words,
@@ -172,6 +176,7 @@ async def get_stats(telegram_id: int = Query(...)):
             "next_tier_xp": nxt[0] if nxt else None,
             "next_tier_key": nxt[1] if nxt else None,
             "next_tier_reward_key": nxt[2] if nxt else None,
+            "tiers": tiers_payload,
             "plan": "pro" if is_pro else user.plan,
             "plan_expires_at": user.plan_expires_at.isoformat() if user.plan_expires_at else None,
             "auto_renew": user.auto_renew,
@@ -181,61 +186,6 @@ async def get_stats(telegram_id: int = Query(...)):
             "daily_limit": daily_limit,
             "is_trial": is_trial,
         }
-
-
-@router.get("/api/stats/timeline")
-async def get_stats_timeline(telegram_id: int = Query(...), days: int = 30):
-    """Аналітика по днях: reviews, XP, нові слова. Для графіків Stats."""
-    days = max(7, min(90, days))
-    today = datetime.now(timezone.utc).date()
-    cutoff = datetime.now(timezone.utc).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    ) - timedelta(days=days - 1)
-
-    async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
-        if not user:
-            return {"days": days, "by_day": []}
-
-        review_rows = (await session.execute(
-            select(
-                func.date(Review.reviewed_at).label("d"),
-                Review.result,
-                func.count().label("n"),
-            ).where(
-                Review.user_id == user.id,
-                Review.reviewed_at >= cutoff,
-            ).group_by(func.date(Review.reviewed_at), Review.result)
-        )).all()
-
-        added_rows = (await session.execute(
-            select(
-                func.date(Word.created_at).label("d"),
-                func.count().label("n"),
-            ).where(
-                Word.user_id == user.id,
-                Word.created_at >= cutoff,
-            ).group_by(func.date(Word.created_at))
-        )).all()
-
-    bucket: dict = {}
-    for row in review_rows:
-        d = row.d
-        b = bucket.setdefault(d, {"reviews": 0, "xp": 0, "added": 0})
-        b["reviews"] += int(row.n)
-        b["xp"] += xp_for_result(row.result) * int(row.n)
-    for row in added_rows:
-        d = row.d
-        b = bucket.setdefault(d, {"reviews": 0, "xp": 0, "added": 0})
-        b["added"] += int(row.n)
-
-    out = []
-    for i in range(days):
-        d = today - timedelta(days=days - 1 - i)
-        b = bucket.get(d, {"reviews": 0, "xp": 0, "added": 0})
-        out.append({"date": d.isoformat(), **b})
-
-    return {"days": days, "by_day": out}
 
 
 @router.get("/api/review")
