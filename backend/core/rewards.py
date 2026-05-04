@@ -18,11 +18,11 @@ XP_PER_RESULT = {
 # (xp_threshold, tier_key, reward_key)
 # reward_key=None → ще тільки статус, без бонусу
 TIERS: list[tuple[int, str, str | None]] = [
-    (0,     "rewards.beginner",     None),
-    (500,   "rewards.apprentice",   None),
-    (2000,  "rewards.word_master",  "rewards.discount_25"),
-    (5000,  "rewards.polyglot",     "rewards.discount_50"),
-    (10000, "rewards.sage",         "rewards.free_month"),
+    (0,    "rewards.beginner",    None),
+    (500,  "rewards.apprentice",  "rewards.discount_10"),
+    (1000, "rewards.word_master", "rewards.discount_25"),
+    (3000, "rewards.polyglot",    "rewards.discount_50"),
+    (5000, "rewards.sage",        "rewards.discount_100"),
 ]
 
 

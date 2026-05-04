@@ -22,17 +22,17 @@ class TestCurrentTier:
         _, key, _ = current_tier(500)
         assert key == "rewards.apprentice"
 
-    def test_2000_xp_is_word_master(self):
-        threshold, key, reward = current_tier(2000)
-        assert threshold == 2000
+    def test_1000_xp_is_word_master(self):
+        threshold, key, reward = current_tier(1000)
+        assert threshold == 1000
         assert key == "rewards.word_master"
         assert reward == "rewards.discount_25"
 
     def test_huge_xp_is_max_tier(self):
         threshold, key, reward = current_tier(999_999)
-        assert threshold == 10_000
+        assert threshold == 5_000
         assert key == "rewards.sage"
-        assert reward == "rewards.free_month"
+        assert reward == "rewards.discount_100"
 
 
 class TestNextTier:
@@ -44,7 +44,7 @@ class TestNextTier:
     def test_at_500_next_is_word_master(self):
         nxt = next_tier(500)
         assert nxt is not None
-        assert nxt[0] == 2000
+        assert nxt[0] == 1000
 
     def test_above_max_returns_none(self):
         assert next_tier(50_000) is None
