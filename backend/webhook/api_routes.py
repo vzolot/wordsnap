@@ -309,13 +309,6 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
     }
 
 
-@router.get("/api/_sentry_test")
-async def sentry_test():
-    """Тестовий ендпоінт — навмисно валиться щоб перевірити що Sentry ловить.
-    Прибери після первинної перевірки."""
-    raise RuntimeError("Sentry smoke test from backend — if you see this in Sentry, it works")
-
-
 @router.get("/api/songs")
 async def list_song_packs(telegram_id: int = Query(...)):
     """Повертає набори слів з пісень для target_lang юзера."""
