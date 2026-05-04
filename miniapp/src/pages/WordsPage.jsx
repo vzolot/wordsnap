@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getWords, readCache, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
+import SpeakButton from '../components/SpeakButton';
 
 function badge(word, t) {
   if (word.status === 'mastered') return { cls: 'badge-mastered', text: t('badge.mastered') };
@@ -57,9 +58,12 @@ function WordsPage() {
             const b = badge(w, t);
             return (
               <div key={w.id} className="word-row">
-                <div>
-                  <div className="word-text">{w.word}</div>
-                  <div className="word-meta">{w.translation}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                  <SpeakButton text={w.word} lang={w.target_lang} size="sm" />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="word-text">{w.word}</div>
+                    <div className="word-meta">{w.translation}</div>
+                  </div>
                 </div>
                 <span className={`badge ${b.cls}`}>{b.text}</span>
               </div>

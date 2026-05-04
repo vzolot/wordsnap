@@ -6,6 +6,7 @@ import WordResult from '../components/WordResult';
 
 function SongsPage() {
   const [packs, setPacks] = useState([]);
+  const [targetLang, setTargetLang] = useState(null);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState(null);
   const { t } = useT();
@@ -13,6 +14,7 @@ function SongsPage() {
   useEffect(() => {
     getSongs().then(r => {
       setPacks(r.data?.packs || []);
+      setTargetLang(r.data?.target_lang || null);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -24,7 +26,7 @@ function SongsPage() {
         {!active ? (
           <SongsList packs={packs} loading={loading} onPick={setActive} t={t} />
         ) : (
-          <SongDetail pack={active} onBack={() => setActive(null)} t={t} />
+          <SongDetail pack={active} targetLang={targetLang} onBack={() => setActive(null)} t={t} />
         )}
       </div>
     </>
@@ -59,7 +61,7 @@ function SongsList({ packs, loading, onPick, t }) {
   );
 }
 
-function SongDetail({ pack, onBack, t }) {
+function SongDetail({ pack, targetLang, onBack, t }) {
   const [statusMap, setStatusMap] = useState({}); // word -> 'idle'|'loading'|'added'|'duplicate'|'error'
   const [results, setResults] = useState({}); // word -> data shown inline
   const [errors, setErrors] = useState({}); // word -> error msg
@@ -142,7 +144,7 @@ function SongDetail({ pack, onBack, t }) {
               </button>
               {result && st === 'added' && (
                 <div className="song-word-result">
-                  <WordResult data={result} />
+                  <WordResult data={result} targetLang={targetLang} />
                 </div>
               )}
               {err && st === 'duplicate' && (

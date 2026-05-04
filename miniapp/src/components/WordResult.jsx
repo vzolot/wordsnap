@@ -1,10 +1,12 @@
 import { useT } from '../contexts/LangContext';
+import SpeakButton from './SpeakButton';
 
 const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪' };
 
-function WordResult({ data, nativeLang }) {
+function WordResult({ data, nativeLang, targetLang }) {
   const { t, lang } = useT();
   const flag = FLAGS[nativeLang || lang] || '🌐';
+  const speakLang = targetLang || data?.target_lang;
 
   const examples = Array.isArray(data?.examples)
     ? data.examples.map(e => typeof e === 'string' ? { sentence: e, explanation: '' } : e)
@@ -24,7 +26,10 @@ function WordResult({ data, nativeLang }) {
             {data.part_of_speech && data.difficulty && <span className="dot">·</span>}
             {data.difficulty && <span>{data.difficulty}</span>}
           </div>
-          <div className="snap-result-word">{data.word}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="snap-result-word">{data.word}</div>
+            <SpeakButton text={data.word} lang={speakLang} size="sm" />
+          </div>
           <div className="snap-result-translation">{flag} {data.translation}</div>
         </div>
       </div>

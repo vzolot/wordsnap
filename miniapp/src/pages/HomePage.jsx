@@ -89,6 +89,7 @@ function HomePage() {
         <div style={{ marginTop: 10 }}>
           <SnapCard
             nativeLang={stats?.native_lang || 'uk'}
+            targetLang={stats?.target_lang}
             usedToday={usedToday}
             dailyLimit={dailyLimit}
             onAdded={loadAll}

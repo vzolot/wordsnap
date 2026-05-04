@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { clearCache, getReviewWords, submitReview } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
+import SpeakButton from '../components/SpeakButton';
 
 const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪' };
 
@@ -146,7 +147,10 @@ function ReviewPage() {
             <div className="review-image-placeholder">📸</div>
           )}
           <div className="review-pos">{current.part_of_speech || ''}</div>
-          <div className="review-word">{current.word}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
+            <div className="review-word">{current.word}</div>
+            <SpeakButton text={current.word} lang={current.target_lang} size="md" />
+          </div>
 
           {!revealed ? (
             <button className="btn-pill" style={{ marginTop: 18 }} onClick={() => setRevealed(true)}>

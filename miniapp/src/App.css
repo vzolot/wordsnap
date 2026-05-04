@@ -1206,3 +1206,28 @@
   font-weight: 600;
   margin-top: 8px;
 }
+
+/* ── Speak (TTS) button ─────────────────────────────── */
+.speak-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--violet);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease, color 0.15s ease;
+  padding: 0;
+}
+.speak-btn:hover { background: var(--violet-soft); }
+.speak-btn:active { transform: scale(0.92); }
+.speak-btn svg { width: 60%; height: 60%; }
+
+.speak-btn-sm { width: 28px; height: 28px; }
+.speak-btn-md { width: 34px; height: 34px; }
+.speak-btn-lg { width: 44px; height: 44px; }
+
+[data-theme="dark"] .speak-btn { color: #C4A8FF; }
+

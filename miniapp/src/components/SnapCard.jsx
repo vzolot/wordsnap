@@ -3,7 +3,7 @@ import { addWord, clearCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import WordResult from './WordResult';
 
-function SnapCard({ nativeLang, usedToday, dailyLimit, onAdded }) {
+function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
   const { t } = useT();
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -82,7 +82,7 @@ function SnapCard({ nativeLang, usedToday, dailyLimit, onAdded }) {
         </form>
       ) : (
         <>
-          <WordResult data={result} nativeLang={nativeLang} />
+          <WordResult data={result} nativeLang={nativeLang} targetLang={targetLang} />
           <button type="button" className="snap-another" onClick={reset}>
             ✨ {t('snap.another')}
           </button>
