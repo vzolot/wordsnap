@@ -17,6 +17,11 @@ from aiogram.types import (
 )
 from dotenv import load_dotenv
 
+# Sentry init ПЕРШЕ — щоб ловити помилки навіть під час імпортів нижче
+load_dotenv()
+from core.sentry_init import init_sentry  # noqa: E402
+init_sentry()
+
 from bot.handlers.word_handler import router as word_router
 from bot.handlers.review_handler import router as review_router
 from bot.handlers.setup_handler import router as setup_router, native_lang_keyboard, ask_native_lang_text
@@ -24,6 +29,7 @@ from bot.handlers.songs_handler import router as songs_router
 from core.bot_i18n import help_text, premium_text, buy_text, t as bt
 from core.constants import MINI_APP_URL
 from core.languages import lang_flag, lang_name
+from core.auto_migrate import run_auto_migrations
 from scheduler.reminder import reminder_loop
 from scheduler.recurring_charges import recurring_charges_loop
 from webhook.server import app as webhook_app
@@ -33,8 +39,6 @@ from core.user_service import (
     cancel_subscription,
 )
 from core.wayforpay_client import create_payment_link
-
-load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -351,6 +355,16 @@ async def setup_bot_commands():
 
 async def main():
     logger.info("🚀 WordSnap Bot starting...")
+
+    # Schema sync — гарантує що БД відповідає поточному коду перед стартом
+    try:
+        await run_auto_migrations()
+    except Exception as e:
+        logger.error(f"Auto-migrations failed: {e}", exc_info=True)
+        # Не валимо процес — частина міграцій могла пройти
+        from core.sentry_init import capture_exception
+        capture_exception(e, {"phase": "startup_migrations"})
+
     await bot.delete_webhook(drop_pending_updates=True)
     try:
         await setup_bot_commands()
