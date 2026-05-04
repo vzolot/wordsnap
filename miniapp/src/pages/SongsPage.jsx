@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { addWord, clearCache, getSongs } from '../api/client';
+import { pollImage } from '../utils/pollImage';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 import WordResult from '../components/WordResult';
@@ -65,6 +66,8 @@ function SongDetail({ pack, targetLang, onBack, t }) {
   const [statusMap, setStatusMap] = useState({}); // word -> 'idle'|'loading'|'added'|'duplicate'|'error'
   const [results, setResults] = useState({}); // word -> data shown inline
   const [errors, setErrors] = useState({}); // word -> error msg
+  const unmountedRef = useRef(false);
+  useEffect(() => () => { unmountedRef.current = true; }, []);
 
   const handleAdd = async (word) => {
     if (statusMap[word] === 'loading' || statusMap[word] === 'added') return;
@@ -88,6 +91,7 @@ function SongDetail({ pack, targetLang, onBack, t }) {
         return;
       }
       const merged = { ...(data.ai_data || {}), ...(data.word || {}) };
+      const wordId = data.word?.id;
       setResults(rs => ({
         ...rs,
         [word]: {
@@ -103,6 +107,15 @@ function SongDetail({ pack, targetLang, onBack, t }) {
       setStatusMap(s => ({ ...s, [word]: 'added' }));
       clearCache('stats');
       clearCache('words');
+      if (wordId) {
+        pollImage(
+          wordId,
+          (url) => setResults(rs => (
+            rs[word] ? { ...rs, [word]: { ...rs[word], image_url: url } } : rs
+          )),
+          () => unmountedRef.current,
+        );
+      }
     } catch {
       setStatusMap(s => ({ ...s, [word]: 'error' }));
     }

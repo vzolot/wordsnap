@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { addWord, clearCache, getWords } from '../api/client';
+import { addWord, clearCache } from '../api/client';
+import { pollImage } from '../utils/pollImage';
 import { useT } from '../contexts/LangContext';
 import WordResult from './WordResult';
 
@@ -15,23 +16,12 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
 
   useEffect(() => () => { unmountedRef.current = true; }, []);
 
-  // Картинка довантажується на бекенді у фоні (Unsplash). Дочекаємось її
-  // 2-3 разами щоб юзер побачив на цій же карточці без переходу у Words.
-  const pollImage = async (wordId) => {
-    const delays = [1500, 2500, 3500];
-    for (const d of delays) {
-      await new Promise(r => setTimeout(r, d));
-      if (unmountedRef.current || activeWordIdRef.current !== wordId) return;
-      try {
-        const r = await getWords();
-        if (unmountedRef.current || activeWordIdRef.current !== wordId) return;
-        const found = (r.data || []).find(w => w.id === wordId);
-        if (found?.image_url) {
-          setResult(prev => (prev ? { ...prev, image_url: found.image_url } : prev));
-          return;
-        }
-      } catch { /* try again next tick */ }
-    }
+  const startPoll = (wordId) => {
+    pollImage(
+      wordId,
+      (url) => setResult(prev => (prev ? { ...prev, image_url: url } : prev)),
+      () => unmountedRef.current || activeWordIdRef.current !== wordId,
+    );
   };
 
   const submit = async (e) => {
@@ -66,7 +56,7 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
       onAdded?.();
       if (wordId) {
         activeWordIdRef.current = wordId;
-        pollImage(wordId);
+        startPoll(wordId);
       }
     } catch (err) {
       const status = err?.response?.status;
