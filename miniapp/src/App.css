@@ -973,7 +973,17 @@
 }
 .snap-another:active { transform: scale(0.98); }
 
-/* ── Songs page ─────────────────────────────────────── */
+/* ── Picks page ─────────────────────────────────────── */
+.picks-section-h {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin: 4px 0 8px;
+  padding: 0 2px;
+}
+
 .song-card {
   display: flex;
   align-items: center;

@@ -39,9 +39,23 @@ function SongsPage() {
 function SongsList({ packs, loading, onPick, t }) {
   if (loading) return <div className="center-loader"><span className="spinner" /></div>;
 
+  const songs = packs.filter(p => (p.category || 'song') === 'song');
+  const movies = packs.filter(p => p.category === 'movie');
+
+  const renderCard = (p) => (
+    <button key={p.id} className="song-card" onClick={() => onPick(p)}>
+      <span className="song-emoji">{p.emoji}</span>
+      <span className="song-info">
+        <span className="song-title">{p.title}</span>
+        <span className="song-artist">{p.artist}</span>
+      </span>
+      <span className="song-count">{p.words.length}</span>
+    </button>
+  );
+
   return (
     <>
-      <h1 className="h1" style={{ marginBottom: 6 }}>🎵 {t('songs.title')}</h1>
+      <h1 className="h1" style={{ marginBottom: 6 }}>{t('songs.title')}</h1>
       <p className="body-2" style={{ marginBottom: 16 }}>{t('songs.sub')}</p>
 
       {packs.length === 0 ? (
@@ -49,16 +63,20 @@ function SongsList({ packs, loading, onPick, t }) {
           <div className="body-2">{t('songs.empty')}</div>
         </div>
       ) : (
-        packs.map(p => (
-          <button key={p.id} className="song-card" onClick={() => onPick(p)}>
-            <span className="song-emoji">{p.emoji}</span>
-            <span className="song-info">
-              <span className="song-title">{p.title}</span>
-              <span className="song-artist">{p.artist}</span>
-            </span>
-            <span className="song-count">{p.words.length}</span>
-          </button>
-        ))
+        <>
+          {songs.length > 0 && (
+            <>
+              <div className="picks-section-h">🎵 {t('picks.songs')}</div>
+              {songs.map(renderCard)}
+            </>
+          )}
+          {movies.length > 0 && (
+            <>
+              <div className="picks-section-h" style={{ marginTop: 18 }}>🎬 {t('picks.movies')}</div>
+              {movies.map(renderCard)}
+            </>
+          )}
+        </>
       )}
     </>
   );

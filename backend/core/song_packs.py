@@ -467,12 +467,247 @@ SONG_PACKS = {
 }
 
 
+MOVIE_PACKS = {
+    "en": [
+        {
+            "id": "en-the-office",
+            "title": "The Office",
+            "artist": "US sitcom",
+            "emoji": "🏢",
+            "words": ["meeting", "boss", "deadline", "weird", "promotion",
+                      "complain", "lunch break", "annoying", "polite",
+                      "awkward"],
+        },
+        {
+            "id": "en-friends",
+            "title": "Friends",
+            "artist": "Sitcom",
+            "emoji": "☕",
+            "words": ["roommate", "break up", "owe", "hang out", "weird",
+                      "borrow", "couch", "neighbor", "promise", "kidding"],
+        },
+        {
+            "id": "en-stranger-things",
+            "title": "Stranger Things",
+            "artist": "Sci-fi series",
+            "emoji": "👽",
+            "words": ["stranger", "missing", "friend", "scared", "trust",
+                      "creepy", "neighborhood", "hide", "promise", "powers"],
+        },
+        {
+            "id": "en-breaking-bad",
+            "title": "Breaking Bad",
+            "artist": "Crime drama",
+            "emoji": "🧪",
+            "words": ["lie", "deal", "cops", "warning", "trouble",
+                      "deserve", "cancer", "savings", "loyal", "regret"],
+        },
+        {
+            "id": "en-the-crown",
+            "title": "The Crown",
+            "artist": "Historical drama",
+            "emoji": "👑",
+            "words": ["duty", "throne", "royal", "scandal", "marriage",
+                      "speech", "advisor", "tradition", "rumor", "politely"],
+        },
+    ],
+    "es": [
+        {
+            "id": "es-money-heist",
+            "title": "La Casa de Papel",
+            "artist": "Money Heist",
+            "emoji": "🎭",
+            "words": ["robo", "rehén", "plan", "huir", "traidor",
+                      "policía", "máscara", "callar", "esconder", "salvar"],
+        },
+        {
+            "id": "es-elite",
+            "title": "Élite",
+            "artist": "Teen drama",
+            "emoji": "🎓",
+            "words": ["beca", "rico", "pobre", "secreto", "novia",
+                      "celoso", "fiesta", "pelear", "mentir", "confesar"],
+        },
+        {
+            "id": "es-narcos",
+            "title": "Narcos",
+            "artist": "Crime saga",
+            "emoji": "💼",
+            "words": ["jefe", "frontera", "soborno", "informante",
+                      "amenazar", "venganza", "huida", "perseguir",
+                      "arrestar", "lealtad"],
+        },
+        {
+            "id": "es-vis-a-vis",
+            "title": "Vis a Vis",
+            "artist": "Prison drama",
+            "emoji": "🔒",
+            "words": ["cárcel", "celda", "presa", "guardia", "fugarse",
+                      "venganza", "amistad", "patio", "prohibido", "valor"],
+        },
+        {
+            "id": "es-las-flores",
+            "title": "La Casa de las Flores",
+            "artist": "Family drama",
+            "emoji": "🌸",
+            "words": ["familia", "herencia", "secreto", "boda", "celos",
+                      "engañar", "perdonar", "vergüenza", "florería",
+                      "discutir"],
+        },
+    ],
+    "pl": [
+        {
+            "id": "pl-1670",
+            "title": "1670",
+            "artist": "Netflix komedia",
+            "emoji": "🏰",
+            "words": ["szlachta", "wieś", "ksiądz", "ślub", "gospodarstwo",
+                      "obowiązek", "głupi", "honor", "panować", "dziedzic"],
+        },
+        {
+            "id": "pl-sexify",
+            "title": "Sexify",
+            "artist": "Warszawski serial",
+            "emoji": "💻",
+            "words": ["aplikacja", "startup", "współlokatorka", "randka",
+                      "stres", "praca", "studia", "kłótnia", "umówić się",
+                      "wstyd"],
+        },
+        {
+            "id": "pl-glebia-lasu",
+            "title": "W głębi lasu",
+            "artist": "Thriller",
+            "emoji": "🌲",
+            "words": ["las", "zaginąć", "morderstwo", "śledztwo",
+                      "świadek", "tajemnica", "podejrzany", "krzyk",
+                      "ukrywać", "ślad"],
+        },
+        {
+            "id": "pl-kobiety-mafii",
+            "title": "Kobiety Mafii",
+            "artist": "Crime",
+            "emoji": "🚗",
+            "words": ["mafia", "interes", "broń", "zdrada", "zemsta",
+                      "policja", "narkotyki", "uciec", "więzienie",
+                      "lojalność"],
+        },
+        {
+            "id": "pl-rojst",
+            "title": "Rojst",
+            "artist": "Mystery",
+            "emoji": "🌫️",
+            "words": ["dziennikarz", "tajemnica", "ofiara", "podejrzany",
+                      "milicja", "strach", "wieś", "kłamstwo", "trop",
+                      "zaginąć"],
+        },
+    ],
+    "de": [
+        {
+            "id": "de-dark",
+            "title": "Dark",
+            "artist": "Sci-fi mystery",
+            "emoji": "🕳️",
+            "words": ["Höhle", "verschwinden", "Vergangenheit", "Zukunft",
+                      "Kreis", "Schicksal", "lügen", "Geheimnis", "Brief",
+                      "wiederkommen"],
+        },
+        {
+            "id": "de-babylon-berlin",
+            "title": "Babylon Berlin",
+            "artist": "Historical noir",
+            "emoji": "🎭",
+            "words": ["Ermittler", "Mord", "Verbrecher", "Verdacht",
+                      "Spur", "Razzia", "verraten", "Kabarett", "Beweis",
+                      "fliehen"],
+        },
+        {
+            "id": "de-tatort",
+            "title": "Tatort",
+            "artist": "Krimi-Klassiker",
+            "emoji": "🔍",
+            "words": ["Tatort", "Leiche", "Kommissar", "Zeuge", "Verdacht",
+                      "Spur", "Verhör", "Alibi", "ermitteln", "festnehmen"],
+        },
+        {
+            "id": "de-4-blocks",
+            "title": "4 Blocks",
+            "artist": "Berlin crime",
+            "emoji": "🔫",
+            "words": ["Familie", "Geschäft", "Bandenkrieg", "Bruder",
+                      "Verrat", "Schulden", "Gewalt", "schweigen",
+                      "Macht", "ausliefern"],
+        },
+        {
+            "id": "de-tuerkisch",
+            "title": "Türkisch für Anfänger",
+            "artist": "Family sitcom",
+            "emoji": "👨‍👩‍👧",
+            "words": ["Familie", "Stiefvater", "nervig", "verliebt",
+                      "Geschwister", "Streit", "Hochzeit", "ausziehen",
+                      "Erlaubnis", "Geheimnis"],
+        },
+    ],
+    "uk": [
+        {
+            "id": "uk-sluga-narodu",
+            "title": "Слуга народу",
+            "artist": "Політична комедія",
+            "emoji": "🏛️",
+            "words": ["президент", "вибори", "корупція", "обіцянка",
+                      "влада", "народ", "журналіст", "брехня", "обман",
+                      "правда"],
+        },
+        {
+            "id": "uk-spiimaty-kaydasha",
+            "title": "Спіймати Кайдаша",
+            "artist": "Серіал",
+            "emoji": "🌾",
+            "words": ["сусід", "сварка", "город", "тарілка", "брат",
+                      "земля", "жадібний", "проклясти", "помиритись",
+                      "родина"],
+        },
+        {
+            "id": "uk-kripostna",
+            "title": "Кріпосна",
+            "artist": "Історична драма",
+            "emoji": "👗",
+            "words": ["панство", "кріпак", "втеча", "кохання", "наречений",
+                      "обіцянка", "зрадити", "помста", "лист", "сваритись"],
+        },
+        {
+            "id": "uk-pershi-lastivky",
+            "title": "Перші ластівки",
+            "artist": "Молодіжна драма",
+            "emoji": "🐦",
+            "words": ["школа", "наркотики", "залежність", "друзі",
+                      "одинак", "втеча", "батьки", "довіра", "зрада",
+                      "допомога"],
+        },
+        {
+            "id": "uk-zakhar-berkut",
+            "title": "Захар Беркут",
+            "artist": "Історичний фільм",
+            "emoji": "⚔️",
+            "words": ["військо", "битва", "ватажок", "загарбник", "скеля",
+                      "перемогти", "захищати", "клятва", "плем'я",
+                      "вільний"],
+        },
+    ],
+}
+
+
 def get_packs(target_lang: str) -> list:
-    return SONG_PACKS.get(target_lang, [])
+    """Повертає всі підбірки (пісні + фільми/серіали) із полем category."""
+    songs = [{"category": "song", **p} for p in SONG_PACKS.get(target_lang, [])]
+    movies = [{"category": "movie", **p} for p in MOVIE_PACKS.get(target_lang, [])]
+    return songs + movies
 
 
 def get_pack(target_lang: str, pack_id: str) -> dict | None:
     for p in SONG_PACKS.get(target_lang, []):
         if p["id"] == pack_id:
-            return p
+            return {"category": "song", **p}
+    for p in MOVIE_PACKS.get(target_lang, []):
+        if p["id"] == pack_id:
+            return {"category": "movie", **p}
     return None
