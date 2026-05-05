@@ -106,6 +106,9 @@ const T = {
 
     'export.title': 'Export your words',
     'export.sub': 'Take your dictionary anywhere — no lock-in.',
+    'export.sub_chat': 'We\'ll send the file to your bot chat — easy to save anywhere.',
+    'export.sent': 'Sent {n} words to your chat',
+    'export.no_words': 'Nothing to export yet — add some words first.',
     'export.free': 'Free',
     'export.csv_desc': 'Plain table for Excel, Sheets or backup. All your words and progress.',
     'export.apkg_desc': 'Ready-to-import Anki deck with images. Same SRS, your words.',
@@ -265,6 +268,9 @@ const T = {
 
     'export.title': 'Експорт словника',
     'export.sub': 'Забери свої слова з собою — без vendor lock-in.',
+    'export.sub_chat': 'Файл прийде у бот-чат — звідти легко зберегти куди завгодно.',
+    'export.sent': 'Надіслано {n} слів у чат',
+    'export.no_words': 'Поки нічого експортувати — додай хоч одне слово.',
     'export.free': 'Безкоштовно',
     'export.csv_desc': 'Проста таблиця для Excel, Sheets чи бекапу. Всі слова і прогрес.',
     'export.apkg_desc': 'Готова Anki-колода з картинками. Той самий SRS, твої слова.',
@@ -424,6 +430,9 @@ const T = {
 
     'export.title': 'Exporta tu vocabulario',
     'export.sub': 'Llévate tu diccionario a cualquier parte — sin lock-in.',
+    'export.sub_chat': 'Te enviaremos el archivo al chat del bot — listo para guardar.',
+    'export.sent': 'Enviadas {n} palabras al chat',
+    'export.no_words': 'Aún no hay nada que exportar — añade alguna palabra.',
     'export.free': 'Gratis',
     'export.csv_desc': 'Tabla plana para Excel, Sheets o backup. Todas tus palabras y progreso.',
     'export.apkg_desc': 'Mazo Anki listo para importar con imágenes. Mismo SRS, tus palabras.',
@@ -583,6 +592,9 @@ const T = {
 
     'export.title': 'Eksportuj słownik',
     'export.sub': 'Zabierz swoje słowa wszędzie — bez lock-inu.',
+    'export.sub_chat': 'Plik przyjdzie na czat bota — łatwo zapisać gdziekolwiek.',
+    'export.sent': 'Wysłano {n} słów na czat',
+    'export.no_words': 'Nic do eksportu — dodaj najpierw jakieś słowo.',
     'export.free': 'Bezpłatnie',
     'export.csv_desc': 'Płaska tabela do Excela, Sheets lub kopii zapasowej. Wszystkie słowa i postęp.',
     'export.apkg_desc': 'Gotowa talia Anki z obrazkami. Ten sam SRS, twoje słowa.',
@@ -678,6 +690,9 @@ const T = {
 
     'export.title': 'Wortschatz exportieren',
     'export.sub': 'Nimm dein Wörterbuch überall mit — ohne Lock-in.',
+    'export.sub_chat': 'Wir schicken die Datei in deinen Bot-Chat — überall speicherbar.',
+    'export.sent': '{n} Wörter in den Chat gesendet',
+    'export.no_words': 'Noch nichts zu exportieren — füge erst Wörter hinzu.',
     'export.free': 'Kostenlos',
     'export.csv_desc': 'Flache Tabelle für Excel, Sheets oder Backup. Alle Wörter und Fortschritt.',
     'export.apkg_desc': 'Importfertiges Anki-Deck mit Bildern. Gleiches SRS, deine Wörter.',

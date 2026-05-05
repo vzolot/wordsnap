@@ -1421,6 +1421,19 @@
 .word-row-clickable:hover { background: var(--bg-card-2); }
 .word-row-clickable:active { transform: scale(0.99); }
 
+/* ── Export success ─────────────────────────────────── */
+.export-success {
+  background: var(--violet-soft);
+  color: var(--violet);
+  padding: 18px 16px;
+  border-radius: var(--r-md);
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  margin: 4px 0 6px;
+}
+[data-theme="dark"] .export-success { color: #C4A8FF; }
+
 /* ── Export modal options ───────────────────────────── */
 .export-options {
   display: flex;

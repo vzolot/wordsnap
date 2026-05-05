@@ -341,15 +341,19 @@ async def list_song_packs(telegram_id: int = Query(...)):
     return {"target_lang": target, "packs": packs}
 
 
-@router.get("/api/export")
+@router.post("/api/export")
 async def export_words(
     telegram_id: int = Query(...),
     format: str = Query("csv"),
 ):
-    """Експорт всіх слів юзера. CSV — для всіх, APKG — лише Pro."""
+    """Експорт всіх слів юзера. CSV — для всіх, APKG — лише Pro.
+
+    Файл надсилається в бот-чат через Telegram Bot API — це надійний
+    шлях у iOS Telegram WebView, де <a download> не працює.
+    """
     from datetime import datetime as _dt
-    from fastapi.responses import Response
     from core.export import to_apkg, to_csv
+    from core.telegram_send import send_document
 
     fmt = format.lower()
     if fmt not in ("csv", "apkg"):
@@ -360,7 +364,6 @@ async def export_words(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # APKG — тільки Pro
         now = datetime.now(timezone.utc)
         is_pro = user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now
         if fmt == "apkg" and not is_pro:
@@ -370,23 +373,36 @@ async def export_words(
             select(Word).where(Word.user_id == user.id).order_by(Word.created_at.asc())
         )).scalars().all())
 
+    if not words:
+        raise HTTPException(status_code=400, detail="No words to export")
+
+    stamp = _dt.now().strftime("%Y%m%d")
+    if fmt == "csv":
+        file_bytes = to_csv(words)
+        filename = f"wordsnap-{stamp}.csv"
+        mime = "text/csv"
+        caption = f"📥 CSV · {len(words)} words"
+    else:
+        file_bytes = to_apkg(words, telegram_id, user.target_lang)
+        filename = f"wordsnap-{stamp}.apkg"
+        mime = "application/octet-stream"
+        caption = f"📥 Anki deck · {len(words)} words"
+
+    sent = await send_document(
+        chat_id=telegram_id,
+        file_bytes=file_bytes,
+        filename=filename,
+        caption=caption,
+        mime_type=mime,
+    )
+    if not sent:
+        raise HTTPException(status_code=502, detail="Failed to send document")
+
     analytics.capture(telegram_id, "export_completed", {
         "format": fmt,
         "word_count": len(words),
     })
-
-    stamp = _dt.now().strftime("%Y%m%d")
-    if fmt == "csv":
-        return Response(
-            content=to_csv(words),
-            media_type="text/csv; charset=utf-8",
-            headers={"Content-Disposition": f'attachment; filename="wordsnap-{stamp}.csv"'},
-        )
-    return Response(
-        content=to_apkg(words, telegram_id, user.target_lang),
-        media_type="application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="wordsnap-{stamp}.apkg"'},
-    )
+    return {"ok": True, "word_count": len(words), "filename": filename}
 
 
 @router.get("/api/referral")
