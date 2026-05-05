@@ -32,20 +32,22 @@ function ReviewPage() {
 
   const current = words[index];
 
-  const handleAnswer = async (quality, key) => {
+  const handleAnswer = (quality, key) => {
     if (selected) return;
     setSelected(key);
-    await submitReview(current.id, quality).catch(() => {});
-    // Інвалідуємо кеш — review/stats тепер застаріли
-    clearCache('review');
-    clearCache('stats');
+    // Оптимістичне оновлення — UI рухається моментально, submitReview летить
+    // у фоні. Якщо запит впаде — нічого, локальний стан правильний, наступне
+    // відкриття review tab підтягне свіжий список з бекенду.
     const xpGain = quality === 5 ? 10 : quality === 3 ? 6 : 2;
     setStats(s => ({
       reviewed: s.reviewed + 1,
       mastered: s.mastered + (quality === 5 ? 1 : 0),
       xp: s.xp + xpGain,
     }));
-    // Невелика затримка щоб користувач побачив підсвічування вибраної кнопки
+    submitReview(current.id, quality).catch(() => {});
+    clearCache('review');
+    clearCache('stats');
+    // Коротка затримка щоб юзер побачив підсвічування вибраної кнопки
     setTimeout(() => {
       if (index + 1 >= words.length) {
         setDone(true);
@@ -53,7 +55,7 @@ function ReviewPage() {
         setIndex(i => i + 1);
         setRevealed(false);
       }
-    }, 350);
+    }, 200);
   };
 
   if (loading) {

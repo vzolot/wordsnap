@@ -82,19 +82,27 @@ def create_payment_link(
     user_telegram_id: int,
     amount: float = SUBSCRIPTION_AMOUNT,
     currency: str = SUBSCRIPTION_CURRENCY,
+    period: str = "monthly",
 ) -> PaymentLink:
     """
     Створює посилання на ПЕРШИЙ платіж.
     WayForPay автоматично запам'ятає картку якщо в кабінеті увімкнено
     'Збереження карток' (за замовчуванням так).
+
+    period — 'monthly' | 'annual'. Впливає на product_name та order_reference,
+    щоб у webhook'у можна було відрізнити підписки і нарахувати правильну
+    тривалість Pro.
     """
     if not MERCHANT_LOGIN or not MERCHANT_SECRET:
         raise ValueError("WayForPay credentials not configured")
-    
-    order_reference = f"WS_{user_telegram_id}_{int(time.time())}"
+
+    order_reference = f"WS_{user_telegram_id}_{period[:3]}_{int(time.time())}"
     order_date = int(time.time())
-    
-    product_names = ["WordSnap Pro - 30 days"]
+
+    if period == "annual":
+        product_names = ["WordSnap Pro - 365 days"]
+    else:
+        product_names = ["WordSnap Pro - 30 days"]
     product_counts = [1]
     product_prices = [amount]
     

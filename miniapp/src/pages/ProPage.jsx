@@ -42,6 +42,7 @@ function ProPage() {
   };
 
   const isPro = stats?.plan === 'pro';
+  const [period, setPeriod] = useState('annual'); // дефолт — annual бо вигідніше
 
   const featureKeys = [
     'pro.features.unlimited',
@@ -49,20 +50,21 @@ function ProPage() {
     'pro.features.srs',
     'pro.features.streaks',
     'pro.features.langs',
+    'pro.features.export_anki',
   ];
 
   const handleBuy = async () => {
-    track('buy_clicked');
+    track('buy_clicked', { period });
     setLoading(true);
     setError('');
     try {
-      const r = await createBuyLink();
+      const r = await createBuyLink(period);
       const url = r.data?.payment_url;
       if (!url) throw new Error('No payment URL');
       if (tg?.openLink) tg.openLink(url);
       else window.open(url, '_blank');
     } catch (e) {
-      track('buy_failed');
+      track('buy_failed', { period });
       setError(t('pro.error.payment'));
     } finally {
       setLoading(false);
@@ -81,11 +83,27 @@ function ProPage() {
         <p className="pro-sub">{t('pro.sub')}</p>
 
         <div className="pro-card">
-          <div className="pro-monthly">{t('pro.monthly')}</div>
-          <div className="pro-price">
-            <span className="pro-price-num">$1.49</span>
-            <span className="pro-price-unit">/ month</span>
-          </div>
+          {!isPro && (
+            <div className="plan-toggle">
+              <button
+                type="button"
+                className={`plan-toggle-btn ${period === 'annual' ? 'active' : ''}`}
+                onClick={() => setPeriod('annual')}
+              >
+                <div className="plan-toggle-label">{t('pro.plan_annual')}</div>
+                <div className="plan-toggle-price">$8.99<span>/yr</span></div>
+                <div className="plan-toggle-badge">−50%</div>
+              </button>
+              <button
+                type="button"
+                className={`plan-toggle-btn ${period === 'monthly' ? 'active' : ''}`}
+                onClick={() => setPeriod('monthly')}
+              >
+                <div className="plan-toggle-label">{t('pro.plan_monthly')}</div>
+                <div className="plan-toggle-price">$1.49<span>/mo</span></div>
+              </button>
+            </div>
+          )}
 
           <ul className="pro-features">
             {featureKeys.map(k => (
@@ -109,7 +127,9 @@ function ProPage() {
             </>
           ) : (
             <button className="pro-cta" onClick={handleBuy} disabled={loading}>
-              {loading ? t('pro.cta_loading') : t('pro.cta')}
+              {loading ? t('pro.cta_loading') : t('pro.cta_buy', {
+                price: period === 'annual' ? '$8.99' : '$1.49',
+              })}
             </button>
           )}
         </div>

@@ -442,19 +442,33 @@ async def get_referral(telegram_id: int = Query(...)):
 
 
 @router.post("/api/buy")
-async def create_buy_link(telegram_id: int = Query(...)):
-    """Створює посилання на оплату Pro для конкретного юзера."""
+async def create_buy_link(
+    telegram_id: int = Query(...),
+    period: str = Query("monthly"),
+):
+    """Створює посилання на оплату Pro. period — 'monthly' (default) | 'annual'.
+    Annual = $8.99 за рік (≈50% знижка від $1.49 × 12)."""
     from core.wayforpay_client import create_payment_link
+
+    if period not in ("monthly", "annual"):
+        raise HTTPException(status_code=400, detail="period must be monthly or annual")
+    amount = 8.99 if period == "annual" else 1.49
+
     try:
         payment = create_payment_link(
             user_telegram_id=telegram_id,
-            amount=1.49,
+            amount=amount,
             currency="USD",
+            period=period,
         )
-        analytics.capture(telegram_id, "buy_link_created", {"amount": 1.49})
+        analytics.capture(telegram_id, "buy_link_created", {
+            "amount": amount, "period": period,
+        })
         return {
             "payment_url": payment["payment_url"],
             "order_reference": payment["order_reference"],
+            "period": period,
+            "amount": amount,
         }
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
