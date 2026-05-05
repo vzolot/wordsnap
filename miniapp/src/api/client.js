@@ -58,13 +58,13 @@ export const createBuyLink = () => api.post('/api/buy');
  */
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 хв
 
-export function readCache(key) {
+export function readCache(key, { ignoreTtl = false } = {}) {
   try {
     const raw = localStorage.getItem(`wordsnap.cache.${key}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.t !== 'number') return null;
-    if (Date.now() - parsed.t > CACHE_TTL_MS) return null;
+    if (!ignoreTtl && Date.now() - parsed.t > CACHE_TTL_MS) return null;
     return parsed.d;
   } catch { return null; }
 }

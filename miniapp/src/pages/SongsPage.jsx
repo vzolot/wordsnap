@@ -107,7 +107,15 @@ function SongDetail({ pack, targetLang, onBack, t }) {
         },
       }));
       setStatusMap(s => ({ ...s, [word]: 'added' }));
-      clearCache('stats');
+      // Оптимістично оновлюємо stats — щоб used_today інкрементувався одразу
+      const cachedStats = readCache('stats', { ignoreTtl: true });
+      if (cachedStats) {
+        writeCache('stats', {
+          ...cachedStats,
+          total_words: (cachedStats.total_words || 0) + 1,
+          used_today: (cachedStats.used_today || 0) + 1,
+        });
+      }
       clearCache('words');
       if (wordId) {
         pollImage(

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { addWord, clearCache } from '../api/client';
+import { addWord, clearCache, readCache, writeCache } from '../api/client';
 import { pollImage } from '../utils/pollImage';
 import { useT } from '../contexts/LangContext';
 import WordResult from './WordResult';
@@ -50,8 +50,17 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
         image_url: merged.image_url || data.image_url,
       });
       setValue('');
-      // Свіжі дані будуть підтягнуті у Home/Stats/Words; інвалідуємо кеш
-      clearCache('stats');
+      // Оптимістичне оновлення кешу stats — щоб поки loadAll fetcить свіжі,
+      // лічильник 5/10 одразу відбивав нове число (без миготіння на 0).
+      const cachedStats = readCache('stats', { ignoreTtl: true });
+      if (cachedStats) {
+        writeCache('stats', {
+          ...cachedStats,
+          total_words: (cachedStats.total_words || 0) + 1,
+          used_today: (cachedStats.used_today || 0) + 1,
+        });
+      }
+      // Words list однаково треба перетягнути цілком — там новий запис.
       clearCache('words');
       onAdded?.();
       if (wordId) {

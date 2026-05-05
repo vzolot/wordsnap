@@ -11,7 +11,7 @@ from sqlalchemy import or_
 
 from core.db import SessionLocal
 from core.models import PaymentHistory, Review, User, Word
-from core.rewards import TIERS, current_tier, next_tier
+from core.rewards import TIERS, current_tier, next_tier, xp_for_result
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +149,7 @@ async def get_stats(telegram_id: int = Query(...)):
             return {
                 "total_words": 0, "learned_words": 0, "streak": 0,
                 "reviewed_today": 0, "total_reviews": 0, "total_xp": 0,
+                "xp_today": 0,
                 "total_spent": 0.0,
                 "tier_xp": beginner[0], "tier_key": beginner[1],
                 "tier_reward_key": beginner[2],
@@ -170,6 +171,19 @@ async def get_stats(telegram_id: int = Query(...)):
         reviewed_today = await _reviewed_today(session, user.id)
         streak = await _calculate_streak(session, user.id)
         total_spent = await _total_spent(session, user.id)
+
+        # XP за сьогодні: сума по reviews сьогодні. Окремо від total_xp щоб
+        # на Home показувати динаміку дня, а не накопичення за весь час.
+        today_start = datetime.now(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        today_review_rows = (await session.execute(
+            select(Review.result, func.count().label("n")).where(
+                Review.user_id == user.id,
+                Review.reviewed_at >= today_start,
+            ).group_by(Review.result)
+        )).all()
+        xp_today = sum(xp_for_result(r.result) * int(r.n) for r in today_review_rows)
 
         now = datetime.now(timezone.utc)
         is_pro = user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now
@@ -196,6 +210,7 @@ async def get_stats(telegram_id: int = Query(...)):
             "reviewed_today": reviewed_today,
             "total_reviews": user.total_reviews,
             "total_xp": xp,
+            "xp_today": xp_today,
             "total_spent": total_spent,
             "tier_xp": tier[0],
             "tier_key": tier[1],

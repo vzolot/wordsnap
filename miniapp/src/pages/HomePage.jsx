@@ -15,10 +15,11 @@ const greetingKey = () => {
 };
 
 function HomePage() {
-  // Stale-while-revalidate: одразу рендеримось з cached даних, потім фоном тягнемо свіжі
-  const [stats, setStats] = useState(() => readCache('stats'));
+  // Stale-while-revalidate: одразу рендеримось з cached даних, потім фоном тягнемо свіжі.
+  // ignoreTtl=true — навіть прострочений кеш краще ніж 0/0 при холодному старті.
+  const [stats, setStats] = useState(() => readCache('stats', { ignoreTtl: true }));
   const [dueCount, setDueCount] = useState(() => {
-    const cached = readCache('review');
+    const cached = readCache('review', { ignoreTtl: true });
     return Array.isArray(cached) ? cached.length : 0;
   });
   const navigate = useNavigate();
@@ -132,8 +133,8 @@ function HomePage() {
             <div className="stat-label">{t('home.stat.mastered')}</div>
           </div>
           <div className="stat-cell">
-            <div className="stat-num gradient">✨ {stats?.total_xp || 0}</div>
-            <div className="stat-label">{t('home.stat.xp')}</div>
+            <div className="stat-num gradient">✨ {stats?.xp_today || 0}</div>
+            <div className="stat-label">{t('home.stat.xp_today')}</div>
           </div>
         </div>
 
