@@ -177,6 +177,8 @@ T: dict[str, dict[str, str]] = {
         # — reminders —
         "remind.title": "🔔 <b>Час повторити слово!</b>",
         "remind.hint": "<i>Згадав переклад? Натисни щоб перевірити 👇</i>",
+        "streak_save.title": "🔥 <b>Серія в небезпеці</b>",
+        "streak_save.body": "У тебе {streak} днів поспіль — і сьогодні ще нуль повторень.\n\nЗалишилось 2 години щоб не зірвати. Одне слово — це 30 секунд.",
 
         "rewards.beginner": "Новачок",
         "rewards.apprentice": "Підмайстер",
@@ -363,6 +365,8 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>Time to review a word!</b>",
         "remind.hint": "<i>Remember the translation? Tap to check 👇</i>",
+        "streak_save.title": "🔥 <b>Streak at risk</b>",
+        "streak_save.body": "You're on a {streak}-day streak — and zero reviews today.\n\n2 hours left to keep it. One word takes 30 seconds.",
 
         "rewards.beginner": "Beginner",
         "rewards.apprentice": "Apprentice",
@@ -549,6 +553,8 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>¡Hora de repasar una palabra!</b>",
         "remind.hint": "<i>¿Recuerdas la traducción? Pulsa para verificar 👇</i>",
+        "streak_save.title": "🔥 <b>Tu racha está en riesgo</b>",
+        "streak_save.body": "Llevas {streak} días seguidos — y hoy cero repasos.\n\nQuedan 2 horas. Una palabra son 30 segundos.",
 
         "rewards.beginner": "Principiante",
         "rewards.apprentice": "Aprendiz",
@@ -735,6 +741,8 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>Czas na powtórkę słowa!</b>",
         "remind.hint": "<i>Pamiętasz tłumaczenie? Naciśnij, by sprawdzić 👇</i>",
+        "streak_save.title": "🔥 <b>Twoja seria w niebezpieczeństwie</b>",
+        "streak_save.body": "Masz {streak} dni z rzędu — a dziś zero powtórzeń.\n\nZostały 2 godziny. Jedno słowo to 30 sekund.",
 
         "rewards.beginner": "Początkujący",
         "rewards.apprentice": "Czeladnik",
@@ -921,6 +929,8 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>Zeit für eine Wiederholung!</b>",
         "remind.hint": "<i>Erinnerst du dich an die Übersetzung? Tippe zum Prüfen 👇</i>",
+        "streak_save.title": "🔥 <b>Deine Serie ist in Gefahr</b>",
+        "streak_save.body": "Du hast eine {streak}-Tage-Serie — und heute null Wiederholungen.\n\n2 Stunden bleiben. Ein Wort dauert 30 Sekunden.",
 
         "rewards.beginner": "Anfänger",
         "rewards.apprentice": "Lehrling",

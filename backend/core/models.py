@@ -49,6 +49,8 @@ class User(Base):
     reminder_time: Mapped[time] = mapped_column(Time, default=time(9, 0))
     timezone: Mapped[str] = mapped_column(String(50), default="Europe/Kiev")
     reminders_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Антиспам для streak-save push (одне на день локального часу)
+    last_streak_save_date: Mapped[date | None] = mapped_column(Date)
 
     # Денні ліміти
     words_added_today: Mapped[int] = mapped_column(Integer, default=0)

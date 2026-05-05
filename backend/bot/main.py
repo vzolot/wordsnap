@@ -32,6 +32,7 @@ from core.languages import lang_flag, lang_name
 from core.auto_migrate import run_auto_migrations
 from scheduler.reminder import reminder_loop
 from scheduler.recurring_charges import recurring_charges_loop
+from scheduler.streak_save import streak_save_loop
 from webhook.server import app as webhook_app
 from core.user_service import (
     get_or_create_user,
@@ -383,11 +384,13 @@ async def main():
     
     logger.info(f"📡 Webhook server starting on port {port}")
     
-    # Запускаємо паралельно: bot polling + reminder + recurring charges + webhook
+    # Запускаємо паралельно: bot polling + reminder + recurring charges +
+    # streak-save + webhook
     await asyncio.gather(
         dp.start_polling(bot),
         reminder_loop(bot),
         recurring_charges_loop(bot),
+        streak_save_loop(bot),
         server.serve(),
     )
 

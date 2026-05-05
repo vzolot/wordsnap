@@ -54,6 +54,10 @@ MIGRATIONS: list[tuple[str, str]] = [
         "CREATE INDEX IF NOT EXISTS idx_ai_cache_lookup "
         "ON ai_cache(word, target_lang, native_lang)",
     ),
+    (
+        "users.last_streak_save_date",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_streak_save_date DATE",
+    ),
 ]
 
 
