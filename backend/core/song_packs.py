@@ -697,16 +697,18 @@ MOVIE_PACKS = {
 
 
 def get_packs(target_lang: str) -> list:
-    """Повертає всі підбірки (пісні + фільми/серіали) із полем category."""
-    songs = [{"category": "song", **p} for p in SONG_PACKS.get(target_lang, [])]
-    movies = [{"category": "movie", **p} for p in MOVIE_PACKS.get(target_lang, [])]
-    return songs + movies
+    """Повертає всі підбірки. Movies тимчасово приховані до того як буде час
+    на ретельну валідацію — деякі слова ламали OpenAI-генерацію. Дані лежать
+    у MOVIE_PACKS, увімкнути назад можна одним рядком."""
+    return [{"category": "song", **p} for p in SONG_PACKS.get(target_lang, [])]
 
 
 def get_pack(target_lang: str, pack_id: str) -> dict | None:
     for p in SONG_PACKS.get(target_lang, []):
         if p["id"] == pack_id:
             return {"category": "song", **p}
+    # MOVIE_PACKS не серветься але lookup працює — для backward-compat,
+    # якщо у чийсь історії ще лежить movie pack_id.
     for p in MOVIE_PACKS.get(target_lang, []):
         if p["id"] == pack_id:
             return {"category": "movie", **p}

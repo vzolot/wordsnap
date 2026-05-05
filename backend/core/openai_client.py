@@ -144,14 +144,23 @@ async def get_word_data(word: str, target_lang: str, native_lang: str = "uk") ->
 
         data = json.loads(content)
 
-        required = ["translation", "examples", "image_keyword"]
-        if not all(key in data for key in required):
-            logger.error(f"Missing required fields in response: {data}")
+        # translation — найкритичніше, без нього сенсу збереженого слова немає
+        if not data.get("translation"):
+            logger.error(
+                f"OpenAI missing translation for '{word}' ({target_lang}/{native_lang}). "
+                f"Raw response keys: {list(data.keys())}"
+            )
             return None
 
-        if not isinstance(data["examples"], list) or len(data["examples"]) < 1:
-            logger.error("Invalid examples in response")
-            return None
+        # examples — якщо нема або не список, підставимо порожній і йдемо далі;
+        # юзер побачить переклад, приклади просто не покажуться
+        if not isinstance(data.get("examples"), list):
+            logger.warning(f"OpenAI returned non-list examples for '{word}', defaulting to []")
+            data["examples"] = []
+
+        # image_keyword не критичний — fallback на саме слово
+        if not data.get("image_keyword"):
+            data["image_keyword"] = word
 
         if response.usage:
             tokens = response.usage.total_tokens
