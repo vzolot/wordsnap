@@ -109,22 +109,10 @@ async def _cache_store(word: str, target_lang: str, native_lang: str, data: dict
         logger.warning(f"Cache store failed: {e}")
 
 
-async def get_word_data(word: str, target_lang: str, native_lang: str = "uk") -> WordData | None:
-    """Запитує OpenAI про слово і повертає структуровані дані. Перевіряє кеш."""
-    word = word.strip().lower()
-
-    if not word:
-        return None
-    if len(word) > 100:
-        logger.warning(f"Word too long: {len(word)} chars")
-        return None
-
-    # ⚡ Cache hit — повертаємо за ~50 мс замість 3 сек OpenAI
-    cached = await _cache_lookup(word, target_lang, native_lang)
-    if cached:
-        logger.info(f"AI cache HIT: '{word}' ({target_lang}/{native_lang})")
-        return cached
-
+async def _ask_openai_once(
+    word: str, target_lang: str, native_lang: str
+) -> WordData | None:
+    """Один сирий виклик OpenAI з валідацією. None при будь-якій помилці."""
     try:
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
@@ -144,21 +132,17 @@ async def get_word_data(word: str, target_lang: str, native_lang: str = "uk") ->
 
         data = json.loads(content)
 
-        # translation — найкритичніше, без нього сенсу збереженого слова немає
         if not data.get("translation"):
             logger.error(
                 f"OpenAI missing translation for '{word}' ({target_lang}/{native_lang}). "
-                f"Raw response keys: {list(data.keys())}"
+                f"Raw keys: {list(data.keys())} content[:200]={content[:200]!r}"
             )
             return None
 
-        # examples — якщо нема або не список, підставимо порожній і йдемо далі;
-        # юзер побачить переклад, приклади просто не покажуться
         if not isinstance(data.get("examples"), list):
             logger.warning(f"OpenAI returned non-list examples for '{word}', defaulting to []")
             data["examples"] = []
 
-        # image_keyword не критичний — fallback на саме слово
         if not data.get("image_keyword"):
             data["image_keyword"] = word
 
@@ -168,15 +152,42 @@ async def get_word_data(word: str, target_lang: str, native_lang: str = "uk") ->
                     response.usage.completion_tokens * 0.0006) / 1000
             logger.info(f"OpenAI: {tokens} tokens, ~${cost:.5f}")
 
-        # Зберігаємо для майбутніх запитів — не блокуємо відповідь
-        import asyncio as _aio
-        _aio.create_task(_cache_store(word, target_lang, native_lang, data))
-
         return data
 
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON: {e}")
+        logger.error(f"Failed to parse JSON for '{word}': {e}")
         return None
     except Exception as e:
-        logger.error(f"OpenAI error: {e}")
+        logger.error(f"OpenAI error for '{word}': {e}")
         return None
+
+
+async def get_word_data(word: str, target_lang: str, native_lang: str = "uk") -> WordData | None:
+    """Запитує OpenAI про слово, кешує. До 2 спроб для усунення транзиентних
+    збоїв (timeout / порожній content / occasional invalid JSON)."""
+    import asyncio as _aio
+
+    word = word.strip().lower()
+
+    if not word:
+        return None
+    if len(word) > 100:
+        logger.warning(f"Word too long: {len(word)} chars")
+        return None
+
+    # ⚡ Cache hit — повертаємо за ~50 мс замість 3 сек OpenAI
+    cached = await _cache_lookup(word, target_lang, native_lang)
+    if cached:
+        logger.info(f"AI cache HIT: '{word}' ({target_lang}/{native_lang})")
+        return cached
+
+    data = await _ask_openai_once(word, target_lang, native_lang)
+    if data is None:
+        logger.info(f"OpenAI retry for '{word}' ({target_lang}/{native_lang})")
+        await _aio.sleep(0.4)
+        data = await _ask_openai_once(word, target_lang, native_lang)
+    if data is None:
+        return None
+
+    _aio.create_task(_cache_store(word, target_lang, native_lang, data))
+    return data
