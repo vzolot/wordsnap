@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStats, createBuyLink } from '../api/client';
+import { track } from '../utils/analytics';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 
@@ -27,6 +28,7 @@ function ProPage() {
   ];
 
   const handleBuy = async () => {
+    track('buy_clicked');
     setLoading(true);
     setError('');
     try {
@@ -36,6 +38,7 @@ function ProPage() {
       if (tg?.openLink) tg.openLink(url);
       else window.open(url, '_blank');
     } catch (e) {
+      track('buy_failed');
       setError(t('pro.error.payment'));
     } finally {
       setLoading(false);

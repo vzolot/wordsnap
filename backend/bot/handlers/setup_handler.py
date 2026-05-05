@@ -177,6 +177,15 @@ async def handle_target_lang(callback: CallbackQuery):
         native_lang=native_code,
         target_lang=target_code,
     )
+    from core import analytics
+    analytics.capture(callback.from_user.id, "lang_selected", {
+        "native_lang": native_code,
+        "target_lang": target_code,
+    })
+    analytics.identify(callback.from_user.id, {
+        "native_lang": native_code,
+        "target_lang": target_code,
+    })
 
     cities = get_cities(target_code)
     if not cities:
@@ -212,6 +221,11 @@ async def handle_city(callback: CallbackQuery):
                 update(User).where(User.telegram_id == callback.from_user.id).values(region=city_id)
             )
             await session.commit()
+    from core import analytics
+    analytics.capture(callback.from_user.id, "region_selected", {
+        "region": city_id,
+        "skipped": city_id == "skip",
+    })
 
     # Якщо є демо-слово для цієї пари — показуємо демо
     demo = get_demo_word(target_code, native_code)

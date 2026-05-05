@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import NavBar from './components/NavBar';
 import DebugBanner from './components/DebugBanner';
 import WelcomeStories, { shouldShowWelcome } from './components/WelcomeStories';
 import { LangProvider } from './contexts/LangContext';
-import { prefetchAll } from './api/client';
+import { getTelegramUserId, prefetchAll } from './api/client';
+import { initAnalytics, track } from './utils/analytics';
 import './App.css';
 
 // Code-split важкі сторінки — кожна підвантажиться лише коли користувач переходить
@@ -32,6 +33,14 @@ function getInitialTheme() {
 const RouteFallback = () => (
   <div className="page"><div className="center-loader"><span className="spinner" /></div></div>
 );
+
+function RouteAnalytics() {
+  const location = useLocation();
+  useEffect(() => {
+    track('page_viewed', { path: location.pathname });
+  }, [location.pathname]);
+  return null;
+}
 
 function App() {
   const [showWelcome, setShowWelcome] = useState(() => shouldShowWelcome());
@@ -62,6 +71,10 @@ function App() {
       });
     }
 
+    // PostHog ініт + identify за telegram_id (співпадає з distinct_id бекенду)
+    initAnalytics(getTelegramUserId());
+    track('app_opened');
+
     // Префетч даних після того як Telegram готовий — Home/Stats/Words рендеряться миттєво
     const prefetchTimer = setTimeout(() => prefetchAll(), 100);
     return () => clearTimeout(prefetchTimer);
@@ -71,6 +84,7 @@ function App() {
     <LangProvider>
       {showWelcome && <WelcomeStories onClose={() => setShowWelcome(false)} />}
       <BrowserRouter>
+        <RouteAnalytics />
         <div className="app">
           <DebugBanner />
           <Suspense fallback={<RouteFallback />}>

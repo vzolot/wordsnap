@@ -5,6 +5,7 @@ import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 import DayCompletionModal from '../components/DayCompletionModal';
 import SnapCard from '../components/SnapCard';
+import { track } from '../utils/analytics';
 
 const greetingKey = () => {
   const h = new Date().getHours();
@@ -64,6 +65,7 @@ function HomePage() {
       const flagKey = `wordsnap.day_completed.${today}`;
       if (!localStorage.getItem(flagKey)) {
         localStorage.setItem(flagKey, '1');
+        track('day_completed', { streak, used_today: usedToday, daily_limit: dailyLimit });
         // Тягнемо саме сьогоднішні слова — getWords сортує за created_at desc
         getWords().then(r => {
           setTodayWords((r.data || []).slice(0, usedToday));

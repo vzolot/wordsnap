@@ -9,6 +9,7 @@ from sqlalchemy import delete, select, func
 
 from sqlalchemy import or_
 
+from core import analytics
 from core.db import SessionLocal
 from core.models import PaymentHistory, Review, User, Word
 from core.rewards import TIERS, current_tier, next_tier, xp_for_result
@@ -86,7 +87,12 @@ async def delete_word(word_id: int, telegram_id: int = Query(...)):
                 )
             )
         await session.commit()
-        return {"ok": True}
+    analytics.capture(telegram_id, "word_deleted", {
+        "target_lang": word.target_lang,
+        "review_count": word.review_count,
+        "status": word.status,
+    })
+    return {"ok": True}
 
 
 async def _total_spent(session, user_id: int) -> float:
@@ -219,8 +225,20 @@ async def submit_review(data: ReviewRequest, telegram_id: int = Query(...)):
     result = result_map.get(data.quality, "struggled")
     word, new_interval, tier_up = await process_review(data.word_id, result)
 
+    analytics.capture(telegram_id, "review_submitted", {
+        "result": result,
+        "quality": data.quality,
+        "tier_up": bool(tier_up),
+        "source": "miniapp",
+    })
+
     # Якщо переступили tier — надсилаємо сторіс-вітання у бот-чат
     if tier_up:
+        analytics.capture(telegram_id, "tier_unlocked", {
+            "xp_threshold": tier_up[0],
+            "tier_key": tier_up[1],
+            "reward_key": tier_up[2],
+        })
         async with SessionLocal() as session:
             user = await _get_user(session, telegram_id)
         lang = (user.native_lang if user else None) or "uk"
@@ -295,6 +313,13 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
             )
         )).scalar_one_or_none()
 
+    analytics.capture(telegram_id, "word_added", {
+        "target_lang": user.target_lang,
+        "native_lang": user.native_lang,
+        "has_image": bool(image_url),
+        "source": "miniapp",
+    })
+
     return {
         "ok": True,
         "word": _serialize_word(saved) if saved else None,
@@ -326,6 +351,7 @@ async def create_buy_link(telegram_id: int = Query(...)):
             amount=1.49,
             currency="USD",
         )
+        analytics.capture(telegram_id, "buy_link_created", {"amount": 1.49})
         return {
             "payment_url": payment["payment_url"],
             "order_reference": payment["order_reference"],

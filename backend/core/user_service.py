@@ -5,6 +5,7 @@ import logging
 from datetime import date, datetime, timezone, timedelta
 from sqlalchemy import select
 
+from . import analytics
 from .models import User
 from .db import SessionLocal
 
@@ -40,6 +41,14 @@ async def get_or_create_user(
             await session.commit()
             await session.refresh(user)
             logger.info(f"Created new user: telegram_id={telegram_id}")
+            analytics.identify(telegram_id, {
+                "username": username,
+                "language_code": language_code,
+                "plan": "free",
+            })
+            analytics.capture(telegram_id, "user_started", {
+                "language_code": language_code,
+            })
         else:
             user.username = username or user.username
             user.first_name = first_name or user.first_name
@@ -185,7 +194,14 @@ async def activate_pro_subscription(
         
         await session.commit()
         await session.refresh(user)
-        
+
+        analytics.capture(telegram_id, "payment_succeeded", {
+            "duration_days": duration_days,
+            "auto_renew": user.auto_renew,
+            "plan_expires_at": user.plan_expires_at.isoformat() if user.plan_expires_at else None,
+        })
+        analytics.identify(telegram_id, {"plan": "pro"})
+
         logger.info(
             f"Activated Pro for user {telegram_id}, "
             f"expires at {user.plan_expires_at}, auto_renew={user.auto_renew}"

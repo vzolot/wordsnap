@@ -4,6 +4,7 @@ import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 import SpeakButton from '../components/SpeakButton';
 import WordDetailModal from '../components/WordDetailModal';
+import { track } from '../utils/analytics';
 
 function badge(word, t) {
   if (word.status === 'mastered') return { cls: 'badge-mastered', text: t('badge.mastered') };
@@ -79,8 +80,8 @@ function WordsPage() {
                 className="word-row word-row-clickable"
                 role="button"
                 tabIndex={0}
-                onClick={() => setActive(w)}
-                onKeyDown={(e) => { if (e.key === 'Enter') setActive(w); }}
+                onClick={() => { track('word_detail_viewed', { status: w.status }); setActive(w); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { track('word_detail_viewed', { status: w.status }); setActive(w); } }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
                   <SpeakButton text={w.word} lang={w.target_lang} size="sm" />
