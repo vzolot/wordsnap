@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { addWord, clearCache, readCache, writeCache } from '../api/client';
 import { pollImage } from '../utils/pollImage';
 import { useT } from '../contexts/LangContext';
@@ -6,10 +7,12 @@ import WordResult from './WordResult';
 
 function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
   const { t } = useT();
+  const navigate = useNavigate();
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [errorKind, setErrorKind] = useState(null); // 'limit' | other
   // Поточне очікуване слово для полінгу картинки. Скидається при reset/submit.
   const activeWordIdRef = useRef(null);
   const unmountedRef = useRef(false);
@@ -30,12 +33,17 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
     if (!word || loading) return;
     setLoading(true);
     setError('');
+    setErrorKind(null);
     activeWordIdRef.current = null;
     try {
       const r = await addWord(word);
       const data = r.data || {};
       if (data.error === 'duplicate') { setError(t('snap.duplicate')); return; }
-      if (data.error === 'limit_reached') { setError(t('snap.limit')); return; }
+      if (data.error === 'limit_reached') {
+        setError(t('snap.limit'));
+        setErrorKind('limit');
+        return;
+      }
       if (data.error === 'setup_required') { setError(t('snap.setup_required')); return; }
       if (!data.ok) { setError(t('snap.error')); return; }
       const merged = { ...(data.ai_data || {}), ...(data.word || {}) };
@@ -111,7 +119,21 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
               <span>{loading ? t('snap.button_loading') : t('snap.button')}</span>
             </button>
           </div>
-          {error && <div className="snap-error">{error}</div>}
+          {error && (
+            <div className="snap-error">
+              {error}
+              {errorKind === 'limit' && (
+                <button
+                  type="button"
+                  className="btn btn-gradient"
+                  style={{ marginTop: 10, width: '100%', padding: '10px', fontSize: 13 }}
+                  onClick={() => navigate('/pro')}
+                >
+                  ✨ {t('snap.buy_pro')}
+                </button>
+              )}
+            </div>
+          )}
         </form>
       ) : (
         <>

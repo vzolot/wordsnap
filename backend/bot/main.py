@@ -414,6 +414,16 @@ async def main():
         await setup_bot_commands()
     except Exception as e:
         logger.warning(f"Failed to set bot commands: {e}")
+
+    # Резолвимо username бота через getMe — для коректних реферальних посилань
+    # незалежно від того, чи виставлено BOT_USERNAME у env.
+    try:
+        me = await bot.get_me()
+        if me and me.username:
+            os.environ["BOT_USERNAME"] = me.username
+            logger.info(f"🤖 Bot username resolved: @{me.username}")
+    except Exception as e:
+        logger.warning(f"Failed to resolve bot username via getMe: {e}")
     
     # Конфігурація FastAPI server
     port = int(os.getenv("PORT", "8000"))
