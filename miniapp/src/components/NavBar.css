@@ -21,9 +21,16 @@
   gap: 4px;
   text-decoration: none;
   color: var(--text-2);
-  padding: 6px 16px;
+  padding: 6px 8px;
   transition: color 0.15s ease;
   flex: 1;
+  min-width: 0;
+}
+.nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .nav-item.active { color: var(--violet); }

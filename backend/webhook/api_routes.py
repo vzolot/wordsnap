@@ -345,6 +345,19 @@ async def list_song_packs(telegram_id: int = Query(...)):
     return {"target_lang": target, "packs": packs}
 
 
+@router.get("/api/themes")
+async def list_theme_packs(telegram_id: int = Query(...)):
+    """Тематичні набори життєвої лексики для target_lang."""
+    from core.theme_packs import get_theme_packs
+
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id)
+        target = (user.target_lang if user else None) or "en"
+
+    packs = get_theme_packs(target)
+    return {"target_lang": target, "packs": packs}
+
+
 @router.post("/api/export")
 async def export_words(
     telegram_id: int = Query(...),

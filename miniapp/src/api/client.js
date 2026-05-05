@@ -47,6 +47,7 @@ export const submitReview = (wordId, quality) =>
 export const addWord = (word) => api.post('/api/words', { word });
 export const deleteWord = (wordId) => api.delete(`/api/words/${wordId}`);
 export const getSongs = () => api.get('/api/songs');
+export const getThemes = () => api.get('/api/themes');
 export const createBuyLink = () => api.post('/api/buy');
 export const getReferral = () => api.get('/api/referral');
 
@@ -89,6 +90,7 @@ export function prefetchAll() {
   getWords().then(r => writeCache('words', r.data)).catch(() => {});
   getReviewWords().then(r => writeCache('review', r.data)).catch(() => {});
   getSongs().then(r => writeCache('songs', r.data)).catch(() => {});
+  getThemes().then(r => writeCache('themes', r.data)).catch(() => {});
 }
 
 export default api;

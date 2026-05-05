@@ -1,7 +1,7 @@
 const T = {
   en: {
     'app.subtitle': 'mini app',
-    'nav.home': 'Home', 'nav.songs': 'Songs', 'nav.words': 'Words', 'nav.review': 'Review', 'nav.stats': 'Stats',
+    'nav.home': 'Home', 'nav.songs': 'Songs', 'nav.themes': 'Topics', 'nav.words': 'Words', 'nav.review': 'Review', 'nav.stats': 'Stats',
     'common.back': 'Back', 'common.loading': 'Loading…',
 
     'home.greeting.morning': 'Good morning',
@@ -100,6 +100,12 @@ const T = {
     'songs.back': '← Back to songs',
     'snap.added_n': '{used}/{limit} today',
 
+    'themes.title': 'Survival vocabulary',
+    'themes.sub': 'Words you actually need at the doctor, the bank, the city office.',
+    'themes.empty': 'No topic packs for this language yet — coming soon!',
+    'themes.detail_sub': 'Tap any word to add it to your vocabulary.',
+    'themes.back': '← Back to topics',
+
     'words.title': 'My words',
     'words.search': 'Search words…',
     'words.no_matches': 'No matches',
@@ -166,7 +172,7 @@ const T = {
 
   uk: {
     'app.subtitle': 'міні-додаток',
-    'nav.home': 'Головна', 'nav.songs': 'Пісні', 'nav.words': 'Слова', 'nav.review': 'Повторення', 'nav.stats': 'Статистика',
+    'nav.home': 'Головна', 'nav.songs': 'Пісні', 'nav.themes': 'Теми', 'nav.words': 'Слова', 'nav.review': 'Повторення', 'nav.stats': 'Статистика',
     'common.back': 'Назад', 'common.loading': 'Завантаження…',
 
     'home.greeting.morning': 'Доброго ранку',
@@ -265,6 +271,12 @@ const T = {
     'songs.back': '← До пісень',
     'snap.added_n': '{used}/{limit} сьогодні',
 
+    'themes.title': 'Лексика для життя',
+    'themes.sub': 'Слова що дійсно потрібні у лікаря, банку, міській адміністрації.',
+    'themes.empty': 'Поки немає тематичних паків для цієї мови — скоро.',
+    'themes.detail_sub': 'Тапни будь-яке слово, щоб додати його у свій словник.',
+    'themes.back': '← До тем',
+
     'words.title': 'Мої слова',
     'words.search': 'Пошук слів…',
     'words.export': 'Експорт',
@@ -331,7 +343,7 @@ const T = {
 
   es: {
     'app.subtitle': 'mini app',
-    'nav.home': 'Inicio', 'nav.songs': 'Canciones', 'nav.words': 'Palabras', 'nav.review': 'Repaso', 'nav.stats': 'Estadísticas',
+    'nav.home': 'Inicio', 'nav.songs': 'Canciones', 'nav.themes': 'Temas', 'nav.words': 'Palabras', 'nav.review': 'Repaso', 'nav.stats': 'Estadísticas',
     'common.back': 'Atrás', 'common.loading': 'Cargando…',
 
     'home.greeting.morning': 'Buenos días',
@@ -430,6 +442,12 @@ const T = {
     'songs.back': '← Volver a canciones',
     'snap.added_n': '{used}/{limit} hoy',
 
+    'themes.title': 'Vocabulario de supervivencia',
+    'themes.sub': 'Palabras que de verdad necesitas en el médico, el banco, el ayuntamiento.',
+    'themes.empty': 'Aún no hay packs temáticos para este idioma — pronto.',
+    'themes.detail_sub': 'Toca cualquier palabra para añadirla a tu vocabulario.',
+    'themes.back': '← Volver a temas',
+
     'words.title': 'Mis palabras',
     'words.search': 'Buscar palabras…',
     'words.no_matches': 'Sin resultados',
@@ -496,7 +514,7 @@ const T = {
 
   pl: {
     'app.subtitle': 'mini app',
-    'nav.home': 'Główna', 'nav.songs': 'Piosenki', 'nav.words': 'Słowa', 'nav.review': 'Powtórka', 'nav.stats': 'Statystyki',
+    'nav.home': 'Główna', 'nav.songs': 'Piosenki', 'nav.themes': 'Tematy', 'nav.words': 'Słowa', 'nav.review': 'Powtórka', 'nav.stats': 'Statystyki',
     'common.back': 'Wstecz', 'common.loading': 'Ładowanie…',
 
     'home.greeting.morning': 'Dzień dobry',
@@ -595,6 +613,12 @@ const T = {
     'songs.back': '← Wróć do piosenek',
     'snap.added_n': '{used}/{limit} dziś',
 
+    'themes.title': 'Słownictwo praktyczne',
+    'themes.sub': 'Słowa, których naprawdę potrzebujesz u lekarza, w banku, w urzędzie.',
+    'themes.empty': 'Brak paczek tematycznych — wkrótce.',
+    'themes.detail_sub': 'Dotknij dowolne słowo, by dodać do słownika.',
+    'themes.back': '← Wróć do tematów',
+
     'words.title': 'Moje słowa',
     'words.search': 'Szukaj słów…',
     'words.no_matches': 'Brak wyników',
@@ -661,7 +685,7 @@ const T = {
 
   de: {
     'app.subtitle': 'mini app',
-    'nav.home': 'Start', 'nav.songs': 'Lieder', 'nav.words': 'Wörter', 'nav.review': 'Wiederholen', 'nav.stats': 'Statistik',
+    'nav.home': 'Start', 'nav.songs': 'Lieder', 'nav.themes': 'Themen', 'nav.words': 'Wörter', 'nav.review': 'Wiederholen', 'nav.stats': 'Statistik',
     'common.back': 'Zurück', 'common.loading': 'Laden…',
 
     'home.greeting.morning': 'Guten Morgen',
@@ -820,6 +844,12 @@ const T = {
     'songs.duplicate': 'Bereits im Wortschatz',
     'songs.adding': 'Hinzufügen…',
     'songs.back': '← Zurück zu Liedern',
+
+    'themes.title': 'Praktischer Wortschatz',
+    'themes.sub': 'Wörter, die du beim Arzt, in der Bank, im Bürgeramt wirklich brauchst.',
+    'themes.empty': 'Noch keine Themen-Packs — kommt bald.',
+    'themes.detail_sub': 'Tippe ein Wort, um es zu deinem Wortschatz hinzuzufügen.',
+    'themes.back': '← Zurück zu Themen',
 
     'unit.day_one': 'Tag', 'unit.day_other': 'Tage',
     'unit.word_one': 'Wort', 'unit.word_other': 'Wörter',

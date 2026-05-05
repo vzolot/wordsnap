@@ -15,6 +15,7 @@ const ReviewPage = lazy(() => import('./pages/ReviewPage'));
 const StatsPage  = lazy(() => import('./pages/StatsPage'));
 const ProPage    = lazy(() => import('./pages/ProPage'));
 const SongsPage  = lazy(() => import('./pages/SongsPage'));
+const ThemesPage = lazy(() => import('./pages/ThemesPage'));
 
 function applyTheme(scheme) {
   document.documentElement.setAttribute('data-theme', scheme === 'dark' ? 'dark' : 'light');
@@ -96,6 +97,7 @@ function App() {
               <Route path="/words" element={<WordsPage />} />
               <Route path="/review" element={<ReviewPage />} />
               <Route path="/songs" element={<SongsPage />} />
+              <Route path="/themes" element={<ThemesPage />} />
               <Route path="/stats" element={<StatsPage />} />
               <Route path="/pro" element={<ProPage />} />
               <Route path="*" element={<Navigate to="/" />} />
