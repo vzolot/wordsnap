@@ -341,6 +341,25 @@ async def list_song_packs(telegram_id: int = Query(...)):
     return {"target_lang": target, "packs": packs}
 
 
+@router.get("/api/referral")
+async def get_referral(telegram_id: int = Query(...)):
+    """Повертає реферальний код юзера, посилання та лічильник."""
+    from core.constants import BOT_USERNAME
+    from core.referral import REFERRAL_BONUS_DAYS, ensure_code
+
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+    code = await ensure_code(user)
+    return {
+        "code": code,
+        "link": f"https://t.me/{BOT_USERNAME}?start=ref_{code}",
+        "referrals_count": user.referrals_count or 0,
+        "bonus_days": REFERRAL_BONUS_DAYS,
+    }
+
+
 @router.post("/api/buy")
 async def create_buy_link(telegram_id: int = Query(...)):
     """Створює посилання на оплату Pro для конкретного юзера."""

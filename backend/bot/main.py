@@ -63,6 +63,13 @@ async def cmd_start(message: Message):
     """Реєстрація юзера в БД при /start"""
     tg_user = message.from_user
 
+    # Парсимо deep-link payload (наприклад: /start ref_ABC123)
+    payload = None
+    if message.text:
+        parts = message.text.split(maxsplit=1)
+        if len(parts) > 1:
+            payload = parts[1].strip()
+
     user = await get_or_create_user(
         telegram_id=tg_user.id,
         username=tg_user.username,
@@ -70,6 +77,42 @@ async def cmd_start(message: Message):
         last_name=tg_user.last_name,
         language_code=tg_user.language_code,
     )
+
+    # Реферал застосовуємо лише новим юзерам без target_lang
+    # (онбординг ще не завершено) і без вже встановленого referrer'а.
+    if (
+        payload
+        and payload.startswith("ref_")
+        and user.target_lang is None
+        and user.referred_by is None
+    ):
+        from core.referral import apply_referral, REFERRAL_BONUS_DAYS
+        result = await apply_referral(invitee_id=user.id, referrer_code=payload[4:])
+        if result:
+            referrer, invitee = result
+            invitee_lang = invitee.native_lang or "uk"
+            referrer_lang = referrer.native_lang or "uk"
+            try:
+                await message.answer(
+                    bt("referral.invitee_welcome", invitee_lang, days=REFERRAL_BONUS_DAYS)
+                )
+            except Exception as e:
+                logger.warning(f"referral invitee msg failed: {e}")
+            try:
+                await bot.send_message(
+                    chat_id=referrer.telegram_id,
+                    text=bt(
+                        "referral.referrer_notify",
+                        referrer_lang,
+                        name=tg_user.first_name or "friend",
+                        days=REFERRAL_BONUS_DAYS,
+                        total=referrer.referrals_count,
+                    ),
+                )
+            except Exception as e:
+                logger.warning(f"referral notify referrer failed: {e}")
+            # Перечитуємо юзера — у нього тепер plan=pro з мерж-баг для шляхів нижче
+            user = invitee
 
     # Новий юзер або ще не обрав мову — запускаємо онбординг
     if not user.target_lang:

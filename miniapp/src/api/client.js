@@ -48,6 +48,7 @@ export const addWord = (word) => api.post('/api/words', { word });
 export const deleteWord = (wordId) => api.delete(`/api/words/${wordId}`);
 export const getSongs = () => api.get('/api/songs');
 export const createBuyLink = () => api.post('/api/buy');
+export const getReferral = () => api.get('/api/referral');
 
 /**
  * Stale-while-revalidate fetch.

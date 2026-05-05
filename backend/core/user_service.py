@@ -27,6 +27,7 @@ async def get_or_create_user(
         user = result.scalar_one_or_none()
         
         if user is None:
+            from .referral import generate_code
             user = User(
                 telegram_id=telegram_id,
                 username=username,
@@ -36,6 +37,7 @@ async def get_or_create_user(
                 native_lang="uk",
                 target_lang=None,
                 plan="free",
+                referral_code=generate_code(telegram_id),
             )
             session.add(user)
             await session.commit()

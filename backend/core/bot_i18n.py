@@ -179,6 +179,8 @@ T: dict[str, dict[str, str]] = {
         "remind.hint": "<i>Згадав переклад? Натисни щоб перевірити 👇</i>",
         "streak_save.title": "🔥 <b>Серія в небезпеці</b>",
         "streak_save.body": "У тебе {streak} днів поспіль — і сьогодні ще нуль повторень.\n\nЗалишилось 2 години щоб не зірвати. Одне слово — це 30 секунд.",
+        "referral.invitee_welcome": "🎁 Тебе запросив друг. Тримай <b>{days} днів Pro</b> у подарунок.",
+        "referral.referrer_notify": "🎉 <b>{name}</b> приєднався за твоїм посиланням!\n\nОбом нараховано <b>+{days} днів Pro</b>. Запрошених разом: {total}.",
 
         "rewards.beginner": "Новачок",
         "rewards.apprentice": "Підмайстер",
@@ -367,6 +369,8 @@ T: dict[str, dict[str, str]] = {
         "remind.hint": "<i>Remember the translation? Tap to check 👇</i>",
         "streak_save.title": "🔥 <b>Streak at risk</b>",
         "streak_save.body": "You're on a {streak}-day streak — and zero reviews today.\n\n2 hours left to keep it. One word takes 30 seconds.",
+        "referral.invitee_welcome": "🎁 A friend invited you. Enjoy <b>{days} days of Pro</b> on the house.",
+        "referral.referrer_notify": "🎉 <b>{name}</b> joined via your link!\n\nBoth of you got <b>+{days} days Pro</b>. Invited so far: {total}.",
 
         "rewards.beginner": "Beginner",
         "rewards.apprentice": "Apprentice",
@@ -555,6 +559,8 @@ T: dict[str, dict[str, str]] = {
         "remind.hint": "<i>¿Recuerdas la traducción? Pulsa para verificar 👇</i>",
         "streak_save.title": "🔥 <b>Tu racha está en riesgo</b>",
         "streak_save.body": "Llevas {streak} días seguidos — y hoy cero repasos.\n\nQuedan 2 horas. Una palabra son 30 segundos.",
+        "referral.invitee_welcome": "🎁 Un amigo te invitó. Disfruta <b>{days} días de Pro</b> gratis.",
+        "referral.referrer_notify": "🎉 <b>{name}</b> se unió con tu enlace!\n\nAmbos reciben <b>+{days} días Pro</b>. Invitados hasta ahora: {total}.",
 
         "rewards.beginner": "Principiante",
         "rewards.apprentice": "Aprendiz",
@@ -743,6 +749,8 @@ T: dict[str, dict[str, str]] = {
         "remind.hint": "<i>Pamiętasz tłumaczenie? Naciśnij, by sprawdzić 👇</i>",
         "streak_save.title": "🔥 <b>Twoja seria w niebezpieczeństwie</b>",
         "streak_save.body": "Masz {streak} dni z rzędu — a dziś zero powtórzeń.\n\nZostały 2 godziny. Jedno słowo to 30 sekund.",
+        "referral.invitee_welcome": "🎁 Znajomy cię zaprosił. Masz <b>{days} dni Pro</b> w prezencie.",
+        "referral.referrer_notify": "🎉 <b>{name}</b> dołączył przez twój link!\n\nObaj otrzymujecie <b>+{days} dni Pro</b>. Zaproszeni: {total}.",
 
         "rewards.beginner": "Początkujący",
         "rewards.apprentice": "Czeladnik",
@@ -931,6 +939,8 @@ T: dict[str, dict[str, str]] = {
         "remind.hint": "<i>Erinnerst du dich an die Übersetzung? Tippe zum Prüfen 👇</i>",
         "streak_save.title": "🔥 <b>Deine Serie ist in Gefahr</b>",
         "streak_save.body": "Du hast eine {streak}-Tage-Serie — und heute null Wiederholungen.\n\n2 Stunden bleiben. Ein Wort dauert 30 Sekunden.",
+        "referral.invitee_welcome": "🎁 Ein Freund hat dich eingeladen. Hier sind <b>{days} Tage Pro</b> geschenkt.",
+        "referral.referrer_notify": "🎉 <b>{name}</b> hat sich über deinen Link angemeldet!\n\nIhr beide bekommt <b>+{days} Tage Pro</b>. Bisher eingeladen: {total}.",
 
         "rewards.beginner": "Anfänger",
         "rewards.apprentice": "Lehrling",

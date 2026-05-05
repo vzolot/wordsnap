@@ -52,6 +52,11 @@ class User(Base):
     # Антиспам для streak-save push (одне на день локального часу)
     last_streak_save_date: Mapped[date | None] = mapped_column(Date)
 
+    # Referrals: унікальний код для запрошень + хто запросив + лічильник
+    referral_code: Mapped[str | None] = mapped_column(String(16))
+    referred_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"))
+    referrals_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
     # Денні ліміти
     words_added_today: Mapped[int] = mapped_column(Integer, default=0)
     last_reset_date: Mapped[date] = mapped_column(Date, server_default=func.current_date())

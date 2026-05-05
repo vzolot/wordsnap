@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStats, createBuyLink } from '../api/client';
+import { getStats, createBuyLink, getReferral } from '../api/client';
 import { track } from '../utils/analytics';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 
 function ProPage() {
   const [stats, setStats] = useState(null);
+  const [referral, setReferral] = useState(null);
+  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -15,7 +17,27 @@ function ProPage() {
 
   useEffect(() => {
     getStats().then(r => setStats(r.data)).catch(() => {});
+    getReferral().then(r => setReferral(r.data)).catch(() => {});
   }, []);
+
+  const handleCopy = async () => {
+    if (!referral?.link) return;
+    track('referral_link_copied');
+    try {
+      await navigator.clipboard.writeText(referral.link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch { /* no clipboard API — користувач скопіює вручну з тексту */ }
+  };
+
+  const handleShare = () => {
+    if (!referral?.link) return;
+    track('referral_link_shared');
+    const text = t('referral.share_text', { days: referral.bonus_days });
+    const url = `https://t.me/share/url?url=${encodeURIComponent(referral.link)}&text=${encodeURIComponent(text)}`;
+    if (tg?.openTelegramLink) tg.openTelegramLink(url);
+    else window.open(url, '_blank');
+  };
 
   const isPro = stats?.plan === 'pro';
 
@@ -92,6 +114,36 @@ function ProPage() {
 
         {!isPro && <p className="pro-finefoot">{t('pro.finefoot')}</p>}
         {error && <p style={{ color: 'var(--coral)', textAlign: 'center', marginTop: 12, fontSize: 13 }}>{error}</p>}
+
+        {referral && (
+          <div className="referral-card">
+            <div className="referral-eyebrow">{t('referral.eyebrow')}</div>
+            <div className="referral-title">
+              {t('referral.title', { days: referral.bonus_days })}
+            </div>
+            <div className="referral-sub">{t('referral.sub', { days: referral.bonus_days })}</div>
+
+            <div className="referral-link-row" onClick={handleCopy}>
+              <span className="referral-link-text">{referral.link}</span>
+              <span className="referral-copy">{copied ? '✓' : '⧉'}</span>
+            </div>
+
+            <button className="btn btn-gradient" style={{ marginTop: 10 }} onClick={handleShare}>
+              {t('referral.share_cta')}
+            </button>
+
+            <div className="referral-stats">
+              <div>
+                <div className="referral-stat-num">{referral.referrals_count}</div>
+                <div className="referral-stat-label">{t('referral.invited')}</div>
+              </div>
+              <div>
+                <div className="referral-stat-num">{(referral.referrals_count || 0) * referral.bonus_days}</div>
+                <div className="referral-stat-label">{t('referral.days_earned')}</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <button className="btn btn-secondary" style={{ marginTop: 24 }} onClick={() => navigate(-1)}>
           {t('pro.back')}

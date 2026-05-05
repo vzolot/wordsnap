@@ -58,6 +58,22 @@ MIGRATIONS: list[tuple[str, str]] = [
         "users.last_streak_save_date",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_streak_save_date DATE",
     ),
+    (
+        "users.referral_code",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(16) UNIQUE",
+    ),
+    (
+        "users.referred_by",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by BIGINT REFERENCES users(id) ON DELETE SET NULL",
+    ),
+    (
+        "users.referrals_count",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS referrals_count INTEGER NOT NULL DEFAULT 0",
+    ),
+    (
+        "users.referral_code idx",
+        "CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)",
+    ),
 ]
 
 
