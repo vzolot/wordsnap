@@ -91,6 +91,7 @@ export function prefetchAll() {
   getReviewWords().then(r => writeCache('review', r.data)).catch(() => {});
   getSongs().then(r => writeCache('songs', r.data)).catch(() => {});
   getThemes().then(r => writeCache('themes', r.data)).catch(() => {});
+  getReferral().then(r => writeCache('referral', r.data)).catch(() => {});
 }
 
 export default api;

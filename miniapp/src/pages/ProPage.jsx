@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStats, createBuyLink, getReferral } from '../api/client';
+import { getStats, createBuyLink, getReferral, readCache, writeCache } from '../api/client';
 import { track } from '../utils/analytics';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 
 function ProPage() {
-  const [stats, setStats] = useState(null);
-  const [referral, setReferral] = useState(null);
+  // Початковий рендер відразу з кешу — Pro card і реферал-блок з'являються
+  // одночасно. Свіжі дані фоном.
+  const [stats, setStats] = useState(() => readCache('stats', { ignoreTtl: true }));
+  const [referral, setReferral] = useState(() => readCache('referral', { ignoreTtl: true }));
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -16,8 +18,8 @@ function ProPage() {
   const tg = window.Telegram?.WebApp;
 
   useEffect(() => {
-    getStats().then(r => setStats(r.data)).catch(() => {});
-    getReferral().then(r => setReferral(r.data)).catch(() => {});
+    getStats().then(r => { setStats(r.data); writeCache('stats', r.data); }).catch(() => {});
+    getReferral().then(r => { setReferral(r.data); writeCache('referral', r.data); }).catch(() => {});
   }, []);
 
   const handleCopy = async () => {
@@ -112,9 +114,6 @@ function ProPage() {
           )}
         </div>
 
-        {!isPro && <p className="pro-finefoot">{t('pro.finefoot')}</p>}
-        {error && <p style={{ color: 'var(--coral)', textAlign: 'center', marginTop: 12, fontSize: 13 }}>{error}</p>}
-
         {referral && (
           <div className="referral-card">
             <div className="referral-eyebrow">{t('referral.eyebrow')}</div>
@@ -144,6 +143,9 @@ function ProPage() {
             </div>
           </div>
         )}
+
+        {!isPro && <p className="pro-finefoot">{t('pro.finefoot')}</p>}
+        {error && <p style={{ color: 'var(--coral)', textAlign: 'center', marginTop: 12, fontSize: 13 }}>{error}</p>}
 
         <button className="btn btn-secondary" style={{ marginTop: 24 }} onClick={() => navigate(-1)}>
           {t('pro.back')}

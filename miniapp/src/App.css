@@ -57,7 +57,9 @@
   max-width: 480px;
   margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: 80px;
+  /* NavBar fixed at bottom із safe-area може займати до ~110px.
+     Без додаткового padding останній блок контенту ховається під ним. */
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
   background: var(--bg);
 }
 
