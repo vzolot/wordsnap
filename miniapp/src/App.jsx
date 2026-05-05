@@ -37,7 +37,7 @@ const RouteFallback = () => (
 function RouteAnalytics() {
   const location = useLocation();
   useEffect(() => {
-    track('page_viewed', { path: location.pathname });
+    try { track('page_viewed', { path: location.pathname }); } catch { /* noop */ }
   }, [location.pathname]);
   return null;
 }
@@ -71,9 +71,12 @@ function App() {
       });
     }
 
-    // PostHog ініт + identify за telegram_id (співпадає з distinct_id бекенду)
-    initAnalytics(getTelegramUserId());
-    track('app_opened');
+    // PostHog ініт + identify за telegram_id (співпадає з distinct_id бекенду).
+    // Обгорнено у try/catch щоб збій аналітики не блокував рендер міні-апи.
+    try {
+      initAnalytics(getTelegramUserId());
+      track('app_opened');
+    } catch { /* noop */ }
 
     // Префетч даних після того як Telegram готовий — Home/Stats/Words рендеряться миттєво
     const prefetchTimer = setTimeout(() => prefetchAll(), 100);
