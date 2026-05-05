@@ -341,6 +341,54 @@ async def list_song_packs(telegram_id: int = Query(...)):
     return {"target_lang": target, "packs": packs}
 
 
+@router.get("/api/export")
+async def export_words(
+    telegram_id: int = Query(...),
+    format: str = Query("csv"),
+):
+    """Експорт всіх слів юзера. CSV — для всіх, APKG — лише Pro."""
+    from datetime import datetime as _dt
+    from fastapi.responses import Response
+    from core.export import to_apkg, to_csv
+
+    fmt = format.lower()
+    if fmt not in ("csv", "apkg"):
+        raise HTTPException(status_code=400, detail="format must be csv or apkg")
+
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # APKG — тільки Pro
+        now = datetime.now(timezone.utc)
+        is_pro = user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now
+        if fmt == "apkg" and not is_pro:
+            raise HTTPException(status_code=402, detail="apkg export requires Pro")
+
+        words = list((await session.execute(
+            select(Word).where(Word.user_id == user.id).order_by(Word.created_at.asc())
+        )).scalars().all())
+
+    analytics.capture(telegram_id, "export_completed", {
+        "format": fmt,
+        "word_count": len(words),
+    })
+
+    stamp = _dt.now().strftime("%Y%m%d")
+    if fmt == "csv":
+        return Response(
+            content=to_csv(words),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="wordsnap-{stamp}.csv"'},
+        )
+    return Response(
+        content=to_apkg(words, telegram_id, user.target_lang),
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="wordsnap-{stamp}.apkg"'},
+    )
+
+
 @router.get("/api/referral")
 async def get_referral(telegram_id: int = Query(...)):
     """Повертає реферальний код юзера, посилання та лічильник."""

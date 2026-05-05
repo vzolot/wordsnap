@@ -1421,6 +1421,44 @@
 .word-row-clickable:hover { background: var(--bg-card-2); }
 .word-row-clickable:active { transform: scale(0.99); }
 
+/* ── Export modal options ───────────────────────────── */
+.export-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  text-align: left;
+}
+.export-option {
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.06s ease;
+  text-align: left;
+}
+.export-option:hover:not(:disabled) { background: var(--bg-card); }
+.export-option:active:not(:disabled) { transform: scale(0.99); }
+.export-option:disabled { opacity: 0.55; cursor: default; }
+.export-option-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.export-option-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-1);
+}
+.export-option-desc {
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 /* ── Referral card ──────────────────────────────────── */
 .referral-card {
   margin-top: 22px;

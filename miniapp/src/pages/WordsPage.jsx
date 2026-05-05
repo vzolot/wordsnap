@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getStats, getWords, readCache, writeCache, clearCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
+import ExportModal from '../components/ExportModal';
 import SpeakButton from '../components/SpeakButton';
 import WordDetailModal from '../components/WordDetailModal';
 import { track } from '../utils/analytics';
@@ -19,7 +20,9 @@ function WordsPage() {
   const [loading, setLoading] = useState(!cached);
   const [search, setSearch] = useState('');
   const [active, setActive] = useState(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const [nativeLang, setNativeLang] = useState(cachedStats?.native_lang || 'uk');
+  const isPro = cachedStats?.plan === 'pro';
   const { t } = useT();
 
   useEffect(() => {
@@ -54,7 +57,18 @@ function WordsPage() {
       <AppBar />
 
       <div className="page">
-        <h1 className="h1" style={{ marginBottom: 14 }}>{t('words.title')}</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h1 className="h1">{t('words.title')}</h1>
+          {words.length > 0 && (
+            <button
+              className="btn-pill"
+              onClick={() => setExportOpen(true)}
+              style={{ padding: '8px 14px', fontSize: 12 }}
+            >
+              📥 {t('words.export')}
+            </button>
+          )}
+        </div>
 
         <input
           className="input"
@@ -103,6 +117,11 @@ function WordsPage() {
         onClose={() => setActive(null)}
         onDeleted={handleDeleted}
         nativeLang={nativeLang}
+      />
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        isPro={isPro}
       />
     </>
   );

@@ -14,5 +14,6 @@ pydantic-settings==2.6.1
 aiohttp==3.10.10
 sentry-sdk[fastapi]==2.18.0
 posthog==3.7.0
+genanki==0.13.1
 pytest==8.3.3
 pytest-asyncio==0.24.0
