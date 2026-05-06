@@ -3,14 +3,12 @@ import { useT } from '../contexts/LangContext';
 
 const STORAGE_KEY = 'wordsnap.welcome_seen';
 
-// Кожен слайд — або з photo (фон-фотографія + чіпи поверх), або text-only
-// (великий заголовок на cream-pink фоні, в стилі Preply "Practice makes possible.")
 const SLIDES = [
   {
     photo: '/onboarding/slide_1.png',
     chips: [
       { text: 'Paragon', variant: 'light' },
-      { textKey: 'welcome.s1.chip2', variant: 'violet' }, // "🇺🇦 чек" / etc
+      { textKey: 'welcome.s1.chip2', variant: 'violet' },
     ],
     titleKey: 'welcome.s1.title',
     bodyKey: 'welcome.s1.body',
@@ -45,10 +43,10 @@ function WelcomeStories({ onClose }) {
   const [index, setIndex] = useState(0);
   const slide = SLIDES[index];
   const isLast = index === SLIDES.length - 1;
+  const isFirst = index === 0;
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    // Прелоадимо фотографії слайдів — щоб переходи були миттєві
     SLIDES.forEach(s => { if (s.photo) { const i = new Image(); i.src = s.photo; } });
     return () => { document.body.style.overflow = ''; };
   }, []);
@@ -63,12 +61,25 @@ function WelcomeStories({ onClose }) {
     else setIndex(i => i + 1);
   };
 
+  const back = () => {
+    if (!isFirst) setIndex(i => i - 1);
+  };
+
   return (
     <div className="welcome-overlay">
-      {/* Top bar — постійний на всіх слайдах */}
+      {/* Top bar */}
       <div className="welcome-top">
         <div className="welcome-brand">
-          <span className="welcome-brand-mark">📸</span>
+          {!isFirst && (
+            <button
+              className="welcome-back"
+              onClick={back}
+              aria-label="Back"
+              type="button"
+            >
+              ←
+            </button>
+          )}
           <span className="welcome-brand-text">WordSnap</span>
         </div>
         <button className="welcome-skip" onClick={finish}>
@@ -76,7 +87,7 @@ function WelcomeStories({ onClose }) {
         </button>
       </div>
 
-      {/* Hero — фото з чіпами, або просто spacer */}
+      {/* Hero */}
       <div className="welcome-hero">
         {slide.photo ? (
           <>
@@ -102,11 +113,17 @@ function WelcomeStories({ onClose }) {
         <p className="welcome-sub">{t(slide.bodyKey)}</p>
       </div>
 
-      {/* Bottom — dots + CTA */}
+      {/* Bottom — clickable dots + CTA */}
       <div className="welcome-bottom">
         <div className="welcome-dots">
           {SLIDES.map((_, i) => (
-            <span key={i} className={`welcome-dot ${i === index ? 'active' : ''}`} />
+            <button
+              key={i}
+              className={`welcome-dot ${i === index ? 'active' : ''}`}
+              onClick={() => setIndex(i)}
+              aria-label={`Slide ${i + 1}`}
+              type="button"
+            />
           ))}
         </div>
         <button className="welcome-cta" onClick={next}>
