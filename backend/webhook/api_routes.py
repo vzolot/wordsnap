@@ -496,6 +496,9 @@ async def pay_redirect(telegram_id: int = Query(...), period: str = Query("month
     return HTMLResponse(content=html)
 
 
+@router.post("/wayforpay/callback")  # legacy без /api — на випадок якщо у
+                                     # WayForPay Service URL вже налаштовано
+                                     # без префіксу
 @router.post("/api/wayforpay/callback")
 async def wayforpay_callback(request: Request):
     """Webhook від WayForPay після платежу. Активує Pro якщо платіж successful.
