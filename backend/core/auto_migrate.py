@@ -74,6 +74,16 @@ MIGRATIONS: list[tuple[str, str]] = [
         "users.referral_code idx",
         "CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)",
     ),
+    # ── Row-Level Security ──────────────────────────────────────────────
+    # Supabase публічно експонує таблиці через PostgREST (REST API). Без RLS
+    # будь-хто з anon-key може читати/редагувати дані. Наш backend
+    # підключається як postgres-superuser → bypass RLS, тому ENABLE RLS без
+    # policy = доступ є тільки у нас, REST API повертає 401.
+    ("rls.users",          "ALTER TABLE users ENABLE ROW LEVEL SECURITY"),
+    ("rls.words",          "ALTER TABLE words ENABLE ROW LEVEL SECURITY"),
+    ("rls.reviews",        "ALTER TABLE reviews ENABLE ROW LEVEL SECURITY"),
+    ("rls.ai_cache",       "ALTER TABLE ai_cache ENABLE ROW LEVEL SECURITY"),
+    ("rls.payment_history","ALTER TABLE payment_history ENABLE ROW LEVEL SECURITY"),
 ]
 
 
