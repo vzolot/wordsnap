@@ -104,9 +104,24 @@ MIGRATIONS: list[tuple[str, str]] = [
     # Функція з мутабельним search_path — фіксуємо щоб уникнути hijack-сценарію
     # коли зловмисник створює свою таблицю/функцію з тим самим іменем у власній
     # схемі і trigger її викликає замість оригіналу.
+    # Postgres не підтримує "ALTER FUNCTION IF EXISTS" — обгортаємо у DO-блок
+    # з перевіркою у pg_proc.
     (
         "fn.update_updated_at_column.search_path",
-        "ALTER FUNCTION IF EXISTS public.update_updated_at_column() SET search_path = pg_catalog, public",
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM pg_proc p
+                JOIN pg_namespace n ON n.oid = p.pronamespace
+                WHERE p.proname = 'update_updated_at_column'
+                  AND n.nspname = 'public'
+            ) THEN
+                EXECUTE 'ALTER FUNCTION public.update_updated_at_column() '
+                     || 'SET search_path = pg_catalog, public';
+            END IF;
+        END $$;
+        """,
     ),
 ]
 
