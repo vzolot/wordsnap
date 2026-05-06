@@ -84,6 +84,30 @@ MIGRATIONS: list[tuple[str, str]] = [
     ("rls.reviews",        "ALTER TABLE reviews ENABLE ROW LEVEL SECURITY"),
     ("rls.ai_cache",       "ALTER TABLE ai_cache ENABLE ROW LEVEL SECURITY"),
     ("rls.payment_history","ALTER TABLE payment_history ENABLE ROW LEVEL SECURITY"),
+    # Залишкові таблиці з попередніх експериментів — IF EXISTS на випадок
+    # коли їх уже немає у схемі. Просто прикриваємо REST API-доступ.
+    ("rls.subscriptions",     "ALTER TABLE IF EXISTS public.subscriptions ENABLE ROW LEVEL SECURITY"),
+    ("rls.theme_packs",       "ALTER TABLE IF EXISTS public.theme_packs ENABLE ROW LEVEL SECURITY"),
+    ("rls.theme_pack_words",  "ALTER TABLE IF EXISTS public.theme_pack_words ENABLE ROW LEVEL SECURITY"),
+    ("rls.user_theme_packs",  "ALTER TABLE IF EXISTS public.user_theme_packs ENABLE ROW LEVEL SECURITY"),
+    # SECURITY DEFINER views — переключаємо на security_invoker щоб view
+    # викликалось правами caller'а, не creator'а. Тоді RLS на нижче-лежачих
+    # таблицях нормально застосовується.
+    (
+        "view.user_stats.invoker",
+        "ALTER VIEW IF EXISTS public.user_stats SET (security_invoker = true)",
+    ),
+    (
+        "view.words_due_review.invoker",
+        "ALTER VIEW IF EXISTS public.words_due_review SET (security_invoker = true)",
+    ),
+    # Функція з мутабельним search_path — фіксуємо щоб уникнути hijack-сценарію
+    # коли зловмисник створює свою таблицю/функцію з тим самим іменем у власній
+    # схемі і trigger її викликає замість оригіналу.
+    (
+        "fn.update_updated_at_column.search_path",
+        "ALTER FUNCTION IF EXISTS public.update_updated_at_column() SET search_path = pg_catalog, public",
+    ),
 ]
 
 
