@@ -112,20 +112,24 @@ MIGRATIONS: list[tuple[str, str]] = [
 
 
 async def run_auto_migrations() -> None:
-    """Виконує всі ідемпотентні міграції. Логує кожну."""
+    """Виконує всі ідемпотентні міграції. Кожна — у власній транзакції,
+    щоб помилка однієї не блокувала наступні (Postgres абортить транзакцію
+    цілком при першому failure, і всі subsequent execute'и в тій же
+    транзакції повертають InFailedSqlTransaction)."""
     logger.info("🔧 Running auto-migrations…")
     applied = 0
     failed = 0
 
-    async with engine.begin() as conn:
-        for name, sql in MIGRATIONS:
-            try:
+    for name, sql in MIGRATIONS:
+        try:
+            async with engine.begin() as conn:
                 await conn.execute(text(sql))
-                logger.info(f"  ✓ {name}")
-                applied += 1
-            except Exception as e:
-                # Помилка не валить процес — але логуємо
-                logger.error(f"  ✗ {name}: {e}")
-                failed += 1
+            logger.info(f"  ✓ {name}")
+            applied += 1
+        except Exception as e:
+            # Помилка не валить процес — але логуємо. Наступні міграції
+            # виконаються нормально, бо в новій транзакції.
+            logger.error(f"  ✗ {name}: {e}")
+            failed += 1
 
     logger.info(f"🔧 Auto-migrations done: {applied} ok, {failed} failed")
