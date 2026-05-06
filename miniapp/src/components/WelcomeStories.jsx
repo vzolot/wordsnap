@@ -1,18 +1,38 @@
 import { useEffect, useState } from 'react';
+import { useT } from '../contexts/LangContext';
 
 const STORAGE_KEY = 'wordsnap.welcome_seen';
 
-// PNG-слайди з усім контентом і текстом (англомовні).
-// Згенеровані у Claude Design — копія у public/onboarding/.
+// Кожен слайд — або з photo (фон-фотографія + чіпи поверх), або text-only
+// (великий заголовок на cream-pink фоні, в стилі Preply "Practice makes possible.")
 const SLIDES = [
-  '/onboarding/slide_1.png',
-  '/onboarding/slide_2.png',
-  '/onboarding/slide_3.png',
+  {
+    photo: '/onboarding/slide_1.png',
+    chips: [
+      { text: 'Paragon', variant: 'light' },
+      { textKey: 'welcome.s1.chip2', variant: 'violet' }, // "🇺🇦 чек" / etc
+    ],
+    titleKey: 'welcome.s1.title',
+    bodyKey: 'welcome.s1.body',
+  },
+  {
+    photo: null,
+    titleKey: 'welcome.s2.title',
+    bodyKey: 'welcome.s2.body',
+  },
+  {
+    photo: null,
+    titleKey: 'welcome.s3.title',
+    bodyKey: 'welcome.s3.body',
+  },
 ];
 
 export function shouldShowWelcome() {
-  // Тимчасово вимкнено — чекаємо на оновлений дизайн (з локалізацією).
-  return false;
+  try {
+    return !localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return true;
+  }
 }
 
 export function replayWelcome() {
@@ -21,13 +41,15 @@ export function replayWelcome() {
 }
 
 function WelcomeStories({ onClose }) {
+  const { t } = useT();
   const [index, setIndex] = useState(0);
+  const slide = SLIDES[index];
   const isLast = index === SLIDES.length - 1;
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    // Прелоадимо наступні слайди — щоб переходи були миттєві без миготіння
-    SLIDES.forEach(src => { const i = new Image(); i.src = src; });
+    // Прелоадимо фотографії слайдів — щоб переходи були миттєві
+    SLIDES.forEach(s => { if (s.photo) { const i = new Image(); i.src = s.photo; } });
     return () => { document.body.style.overflow = ''; };
   }, []);
 
@@ -42,31 +64,56 @@ function WelcomeStories({ onClose }) {
   };
 
   return (
-    <div className="welcome-overlay-png">
-      {SLIDES.map((src, i) => (
-        <img
-          key={i}
-          src={src}
-          alt=""
-          className={`welcome-slide-img ${i === index ? 'active' : ''}`}
-          aria-hidden={i !== index}
-          draggable={false}
-        />
-      ))}
+    <div className="welcome-overlay">
+      {/* Top bar — постійний на всіх слайдах */}
+      <div className="welcome-top">
+        <div className="welcome-brand">
+          <span className="welcome-brand-mark">📸</span>
+          <span className="welcome-brand-text">WordSnap</span>
+        </div>
+        <button className="welcome-skip" onClick={finish}>
+          {t('welcome.skip')}
+        </button>
+      </div>
 
-      {/* Невидима кнопка Skip — поверх "Skip" що намальована у PNG (top-right) */}
-      <button
-        className="welcome-tap welcome-tap-skip"
-        onClick={finish}
-        aria-label="Skip"
-      />
+      {/* Hero — фото з чіпами, або просто spacer */}
+      <div className="welcome-hero">
+        {slide.photo ? (
+          <>
+            <img src={slide.photo} alt="" className="welcome-hero-photo" draggable={false} />
+            {slide.chips && (
+              <div className="welcome-hero-chips">
+                {slide.chips.map((chip, i) => (
+                  <span key={i} className={`welcome-chip welcome-chip-${chip.variant}`}>
+                    {chip.textKey ? t(chip.textKey) : chip.text}
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="welcome-hero-spacer" />
+        )}
+      </div>
 
-      {/* Невидима кнопка Get started — поверх кнопки що намальована у PNG (bottom) */}
-      <button
-        className="welcome-tap welcome-tap-cta"
-        onClick={next}
-        aria-label={isLast ? 'Get started' : 'Next'}
-      />
+      {/* Headline + body */}
+      <div className="welcome-content">
+        <h1 className="welcome-display">{t(slide.titleKey)}</h1>
+        <p className="welcome-sub">{t(slide.bodyKey)}</p>
+      </div>
+
+      {/* Bottom — dots + CTA */}
+      <div className="welcome-bottom">
+        <div className="welcome-dots">
+          {SLIDES.map((_, i) => (
+            <span key={i} className={`welcome-dot ${i === index ? 'active' : ''}`} />
+          ))}
+        </div>
+        <button className="welcome-cta" onClick={next}>
+          <span>{isLast ? t('welcome.start') : t('welcome.next')}</span>
+          <span className="welcome-cta-arrow">→</span>
+        </button>
+      </div>
     </div>
   );
 }

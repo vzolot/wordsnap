@@ -1166,59 +1166,170 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Welcome stories overlay (PNG-based) ────────────── */
-.welcome-overlay-png {
+/* ── Welcome stories (photo + React overlay) ─────────── */
+.welcome-overlay {
   position: fixed;
   inset: 0;
   z-index: 1000;
+  display: flex;
+  flex-direction: column;
   background: #FCE7F3;
-  overflow: hidden;
+  /* мʼякий violet bloom у правому верхньому куті */
+  background-image:
+    radial-gradient(circle at 80% 12%, #DDD6FE 0%, transparent 55%),
+    linear-gradient(#FCE7F3, #FCE7F3);
+  color: #0F0F14;
+  padding: env(safe-area-inset-top, 16px) 22px env(safe-area-inset-bottom, 16px);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  -webkit-user-drag: none;
+  overflow: hidden;
 }
 
-.welcome-slide-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  /* contain — щоб не обрізати слайд на широкому/вузькому екрані; PNG-фон
-     все одно cream-pink, тому будь-які поля непомітні */
-  object-fit: contain;
-  object-position: center;
-  opacity: 0;
-  transition: opacity 0.35s ease;
-  pointer-events: none;
-  -webkit-user-drag: none;
+/* Top bar — бренд + skip */
+.welcome-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 0;
 }
-.welcome-slide-img.active { opacity: 1; }
-
-.welcome-tap {
-  position: absolute;
+.welcome-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.welcome-brand-mark { font-size: 22px; }
+.welcome-brand-text {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #0F0F14;
+}
+.welcome-skip {
   background: transparent;
   border: none;
+  color: #0F0F14;
+  opacity: 0.6;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 8px 4px;
   cursor: pointer;
-  z-index: 10;
-  -webkit-tap-highlight-color: rgba(124, 58, 237, 0.08);
 }
 
-/* "Skip" — top-right ~30% ширини, висота safe-area + 60px */
-.welcome-tap-skip {
-  top: 0;
-  right: 0;
-  width: 35%;
-  height: calc(env(safe-area-inset-top, 0px) + 80px);
+/* Hero — фото з чіпами, або spacer */
+.welcome-hero {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  max-height: 60vh;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.welcome-hero-photo {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  -webkit-user-drag: none;
+}
+.welcome-hero-spacer { flex: 1; }
+.welcome-hero-chips {
+  position: absolute;
+  bottom: 8%;
+  right: 6%;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  z-index: 5;
+}
+.welcome-chip {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 999px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.welcome-chip-light {
+  background: #fff;
+  color: #0F0F14;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.welcome-chip-violet {
+  background: #7C3AED;
+  color: #fff;
 }
 
-/* "Get started" — нижня смуга над кнопкою у PNG, до safe-area */
-.welcome-tap-cta {
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: calc(env(safe-area-inset-bottom, 0px) + 130px);
-  border-radius: 0;
+/* Content — display headline + body */
+.welcome-content {
+  padding: 18px 0 0;
 }
+.welcome-display {
+  font-size: clamp(40px, 11vw, 56px);
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  line-height: 0.95;
+  margin: 0 0 14px;
+  color: #0F0F14;
+}
+.welcome-sub {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #0F0F14;
+  opacity: 0.78;
+  max-width: 380px;
+  margin: 0;
+}
+
+/* Bottom — dots + CTA */
+.welcome-bottom {
+  padding: 18px 0 8px;
+}
+.welcome-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.welcome-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+  transition: all 0.2s;
+}
+.welcome-dot.active {
+  background: #0F0F14;
+  width: 26px;
+  border-radius: 4px;
+}
+.welcome-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  background: #0F0F14;
+  color: #fff;
+  padding: 18px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+.welcome-cta:active { transform: scale(0.98); }
+.welcome-cta-arrow {
+  font-size: 18px;
+  font-weight: 900;
+  transition: transform 0.18s ease;
+}
+.welcome-cta:hover .welcome-cta-arrow { transform: translateX(3px); }
 
 /* ── Debug banner ───────────────────────────────────── */
 .debug-banner {

@@ -37,6 +37,7 @@ const T = {
 
     'welcome.s1.title': "Don't let words slip.",
     'welcome.s1.body': 'Snap from any chat — I drop the word into smart spaced-repetition. 5 languages, AI examples, native audio.',
+    'welcome.s1.chip2': 'receipt',
     'welcome.s2.title': 'One snap. You know it.',
     'welcome.s2.body': 'Type any word. Translation, image, contextual examples in 2 seconds. Pro from $1.49/mo or $8.99/yr.',
     'welcome.s3.title': 'Keep the streak alive.',
@@ -208,6 +209,7 @@ const T = {
 
     'welcome.s1.title': 'Не даю забути.',
     'welcome.s1.body': 'Snap із будь-якого чату — слово потрапляє в інтервальне повторення. 5 мов, AI-приклади, нативне аудіо.',
+    'welcome.s1.chip2': '🇺🇦 чек',
     'welcome.s2.title': 'Один snap — і знаєш.',
     'welcome.s2.body': 'Введи слово. За 2 секунди — переклад, картинка і приклад у контексті. Pro від $1.49/міс або $8.99/рік.',
     'welcome.s3.title': 'Не зривай серію.',
@@ -379,6 +381,7 @@ const T = {
 
     'welcome.s1.title': 'No olvides palabras.',
     'welcome.s1.body': 'Captura desde cualquier chat — entran en repetición espaciada inteligente. 5 idiomas, ejemplos con IA, audio nativo.',
+    'welcome.s1.chip2': 'recibo',
     'welcome.s2.title': 'Un snap. Lo sabes.',
     'welcome.s2.body': 'Escribe una palabra. En 2 segundos: traducción, imagen, ejemplo en contexto. Pro desde $1.49/mes o $8.99/año.',
     'welcome.s3.title': 'Mantén tu racha.',
@@ -550,6 +553,7 @@ const T = {
 
     'welcome.s1.title': 'Nie zapomnij słów.',
     'welcome.s1.body': 'Snap z dowolnego czatu — słowo trafia do inteligentnych powtórek. 5 języków, przykłady z AI, natywne audio.',
+    'welcome.s1.chip2': 'paragon',
     'welcome.s2.title': 'Jeden snap. Wiesz.',
     'welcome.s2.body': 'Wpisz słowo. W 2 sekundy — tłumaczenie, obraz, przykład. Pro od $1.49/msc lub $8.99/rok.',
     'welcome.s3.title': 'Utrzymaj serię.',
@@ -787,6 +791,7 @@ const T = {
 
     'welcome.s1.title': 'Vergiss keine Wörter.',
     'welcome.s1.body': 'Snap aus jedem Chat — das Wort landet in der smarten Wiederholung. 5 Sprachen, KI-Beispiele, native Aussprache.',
+    'welcome.s1.chip2': 'Quittung',
     'welcome.s2.title': 'Ein Snap. Du weißt es.',
     'welcome.s2.body': 'Tippe ein Wort. In 2 Sekunden — Übersetzung, Bild, Beispiel im Kontext. Pro ab $1.49/Mo oder $8.99/Jahr.',
     'welcome.s3.title': 'Halte deine Serie.',
