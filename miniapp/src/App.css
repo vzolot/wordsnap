@@ -1166,321 +1166,59 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Welcome stories overlay ────────────────────────── */
-/* ── Welcome onboarding (Preply-inspired) ───────────── */
-.welcome-overlay {
+/* ── Welcome stories overlay (PNG-based) ────────────── */
+.welcome-overlay-png {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  /* Брендовий мʼякий рожевий (на ньому чорний текст контрастує як у референсі) */
-  background:
-    radial-gradient(circle at 80% 20%, #FBCFE8 0%, transparent 60%),
-    radial-gradient(circle at 10% 90%, #DDD6FE 0%, transparent 55%),
-    #FCE7F3;
-  color: var(--ink);
-  padding: env(safe-area-inset-top, 16px) 22px env(safe-area-inset-bottom, 24px);
+  background: #FCE7F3;
+  overflow: hidden;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  overflow-y: auto;
-}
-[data-theme="dark"] .welcome-overlay {
-  background:
-    radial-gradient(circle at 80% 20%, rgba(236,72,153,0.45) 0%, transparent 60%),
-    radial-gradient(circle at 10% 90%, rgba(124,58,237,0.55) 0%, transparent 55%),
-    #1A0E2E;
-  color: #fff;
+  -webkit-user-drag: none;
 }
 
-.welcome-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 16px;
-}
-.welcome-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.welcome-brand-mark {
-  font-size: 22px;
-}
-.welcome-brand-text {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-}
-
-.welcome-skip {
-  background: transparent;
-  color: var(--ink);
-  opacity: 0.55;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 6px 4px;
-}
-[data-theme="dark"] .welcome-skip { color: #fff; }
-
-.welcome-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  padding: 24px 0 16px;
-}
-
-.welcome-display {
-  font-size: clamp(40px, 11vw, 64px);
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  line-height: 0.95;
-  margin: 28px 0 18px;
-  color: var(--ink);
-}
-[data-theme="dark"] .welcome-display { color: #fff; }
-.welcome-display .accent {
-  background: var(--gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.welcome-sub {
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 1.45;
-  color: var(--ink);
-  opacity: 0.78;
-  max-width: 380px;
-}
-[data-theme="dark"] .welcome-sub { color: rgba(255,255,255,0.85); opacity: 1; }
-
-/* Stack of cards visual — like Preply's offset photo stack */
-.welcome-visual {
-  position: relative;
-  width: 100%;
-  height: 220px;
-  margin-top: 4px;
-}
-.welcome-visual-stack {
-  perspective: 800px;
-}
-.welcome-card {
+.welcome-slide-img {
   position: absolute;
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(76, 29, 149, 0.12);
-}
-.welcome-card-back {
-  width: 70%;
-  height: 88%;
-  top: 12%;
-  left: 0;
-  transform: rotate(-7deg);
-  background: rgba(255, 255, 255, 0.6);
-  z-index: 1;
-}
-.welcome-card-mid {
-  width: 76%;
-  height: 92%;
-  top: 6%;
-  left: 8%;
-  transform: rotate(-3deg);
-  background: rgba(255, 255, 255, 0.85);
-  z-index: 2;
-}
-.welcome-card-front {
-  width: 78%;
-  height: 100%;
-  top: 0;
-  left: 16%;
-  z-index: 3;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-}
-[data-theme="dark"] .welcome-card { background: rgba(255,255,255,0.08); }
-[data-theme="dark"] .welcome-card-back { background: rgba(255,255,255,0.04); }
-[data-theme="dark"] .welcome-card-mid { background: rgba(255,255,255,0.06); }
-[data-theme="dark"] .welcome-card-front { background: rgba(255,255,255,0.95); color: var(--ink); }
-
-.welcome-card-snap-back {
-  background: linear-gradient(135deg, rgba(252, 231, 243, 0.85), rgba(221, 214, 254, 0.85));
-}
-
-.welcome-card-img {
-  flex: 1;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 10px;
-}
-
-.welcome-card-meta {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  margin-top: auto;
-}
-
-.welcome-chip {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 5px 10px;
-  border-radius: 999px;
-  letter-spacing: 0.2px;
-}
-.welcome-chip-light {
-  background: #fff;
-  color: var(--ink);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-.welcome-chip-violet {
-  background: var(--violet);
-  color: #fff;
-}
-
-.welcome-card-word { padding: 16px 14px; }
-.welcome-word-meta {
-  font-size: 9px;
-  font-weight: 800;
-  color: var(--text-2);
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-}
-.welcome-word-text {
-  font-size: 24px;
-  font-weight: 900;
-  color: var(--ink);
-  margin-top: 2px;
-  letter-spacing: -0.5px;
-}
-.welcome-word-tr {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--violet);
-  margin-top: 2px;
-}
-.welcome-word-ex {
-  font-size: 12px;
-  font-style: italic;
-  color: var(--text-2);
-  margin-top: 8px;
-  line-height: 1.35;
-}
-
-.welcome-card-streak { padding: 16px 14px; gap: 12px; }
-.welcome-streak-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.welcome-streak-flame { font-size: 26px; }
-.welcome-streak-num {
-  font-size: 18px;
-  font-weight: 900;
-  color: var(--ink);
-  letter-spacing: -0.3px;
-}
-.welcome-streak-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-2);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-.welcome-streak-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  margin-top: 6px;
-}
-.welcome-streak-dot {
-  aspect-ratio: 1;
-  border-radius: 4px;
-  background: rgba(124, 58, 237, 0.12);
-}
-.welcome-streak-dot.on {
-  background: var(--violet);
-  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.35);
-}
-.welcome-streak-tier {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ink);
-  margin-top: auto;
-  padding-top: 8px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-}
-.welcome-streak-reward {
-  background: var(--gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.welcome-bottom {
-  padding-top: 18px;
-}
-
-.welcome-dots {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  margin-bottom: 14px;
-}
-.welcome-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.18);
-  transition: background 0.2s;
-}
-.welcome-dot.active { background: var(--ink); width: 26px; border-radius: 4px; }
-[data-theme="dark"] .welcome-dot { background: rgba(255,255,255,0.25); }
-[data-theme="dark"] .welcome-dot.active { background: #fff; }
-
-.welcome-cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+  inset: 0;
   width: 100%;
-  background: var(--ink);
-  color: #fff;
-  padding: 18px;
-  border-radius: var(--r-f);
-  font-size: 16px;
-  font-weight: 700;
-  transition: transform 0.12s ease, opacity 0.15s ease;
+  height: 100%;
+  /* contain — щоб не обрізати слайд на широкому/вузькому екрані; PNG-фон
+     все одно cream-pink, тому будь-які поля непомітні */
+  object-fit: contain;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  -webkit-user-drag: none;
 }
-.welcome-cta:active { transform: scale(0.98); }
-[data-theme="dark"] .welcome-cta { background: #fff; color: var(--ink); }
-.welcome-cta-arrow {
-  font-size: 18px;
-  font-weight: 900;
-  transition: transform 0.18s ease;
-}
-.welcome-cta:hover .welcome-cta-arrow { transform: translateX(3px); }
+.welcome-slide-img.active { opacity: 1; }
 
-.welcome-skip-bottom {
-  display: block;
-  margin: 14px auto 0;
+.welcome-tap {
+  position: absolute;
   background: transparent;
-  color: var(--ink);
-  opacity: 0.6;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  padding: 6px 12px;
+  border: none;
+  cursor: pointer;
+  z-index: 10;
+  -webkit-tap-highlight-color: rgba(124, 58, 237, 0.08);
 }
-[data-theme="dark"] .welcome-skip-bottom { color: #fff; }
+
+/* "Skip" — top-right ~30% ширини, висота safe-area + 60px */
+.welcome-tap-skip {
+  top: 0;
+  right: 0;
+  width: 35%;
+  height: calc(env(safe-area-inset-top, 0px) + 80px);
+}
+
+/* "Get started" — нижня смуга над кнопкою у PNG, до safe-area */
+.welcome-tap-cta {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(env(safe-area-inset-bottom, 0px) + 130px);
+  border-radius: 0;
+}
 
 /* ── Debug banner ───────────────────────────────────── */
 .debug-banner {
