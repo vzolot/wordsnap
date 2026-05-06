@@ -15,7 +15,8 @@ from .models import User
 
 logger = logging.getLogger(__name__)
 
-REFERRAL_BONUS_DAYS = 30
+REFERRAL_BONUS_DAYS = 10
+TRIAL_DAYS = 7  # дзеркалить логіку у user_service.is_trial — стек бонусу на trial
 _BASE36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
@@ -78,10 +79,18 @@ async def apply_referral(invitee_id: int, referrer_code: str) -> tuple[User, Use
             return None
 
         invitee.referred_by = referrer.id
-        # +30 днів Pro обом — продовжуємо існуючий або починаємо новий
+        # +10 днів Pro обом — стекаємо на існуюче:
+        # - якщо юзер уже Pro з активним plan_expires_at → продовжуємо від нього
+        # - інакше базою береться кінець trial-періоду (created_at + 7 днів),
+        #   або зараз — якщо trial уже минув. Так новий запрошений отримує
+        #   trial 7 днів + 10 бонусних = 17 днів реального free-Pro.
         now = datetime.now(timezone.utc)
         for u in (invitee, referrer):
-            base = u.plan_expires_at if (u.plan == "pro" and u.plan_expires_at and u.plan_expires_at > now) else now
+            if u.plan == "pro" and u.plan_expires_at and u.plan_expires_at > now:
+                base = u.plan_expires_at
+            else:
+                trial_end = (u.created_at + timedelta(days=TRIAL_DAYS)) if u.created_at else now
+                base = max(trial_end, now)
             u.plan = "pro"
             u.plan_expires_at = base + timedelta(days=REFERRAL_BONUS_DAYS)
             u.subscription_status = "active"

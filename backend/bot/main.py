@@ -86,15 +86,18 @@ async def cmd_start(message: Message):
         and user.target_lang is None
         and user.referred_by is None
     ):
-        from core.referral import apply_referral, REFERRAL_BONUS_DAYS
+        from core.referral import apply_referral, REFERRAL_BONUS_DAYS, TRIAL_DAYS
         result = await apply_referral(invitee_id=user.id, referrer_code=payload[4:])
         if result:
             referrer, invitee = result
             invitee_lang = invitee.native_lang or "uk"
             referrer_lang = referrer.native_lang or "uk"
+            # Invitee: показуємо повну суму (trial 7 + бонус 10 = 17), бо це
+            # значно сильніший value-prop ніж "+10". Referrer бачить +10 як
+            # бонус до своєї підписки.
             try:
                 await message.answer(
-                    bt("referral.invitee_welcome", invitee_lang, days=REFERRAL_BONUS_DAYS)
+                    bt("referral.invitee_welcome", invitee_lang, days=TRIAL_DAYS + REFERRAL_BONUS_DAYS)
                 )
             except Exception as e:
                 logger.warning(f"referral invitee msg failed: {e}")
