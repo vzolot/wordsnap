@@ -441,6 +441,61 @@ async def get_referral(telegram_id: int = Query(...)):
     }
 
 
+@router.get("/pay")
+async def pay_redirect(telegram_id: int = Query(...), period: str = Query("monthly")):
+    """Auto-submit HTML page що POST'ить форму на WayForPay HPP.
+
+    Юзер тапає Get Pro у міні-апі → frontend відкриває цей URL → ця сторінка
+    рендериться → JS сабмітить форму → WayForPay показує платіжку.
+    Без цього прошарку клієнт відкривав би GET URL і отримував
+    "Bad Request — this page requires only POST data".
+    """
+    from html import escape as html_escape
+    from fastapi.responses import HTMLResponse
+    from core.wayforpay_client import create_payment_link
+
+    if period not in ("monthly", "annual"):
+        raise HTTPException(status_code=400, detail="period must be monthly or annual")
+    amount = 8.99 if period == "annual" else 1.49
+
+    try:
+        payment = create_payment_link(
+            user_telegram_id=telegram_id,
+            amount=amount,
+            currency="USD",
+            period=period,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+    analytics.capture(telegram_id, "buy_link_created", {
+        "amount": amount, "period": period,
+    })
+
+    fields_html = "".join(
+        f'<input type="hidden" name="{html_escape(str(k))}" value="{html_escape(str(v))}">'
+        for k, v in payment["form_fields"].items()
+    )
+    html = (
+        '<!doctype html><html><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        '<title>Redirecting…</title>'
+        '<style>body{font-family:-apple-system,sans-serif;background:#FCE7F3;'
+        'display:grid;place-items:center;min-height:100vh;margin:0;'
+        'color:#0E0B1A}.box{text-align:center;padding:24px}'
+        '.s{display:inline-block;width:24px;height:24px;border:3px solid #7C3AED;'
+        'border-bottom-color:transparent;border-radius:50%;animation:r 0.8s linear infinite}'
+        '@keyframes r{to{transform:rotate(360deg)}}</style></head>'
+        '<body><div class="box"><div class="s"></div>'
+        '<p style="margin-top:16px;font-weight:600">Opening WayForPay…</p></div>'
+        f'<form id="f" method="POST" action="{html_escape(payment["form_url"])}">'
+        f'{fields_html}</form>'
+        '<script>document.getElementById("f").submit();</script>'
+        '</body></html>'
+    )
+    return HTMLResponse(content=html)
+
+
 @router.post("/api/wayforpay/callback")
 async def wayforpay_callback(request: Request):
     """Webhook від WayForPay після платежу. Активує Pro якщо платіж successful.
@@ -585,34 +640,24 @@ async def wayforpay_callback(request: Request):
 
 @router.post("/api/buy")
 async def create_buy_link(
+    request: Request,
     telegram_id: int = Query(...),
     period: str = Query("monthly"),
 ):
-    """Створює посилання на оплату Pro. period — 'monthly' (default) | 'annual'.
-    Annual = $8.99 за рік (≈50% знижка від $1.49 × 12)."""
-    from core.wayforpay_client import create_payment_link
+    """Створює URL що веде на /pay-сторінку нашого бекенду. /pay рендерить
+    auto-submit POST форму, бо WayForPay HPP вимагає POST а не GET.
+    period — 'monthly' (default) | 'annual'."""
 
     if period not in ("monthly", "annual"):
         raise HTTPException(status_code=400, detail="period must be monthly or annual")
     amount = 8.99 if period == "annual" else 1.49
 
-    try:
-        payment = create_payment_link(
-            user_telegram_id=telegram_id,
-            amount=amount,
-            currency="USD",
-            period=period,
-        )
-        analytics.capture(telegram_id, "buy_link_created", {
-            "amount": amount, "period": period,
-        })
-        return {
-            "payment_url": payment["payment_url"],
-            "order_reference": payment["order_reference"],
-            "period": period,
-            "amount": amount,
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=503, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to create payment link")
+    # Будуємо URL поточного хоста: схема + хост + /pay?…
+    base = f"{request.url.scheme}://{request.url.netloc}"
+    payment_url = f"{base}/pay?telegram_id={telegram_id}&period={period}"
+
+    return {
+        "payment_url": payment_url,
+        "period": period,
+        "amount": amount,
+    }

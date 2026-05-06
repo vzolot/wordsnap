@@ -137,14 +137,19 @@ def create_payment_link(
     
     if WEBHOOK_URL:
         params["serviceUrl"] = WEBHOOK_URL
-    
+
+    # WayForPay HPP вимагає POST-форму. payment_url як GET давав "Bad Request,
+    # this page requires only POST data". Тому повертаємо params як dict —
+    # /pay endpoint рендеритиме HTML auto-submit форму.
     payment_url = f"{WAYFORPAY_PURCHASE_URL}?{urlencode(params)}"
-    
+
     logger.info(f"Created payment link for user {user_telegram_id}, order {order_reference}")
-    
+
     return {
         "payment_url": payment_url,
         "order_reference": order_reference,
+        "form_url": WAYFORPAY_PURCHASE_URL,
+        "form_fields": params,
     }
 
 
