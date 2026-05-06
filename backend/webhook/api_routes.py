@@ -3,7 +3,7 @@ REST API для miniapp.
 """
 import logging
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import delete, select, func
 
@@ -438,6 +438,148 @@ async def get_referral(telegram_id: int = Query(...)):
         "link": f"https://t.me/{bot_username()}?start=ref_{code}",
         "referrals_count": user.referrals_count or 0,
         "bonus_days": REFERRAL_BONUS_DAYS,
+    }
+
+
+@router.post("/api/wayforpay/callback")
+async def wayforpay_callback(request: Request):
+    """Webhook від WayForPay після платежу. Активує Pro якщо платіж successful.
+
+    Формат відповіді що очікує WayForPay:
+        {
+          "orderReference": "...",
+          "status": "accept",
+          "time": <unix>,
+          "signature": "..."
+        }
+    """
+    import time as _time
+    from core.user_service import activate_pro_subscription
+    from core.wayforpay_client import (
+        verify_callback_signature,
+        generate_response_signature,
+    )
+
+    # WayForPay часом шле application/x-www-form-urlencoded з єдиним полем JSON,
+    # часом — справжній JSON. Спробуємо обидва.
+    raw_body = (await request.body()).decode("utf-8", errors="ignore")
+    data = None
+    try:
+        data = await request.json()
+    except Exception:
+        pass
+    if not data:
+        try:
+            import json as _json
+            data = _json.loads(raw_body)
+        except Exception:
+            try:
+                form = await request.form()
+                if len(form) == 1:
+                    only_key = next(iter(form.keys()))
+                    import json as _json
+                    data = _json.loads(only_key) if only_key.startswith("{") else dict(form)
+                else:
+                    data = dict(form)
+            except Exception:
+                logger.error(f"WayForPay callback: cannot parse body: {raw_body[:300]!r}")
+                raise HTTPException(status_code=400, detail="Bad payload")
+
+    order_ref = str(data.get("orderReference", ""))
+    transaction_status = str(data.get("transactionStatus", ""))
+    reason_code = str(data.get("reasonCode", ""))
+    amount = float(data.get("amount", 0) or 0)
+    rec_token = data.get("recToken")
+
+    logger.info(
+        f"WayForPay callback: order={order_ref} status={transaction_status} "
+        f"reason={reason_code} amount={amount}"
+    )
+
+    # Підпис обов'язковий — без нього не довіряємо
+    if not verify_callback_signature(data):
+        logger.warning(f"WayForPay: bad signature for {order_ref}")
+        raise HTTPException(status_code=403, detail="Bad signature")
+
+    # Парсимо order_reference: WS_<tg_id>_<period[:3]>_<ts> або
+    # WS_<tg_id>_<ts> (legacy) або WS_REC_<tg_id>_<ts> (recurring)
+    parts = order_ref.split("_")
+    telegram_id: int | None = None
+    period = "monthly"
+    is_recurring = False
+    try:
+        if len(parts) >= 3 and parts[0] == "WS" and parts[1] == "REC":
+            telegram_id = int(parts[2])
+            is_recurring = True
+        elif len(parts) >= 4 and parts[0] == "WS":
+            telegram_id = int(parts[1])
+            period_tag = parts[2]
+            period = "annual" if period_tag.startswith("ann") else "monthly"
+        elif len(parts) >= 3 and parts[0] == "WS":
+            telegram_id = int(parts[1])
+    except (ValueError, IndexError):
+        logger.error(f"WayForPay: cannot parse order_reference {order_ref}")
+
+    success = transaction_status == "Approved" and reason_code == "1100"
+
+    # Записуємо в історію (одразу, навіть для невдалих платежів)
+    if telegram_id is not None:
+        try:
+            async with SessionLocal() as session:
+                user = await _get_user(session, telegram_id)
+                if user:
+                    # Уникаємо дублікатів — order_reference унікальний
+                    existing = (await session.execute(
+                        select(PaymentHistory).where(
+                            PaymentHistory.order_reference == order_ref
+                        )
+                    )).scalar_one_or_none()
+                    if not existing:
+                        session.add(PaymentHistory(
+                            user_id=user.id,
+                            order_reference=order_ref,
+                            amount=amount,
+                            currency=str(data.get("currency", "USD")),
+                            status="success" if success else "failed",
+                            transaction_status=transaction_status,
+                            reason_code=reason_code,
+                            reason=str(data.get("reason", "")),
+                            is_recurring=is_recurring,
+                            rec_token=str(rec_token) if rec_token else None,
+                            raw_payload=data,
+                        ))
+                        await session.commit()
+        except Exception as e:
+            logger.error(f"WayForPay: failed to save payment history: {e}", exc_info=True)
+
+    # Активуємо Pro лише при успіху
+    if success and telegram_id is not None and not is_recurring:
+        duration_days = 365 if period == "annual" else 30
+        try:
+            await activate_pro_subscription(
+                telegram_id=telegram_id,
+                rec_token=str(rec_token) if rec_token else None,
+                duration_days=duration_days,
+            )
+            # Сповіщаємо у бот-чат
+            try:
+                from core.telegram_send import send_message
+                await send_message(
+                    telegram_id,
+                    f"🎉 <b>Pro активовано на {duration_days} днів!</b>\n\nДякую — без обмежень снапай скільки хочеш.",
+                )
+            except Exception as e:
+                logger.warning(f"WayForPay: notify user failed: {e}")
+        except Exception as e:
+            logger.error(f"WayForPay: activate_pro failed for {telegram_id}: {e}", exc_info=True)
+
+    # Відповідь WayForPay у правильному форматі
+    now = int(_time.time())
+    return {
+        "orderReference": order_ref,
+        "status": "accept",
+        "time": now,
+        "signature": generate_response_signature(order_ref, "accept", now),
     }
 
 
