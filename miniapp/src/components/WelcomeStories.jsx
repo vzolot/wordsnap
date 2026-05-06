@@ -11,11 +11,8 @@ const SLIDES = [
 ];
 
 export function shouldShowWelcome() {
-  try {
-    return !localStorage.getItem(STORAGE_KEY);
-  } catch {
-    return true;
-  }
+  // Тимчасово вимкнено — чекаємо на оновлений дизайн (з локалізацією).
+  return false;
 }
 
 export function replayWelcome() {

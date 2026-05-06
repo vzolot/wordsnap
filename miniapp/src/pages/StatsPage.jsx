@@ -3,7 +3,7 @@ import { getStats, readCache, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 import TierLadder from '../components/TierLadder';
-import { replayWelcome } from '../components/WelcomeStories';
+// import { replayWelcome } from '../components/WelcomeStories'; // welcome stories вимкнено
 
 function StatsPage() {
   const cached = readCache('stats');
@@ -93,6 +93,7 @@ function StatsPage() {
           </div>
         )}
 
+        {/* "Watch intro again" — приховано поки welcome stories вимкнено
         <button
           className="link-back"
           style={{ marginTop: 22, color: 'var(--text-2)', display: 'block' }}
@@ -100,6 +101,7 @@ function StatsPage() {
         >
           {t('welcome.replay')}
         </button>
+        */}
       </div>
     </>
   );
