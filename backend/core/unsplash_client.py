@@ -55,11 +55,22 @@ async def search_image(keyword: str) -> str | None:
             if not results:
                 logger.info(f"No Unsplash results for: {keyword}")
                 return None
-            
-            # Беремо середній розмір (1080px), щоб не вантажити велике
+
+            # Зразу беремо raw і додаємо контрольовані параметри:
+            # - w=600 (точно під розмір картки в мобілі) — у 2-4 рази менше
+            #   байтів ніж 'regular' (1080px)
+            # - q=75 (sweet-spot якості/розміру)
+            # - auto=format → WebP/AVIF на сучасних браузерах (-25% bytes)
+            # - fit=crop → uniform aspect ratio
             photo = results[0]
-            image_url = photo.get("urls", {}).get("regular")
-            
+            urls = photo.get("urls", {}) or {}
+            raw = urls.get("raw")
+            if raw:
+                image_url = f"{raw}&w=600&h=400&fit=crop&auto=format&q=75"
+            else:
+                # Fallback якщо raw нема — стара поведінка
+                image_url = urls.get("regular")
+
             logger.info(f"Unsplash image found for '{keyword}'")
             return image_url
             

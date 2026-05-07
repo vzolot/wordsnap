@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { deleteWord } from '../api/client';
 import { useT } from '../contexts/LangContext';
+import { optimizeImage } from '../utils/optimizeImage';
 import SpeakButton from './SpeakButton';
 import WordPlaceholder from './WordPlaceholder';
 
@@ -48,7 +49,7 @@ function WordDetailModal({ open, word, onClose, onDeleted, nativeLang }) {
     <div className="day-modal-backdrop" onClick={closeAndReset}>
       <div className="day-modal word-detail-modal" onClick={(e) => e.stopPropagation()}>
         {word.image_url ? (
-          <img src={word.image_url} alt="" className="word-detail-img" />
+          <img src={optimizeImage(word.image_url)} alt="" className="word-detail-img" loading="lazy" />
         ) : (
           <WordPlaceholder word={word.word} className="word-detail-img" />
         )}

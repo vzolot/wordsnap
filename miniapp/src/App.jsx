@@ -111,9 +111,36 @@ function App() {
 
     // Префетч даних після того як Telegram готовий — Home/Stats/Words рендеряться миттєво
     const prefetchTimer = setTimeout(() => prefetchAll(), 100);
+
+    // Префетч JS-чанків лазі-сторінок на idle. Перехід по табах стає миттєвим
+    // (без waterfall: navigation → fetch chunk → parse → render).
+    const idleCb = () => {
+      // Порядок — від найімовірніших до рідкісних. Проміси не await'имо —
+      // браузер сам кешує модулі, ми просто викликаємо завантаження.
+      import('./pages/WordsPage').catch(() => {});
+      import('./pages/ReviewPage').catch(() => {});
+      import('./pages/StatsPage').catch(() => {});
+      import('./pages/SongsPage').catch(() => {});
+      import('./pages/ThemesPage').catch(() => {});
+      import('./pages/SettingsPage').catch(() => {});
+      import('./pages/ProPage').catch(() => {});
+      import('./pages/LeaderboardPage').catch(() => {});
+    };
+    let idleId = 0;
+    if ('requestIdleCallback' in window) {
+      idleId = window.requestIdleCallback(idleCb, { timeout: 3000 });
+    } else {
+      idleId = setTimeout(idleCb, 1500);
+    }
+
     return () => {
       clearTimeout(prefetchTimer);
       document.removeEventListener('visibilitychange', onVisibility);
+      if (idleId && 'cancelIdleCallback' in window) {
+        try { window.cancelIdleCallback(idleId); } catch {}
+      } else if (idleId) {
+        clearTimeout(idleId);
+      }
     };
   }, []);
 

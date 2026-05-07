@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { clearCache, getReviewWords, getWords, readCache, submitReview } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import { track } from '../utils/analytics';
+import { optimizeImage } from '../utils/optimizeImage';
 import AppBar from '../components/AppBar';
 import SpeakButton from '../components/SpeakButton';
 import WordPlaceholder from '../components/WordPlaceholder';
@@ -211,7 +212,7 @@ function CardsMode({ current, onAnswer, t, lang }) {
     <>
       <div className="review-card">
         {current.image_url
-          ? <img src={current.image_url} alt="" className="review-image" />
+          ? <img src={optimizeImage(current.image_url)} alt="" className="review-image" loading="lazy" />
           : <WordPlaceholder word={current.word} className="review-image" />}
         <div className="review-pos">{current.part_of_speech || ''}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
@@ -289,7 +290,7 @@ function QuizMode({ current, pool, onAnswer, t, lang }) {
   return (
     <div className="review-card">
       {current.image_url
-        ? <img src={current.image_url} alt="" className="review-image" />
+        ? <img src={optimizeImage(current.image_url)} alt="" className="review-image" loading="lazy" />
         : <WordPlaceholder word={current.word} className="review-image" />}
       <div className="review-pos">{current.part_of_speech || ''}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
@@ -353,7 +354,7 @@ function SpellingMode({ current, onAnswer, t, lang }) {
   return (
     <div className="review-card">
       {current.image_url
-        ? <img src={current.image_url} alt="" className="review-image" />
+        ? <img src={optimizeImage(current.image_url)} alt="" className="review-image" loading="lazy" />
         : <WordPlaceholder word={current.word} className="review-image" />}
       <div className="review-pos">{current.part_of_speech || ''}</div>
       <div className="spelling-prompt">

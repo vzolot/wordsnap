@@ -133,28 +133,48 @@ async def get_stats(telegram_id: int = Query(...)):
                 "is_trial": True,
             }
 
-        learned = (await session.execute(
-            select(func.count(Word.id)).where(
-                Word.user_id == user.id, Word.status == "mastered"
-            )
-        )).scalar() or 0
+        # 5 запитів — паралельно у власних sessions. Без gather це ~250-500мс
+        # послідовно; паралельно — ~50-80мс (RTT до Supabase + max латентність).
+        import asyncio as _aio
 
-        reviewed_today = await _reviewed_today(session, user.id)
-        streak = await _calculate_streak(session, user.id)
-        total_spent = await _total_spent(session, user.id)
-
-        # XP за сьогодні: сума по reviews сьогодні. Окремо від total_xp щоб
-        # на Home показувати динаміку дня, а не накопичення за весь час.
         today_start = datetime.now(timezone.utc).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-        today_review_rows = (await session.execute(
-            select(Review.result, func.count().label("n")).where(
-                Review.user_id == user.id,
-                Review.reviewed_at >= today_start,
-            ).group_by(Review.result)
-        )).all()
-        xp_today = sum(xp_for_result(r.result) * int(r.n) for r in today_review_rows)
+        uid = user.id
+
+        async def q_learned() -> int:
+            async with SessionLocal() as s:
+                return (await s.execute(
+                    select(func.count(Word.id)).where(
+                        Word.user_id == uid, Word.status == "mastered"
+                    )
+                )).scalar() or 0
+
+        async def q_reviewed_today() -> int:
+            async with SessionLocal() as s:
+                return await _reviewed_today(s, uid)
+
+        async def q_streak() -> int:
+            async with SessionLocal() as s:
+                return await _calculate_streak(s, uid)
+
+        async def q_total_spent() -> float:
+            async with SessionLocal() as s:
+                return await _total_spent(s, uid)
+
+        async def q_xp_today() -> int:
+            async with SessionLocal() as s:
+                rows = (await s.execute(
+                    select(Review.result, func.count().label("n")).where(
+                        Review.user_id == uid,
+                        Review.reviewed_at >= today_start,
+                    ).group_by(Review.result)
+                )).all()
+                return sum(xp_for_result(r.result) * int(r.n) for r in rows)
+
+        learned, reviewed_today, streak, total_spent, xp_today = await _aio.gather(
+            q_learned(), q_reviewed_today(), q_streak(), q_total_spent(), q_xp_today()
+        )
 
         now = datetime.now(timezone.utc)
         is_pro = user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now

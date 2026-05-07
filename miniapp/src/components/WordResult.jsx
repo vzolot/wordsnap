@@ -1,4 +1,5 @@
 import { useT } from '../contexts/LangContext';
+import { optimizeImage } from '../utils/optimizeImage';
 import SpeakButton from './SpeakButton';
 import WordPlaceholder from './WordPlaceholder';
 
@@ -17,7 +18,7 @@ function WordResult({ data, nativeLang, targetLang }) {
     <div className="word-result">
       <div className="snap-result-head">
         {data.image_url ? (
-          <img src={data.image_url} alt="" className="snap-result-img" />
+          <img src={optimizeImage(data.image_url)} alt="" className="snap-result-img" loading="lazy" />
         ) : (
           <WordPlaceholder word={data.word} className="snap-result-img" />
         )}
