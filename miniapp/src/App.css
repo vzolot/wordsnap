@@ -1932,6 +1932,134 @@
   font-weight: 600;
 }
 
+/* ── Settings page ───────────────────────────────────── */
+.app-bar-settings {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--text-2);
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+.app-bar-settings:hover { background: var(--bg-card-2); color: var(--text-1); }
+.app-bar-settings svg { width: 18px; height: 18px; }
+
+.settings-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.settings-section-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+.settings-section-sub {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-row .settings-section-sub { margin-bottom: 0; }
+
+.settings-lang-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+.settings-lang-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card-2);
+  border-radius: var(--r-md);
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.settings-lang-btn:hover:not(:disabled) { background: var(--bg-card); }
+.settings-lang-btn:disabled { opacity: 0.55; cursor: default; }
+.settings-lang-btn.active {
+  background: var(--violet);
+  color: #fff;
+  border-color: var(--violet);
+}
+.settings-lang-flag { font-size: 18px; line-height: 1; }
+.settings-lang-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.settings-switch {
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+  border: none;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.18s ease;
+  flex-shrink: 0;
+}
+.settings-switch.on { background: var(--violet); }
+.settings-switch:disabled { opacity: 0.5; cursor: default; }
+.settings-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.18s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+.settings-switch.on .settings-switch-knob { transform: translateX(20px); }
+[data-theme="dark"] .settings-switch { background: rgba(255, 255, 255, 0.18); }
+
+.settings-select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card-2);
+  border-radius: var(--r-md);
+  color: var(--text-1);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.settings-toast {
+  position: fixed;
+  bottom: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  animation: settings-toast-pop 0.18s ease-out;
+}
+@keyframes settings-toast-pop {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
 /* ── Word placeholder (no image) ─────────────────────── */
 .word-placeholder {
   background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);

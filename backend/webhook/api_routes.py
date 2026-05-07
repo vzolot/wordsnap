@@ -194,6 +194,8 @@ async def get_stats(telegram_id: int = Query(...)):
             "auto_renew": user.auto_renew,
             "native_lang": user.native_lang,
             "target_lang": user.target_lang,
+            "reminders_enabled": user.reminders_enabled,
+            "timezone": user.timezone,
             "used_today": user.words_added_today,
             "daily_limit": daily_limit,
             "is_trial": is_trial,
@@ -420,6 +422,56 @@ async def export_words(
         "word_count": len(words),
     })
     return {"ok": True, "word_count": len(words), "filename": filename}
+
+
+class SettingsRequest(BaseModel):
+    native_lang: str | None = None
+    target_lang: str | None = None
+    reminders_enabled: bool | None = None
+    timezone: str | None = None
+
+
+@router.patch("/api/user/settings")
+async def update_user_settings(data: SettingsRequest, telegram_id: int = Query(...)):
+    """Часткове оновлення налаштувань юзера. Тільки задані поля міняються."""
+    from sqlalchemy import update as sa_update
+
+    SUPPORTED_LANGS = {"uk", "en", "es", "pl", "de"}
+
+    updates: dict = {}
+    if data.native_lang is not None:
+        if data.native_lang not in SUPPORTED_LANGS:
+            raise HTTPException(status_code=400, detail="Unsupported native_lang")
+        updates["native_lang"] = data.native_lang
+    if data.target_lang is not None:
+        if data.target_lang not in SUPPORTED_LANGS:
+            raise HTTPException(status_code=400, detail="Unsupported target_lang")
+        updates["target_lang"] = data.target_lang
+    if data.reminders_enabled is not None:
+        updates["reminders_enabled"] = bool(data.reminders_enabled)
+    if data.timezone is not None:
+        # Базова валідація — зберігаємо як є, у scheduler ZoneInfo() сам впаде
+        # на bad value і ми залогуємо.
+        if not isinstance(data.timezone, str) or len(data.timezone) > 50:
+            raise HTTPException(status_code=400, detail="Bad timezone")
+        updates["timezone"] = data.timezone
+
+    if not updates:
+        raise HTTPException(status_code=400, detail="Nothing to update")
+
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        await session.execute(
+            sa_update(User).where(User.id == user.id).values(**updates)
+        )
+        await session.commit()
+
+    analytics.capture(telegram_id, "settings_updated", {
+        "fields": list(updates.keys()),
+    })
+    return {"ok": True, "updated": list(updates.keys())}
 
 
 @router.get("/api/referral")
