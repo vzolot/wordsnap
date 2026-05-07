@@ -1,5 +1,6 @@
 import { useT } from '../contexts/LangContext';
 import SpeakButton from './SpeakButton';
+import WordPlaceholder from './WordPlaceholder';
 
 const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪' };
 
@@ -18,7 +19,7 @@ function WordResult({ data, nativeLang, targetLang }) {
         {data.image_url ? (
           <img src={data.image_url} alt="" className="snap-result-img" />
         ) : (
-          <div className="snap-result-img" style={{ display: 'grid', placeItems: 'center', fontSize: 30 }}>📸</div>
+          <WordPlaceholder word={data.word} className="snap-result-img" />
         )}
         <div className="snap-result-body">
           <div className="snap-result-meta">

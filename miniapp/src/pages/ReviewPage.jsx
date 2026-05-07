@@ -4,6 +4,7 @@ import { clearCache, getReviewWords, submitReview } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 import SpeakButton from '../components/SpeakButton';
+import WordPlaceholder from '../components/WordPlaceholder';
 
 const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪' };
 
@@ -146,7 +147,7 @@ function ReviewPage() {
           {current.image_url ? (
             <img src={current.image_url} alt="" className="review-image" />
           ) : (
-            <div className="review-image-placeholder">📸</div>
+            <WordPlaceholder word={current.word} className="review-image" />
           )}
           <div className="review-pos">{current.part_of_speech || ''}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
@@ -183,7 +184,8 @@ function ReviewPage() {
               disabled={!!selected}
             >
               <span className="icon">✕</span>
-              <span>{t('review.forgot')}</span>
+              <span className="answer-label">{t('review.forgot')}</span>
+              <span className="answer-hint">{t('review.forgot_hint')}</span>
             </button>
             <button
               className={`answer-btn hard ${selected === 'hard' ? 'selected' : ''}`}
@@ -191,7 +193,8 @@ function ReviewPage() {
               disabled={!!selected}
             >
               <span className="icon">◐</span>
-              <span>{t('review.hard')}</span>
+              <span className="answer-label">{t('review.hard')}</span>
+              <span className="answer-hint">{t('review.hard_hint')}</span>
             </button>
             <button
               className={`answer-btn easy ${selected === 'easy' ? 'selected' : ''}`}
@@ -199,7 +202,8 @@ function ReviewPage() {
               disabled={!!selected}
             >
               <span className="icon">✓</span>
-              <span>{t('review.easy')}</span>
+              <span className="answer-label">{t('review.easy')}</span>
+              <span className="answer-hint">{t('review.easy_hint')}</span>
             </button>
           </div>
         )}

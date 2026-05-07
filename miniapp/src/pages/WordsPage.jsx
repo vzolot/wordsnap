@@ -13,12 +13,20 @@ function badge(word, t) {
   return { cls: 'badge-learning', text: t('badge.learning') };
 }
 
+function statusOf(w) {
+  if (w.status === 'mastered') return 'mastered';
+  if ((w.review_count || 0) === 0) return 'new';
+  return 'learning';
+}
+
 function WordsPage() {
   const cached = readCache('words');
   const cachedStats = readCache('stats');
   const [words, setWords] = useState(Array.isArray(cached) ? cached : []);
   const [loading, setLoading] = useState(!cached);
   const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');   // all | new | learning | mastered
+  const [sort, setSort] = useState('recent');    // recent | alpha
   const [active, setActive] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [nativeLang, setNativeLang] = useState(cachedStats?.native_lang || 'uk');
@@ -39,10 +47,24 @@ function WordsPage() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filtered = words.filter(w =>
-    w.word.toLowerCase().includes(search.toLowerCase()) ||
-    (w.translation || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const counts = {
+    all: words.length,
+    new: words.filter(w => statusOf(w) === 'new').length,
+    learning: words.filter(w => statusOf(w) === 'learning').length,
+    mastered: words.filter(w => statusOf(w) === 'mastered').length,
+  };
+
+  const visible = words
+    .filter(w => filter === 'all' || statusOf(w) === filter)
+    .filter(w =>
+      w.word.toLowerCase().includes(search.toLowerCase()) ||
+      (w.translation || '').toLowerCase().includes(search.toLowerCase())
+    );
+
+  if (sort === 'alpha') {
+    visible.sort((a, b) => a.word.localeCompare(b.word));
+  }
+  // 'recent' — за замовчуванням бекенд повертає сортовано за created_at desc
 
   const handleDeleted = (deletedId) => {
     setWords(prev => prev.filter(w => w.id !== deletedId));
@@ -76,17 +98,56 @@ function WordsPage() {
           placeholder={t('words.search')}
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ marginBottom: 14 }}
+          style={{ marginBottom: 10 }}
         />
+
+        {words.length > 0 && (
+          <>
+            <div className="words-chips">
+              {[
+                { k: 'all',      label: t('words.filter.all'),      count: counts.all },
+                { k: 'new',      label: t('words.filter.new'),      count: counts.new },
+                { k: 'learning', label: t('words.filter.learning'), count: counts.learning },
+                { k: 'mastered', label: t('words.filter.mastered'), count: counts.mastered },
+              ].map(c => (
+                <button
+                  key={c.k}
+                  className={`words-chip ${filter === c.k ? 'active' : ''}`}
+                  onClick={() => setFilter(c.k)}
+                  type="button"
+                >
+                  {c.label}
+                  <span className="words-chip-count">{c.count}</span>
+                </button>
+              ))}
+            </div>
+            <div className="words-sort">
+              <button
+                className={`words-sort-btn ${sort === 'recent' ? 'active' : ''}`}
+                onClick={() => setSort('recent')}
+                type="button"
+              >
+                {t('words.sort.recent')}
+              </button>
+              <button
+                className={`words-sort-btn ${sort === 'alpha' ? 'active' : ''}`}
+                onClick={() => setSort('alpha')}
+                type="button"
+              >
+                {t('words.sort.alpha')}
+              </button>
+            </div>
+          </>
+        )}
 
         {loading ? (
           <div className="center-loader"><span className="spinner" /></div>
-        ) : filtered.length === 0 ? (
+        ) : visible.length === 0 ? (
           <div className="card-soft" style={{ textAlign: 'center', padding: 28 }}>
             <div className="body-2">{words.length === 0 ? t('words.empty') : t('words.no_matches')}</div>
           </div>
         ) : (
-          filtered.map(w => {
+          visible.map(w => {
             const b = badge(w, t);
             return (
               <div

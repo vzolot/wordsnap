@@ -473,6 +473,21 @@
   font-weight: 700;
 }
 
+.answer-btn .answer-label {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.answer-btn .answer-hint {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-2);
+  letter-spacing: 0.2px;
+  margin-top: -2px;
+  opacity: 0.85;
+}
+.answer-btn.easy.active .answer-hint { color: rgba(0,0,0,0.55); }
+
 .answer-btn.forgot .icon { background: var(--coral-soft); color: var(--coral); }
 .answer-btn.hard   .icon { background: var(--amber-soft); color: var(--amber); }
 .answer-btn.easy   .icon { background: var(--lime-soft);  color: #65A30D; }
@@ -1584,6 +1599,80 @@
 .word-row-clickable:hover { background: var(--bg-card-2); }
 .word-row-clickable:active { transform: scale(0.99); }
 
+/* ── Words list filters & sort ───────────────────────── */
+.words-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 12px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.words-chips::-webkit-scrollbar { display: none; }
+
+.words-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  flex-shrink: 0;
+}
+.words-chip:hover { background: var(--bg-card-2); }
+.words-chip.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+[data-theme="dark"] .words-chip.active {
+  background: #fff;
+  color: var(--ink);
+  border-color: #fff;
+}
+.words-chip-count {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.7;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 999px;
+}
+.words-chip.active .words-chip-count {
+  background: rgba(255, 255, 255, 0.18);
+  opacity: 1;
+}
+[data-theme="dark"] .words-chip-count { background: rgba(255, 255, 255, 0.08); }
+[data-theme="dark"] .words-chip.active .words-chip-count { background: rgba(0, 0, 0, 0.12); }
+
+.words-sort {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.words-sort-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.words-sort-btn.active {
+  color: var(--violet);
+  background: var(--violet-soft);
+}
+[data-theme="dark"] .words-sort-btn.active { color: #C4A8FF; }
+
 /* ── Export success ─────────────────────────────────── */
 .export-success {
   background: var(--violet-soft);
@@ -1841,6 +1930,30 @@
   color: var(--text-2);
   margin-top: 3px;
   font-weight: 600;
+}
+
+/* ── Word placeholder (no image) ─────────────────────── */
+.word-placeholder {
+  background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.word-placeholder::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 60%);
+}
+.word-placeholder-letter {
+  font-size: 56px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  z-index: 1;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
 /* ── Speak (TTS) button ─────────────────────────────── */

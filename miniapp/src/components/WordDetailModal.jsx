@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { deleteWord } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import SpeakButton from './SpeakButton';
+import WordPlaceholder from './WordPlaceholder';
 
 const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪' };
 
@@ -49,7 +50,7 @@ function WordDetailModal({ open, word, onClose, onDeleted, nativeLang }) {
         {word.image_url ? (
           <img src={word.image_url} alt="" className="word-detail-img" />
         ) : (
-          <div className="word-detail-img-placeholder">📸</div>
+          <WordPlaceholder word={word.word} className="word-detail-img" />
         )}
 
         <div className="word-detail-meta">
