@@ -18,8 +18,13 @@ function ProPage() {
   const tg = window.Telegram?.WebApp;
 
   useEffect(() => {
+    track('pro_page_viewed', {
+      is_pro: stats?.plan === 'pro',
+      is_trial: !!stats?.is_trial,
+    });
     getStats().then(r => { setStats(r.data); writeCache('stats', r.data); }).catch(() => {});
     getReferral().then(r => { setReferral(r.data); writeCache('referral', r.data); }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCopy = async () => {

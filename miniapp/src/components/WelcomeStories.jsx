@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../contexts/LangContext';
+import { track } from '../utils/analytics';
 
 const STORAGE_KEY = 'wordsnap.welcome_seen';
 
@@ -48,16 +49,23 @@ function WelcomeStories({ onClose }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     SLIDES.forEach(s => { if (s.photo) { const i = new Image(); i.src = s.photo; } });
+    track('welcome_started', { total_steps: SLIDES.length });
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  const finish = () => {
+  useEffect(() => {
+    track('welcome_step_viewed', { n: index + 1, total: SLIDES.length });
+  }, [index]);
+
+  const finish = (via) => {
     try { localStorage.setItem(STORAGE_KEY, '1'); } catch {}
+    if (via === 'complete') track('welcome_completed', { total_steps: SLIDES.length });
+    else track('welcome_skipped', { at_step: index + 1, total_steps: SLIDES.length });
     onClose?.();
   };
 
   const next = () => {
-    if (isLast) finish();
+    if (isLast) finish('complete');
     else setIndex(i => i + 1);
   };
 
@@ -82,7 +90,7 @@ function WelcomeStories({ onClose }) {
           )}
           <span className="welcome-brand-text">WordSnap</span>
         </div>
-        <button className="welcome-skip" onClick={finish}>
+        <button className="welcome-skip" onClick={() => finish('skip')}>
           {t('welcome.skip')}
         </button>
       </div>
