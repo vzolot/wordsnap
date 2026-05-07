@@ -16,6 +16,7 @@ from core.openai_client import get_word_data
 from core.unsplash_client import search_image
 from core.user_service import get_or_create_user, can_add_word, increment_word_counter
 from core.word_service import word_exists, save_word
+from core import analytics
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -155,6 +156,12 @@ async def handle_word(message: Message):
             return
 
         await increment_word_counter(message.from_user.id)
+        analytics.capture(message.from_user.id, "word_added", {
+            "target_lang": user.target_lang,
+            "native_lang": user.native_lang,
+            "has_image": bool(image_url),
+            "source": "bot_chat",
+        })
 
         stop_typing.set()
         await typing_task

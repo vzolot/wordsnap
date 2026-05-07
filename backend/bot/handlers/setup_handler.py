@@ -304,6 +304,13 @@ async def handle_demo_snap(callback: CallbackQuery):
         return
 
     await increment_word_counter(callback.from_user.id)
+    from core import analytics as _an
+    _an.capture(callback.from_user.id, "word_added", {
+        "target_lang": target_code,
+        "native_lang": native,
+        "has_image": False,
+        "source": "bot_setup",
+    })
 
     # Картинку довантажуємо у фон
     import asyncio as _aio

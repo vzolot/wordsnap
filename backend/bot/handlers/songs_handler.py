@@ -195,6 +195,13 @@ async def add_word_from_pack(callback: CallbackQuery):
         return
 
     await increment_word_counter(user.telegram_id)
+    from core import analytics as _an
+    _an.capture(user.telegram_id, "word_added", {
+        "target_lang": target,
+        "native_lang": lang,
+        "has_image": bool(image_url),
+        "source": "song_pack",
+    })
 
     from core.languages import lang_flag
     formatted = format_added_word(word, ai_data, lang_flag(lang))
