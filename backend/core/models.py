@@ -26,6 +26,8 @@ class User(Base):
     native_lang: Mapped[str] = mapped_column(String(5), default="uk")
     target_lang: Mapped[str | None] = mapped_column(String(5))
     region: Mapped[str | None] = mapped_column(String(50))
+    # Аватар у leaderboard. None → детермінований default з telegram_id.
+    avatar_emoji: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     # Підписка
     plan: Mapped[str] = mapped_column(String(20), default="free")

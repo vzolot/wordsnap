@@ -19,6 +19,13 @@ const TIMEZONES = [
   'Europe/Vienna', 'Europe/Amsterdam', 'America/New_York', 'America/Los_Angeles',
 ];
 
+const AVATARS = [
+  '🐱','🐶','🦊','🐼','🐰','🐨','🐯','🦁',
+  '🐮','🐷','🐸','🐵','🐔','🐧','🦉','🦅',
+  '🦄','🐲','🦋','🐢','🦖','🐬','🐳','🦜',
+  '🐝','🐞','🦂','🦑','🦐','🐍','🦔','🦦',
+];
+
 function SettingsPage() {
   const cached = readCache('stats', { ignoreTtl: true });
   const [stats, setStats] = useState(cached);
@@ -62,6 +69,7 @@ function SettingsPage() {
   const target = stats?.target_lang || null;
   const remindersEnabled = stats?.reminders_enabled !== false;
   const tz = stats?.timezone || 'Europe/Kiev';
+  const avatar = stats?.avatar_emoji || null;
 
   return (
     <>
@@ -69,6 +77,25 @@ function SettingsPage() {
 
       <div className="page">
         <h1 className="h1" style={{ marginBottom: 16 }}>{t('settings.title')}</h1>
+
+        <div className="settings-section">
+          <div className="settings-section-title">{t('settings.avatar')}</div>
+          <div className="settings-section-sub">{t('settings.avatar_sub')}</div>
+          <div className="settings-avatar-grid">
+            {AVATARS.map(em => (
+              <button
+                key={em}
+                className={`settings-avatar-btn ${avatar === em ? 'active' : ''}`}
+                disabled={saving === 'avatar_emoji'}
+                onClick={() => avatar !== em && apply({ avatar_emoji: em }, 'avatar_emoji')}
+                type="button"
+                aria-label={`Avatar ${em}`}
+              >
+                {em}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="settings-section">
           <div className="settings-section-title">{t('settings.native_lang')}</div>

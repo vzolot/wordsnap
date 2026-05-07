@@ -197,6 +197,7 @@ async def get_stats(telegram_id: int = Query(...)):
             "target_lang": user.target_lang,
             "reminders_enabled": user.reminders_enabled,
             "timezone": user.timezone,
+            "avatar_emoji": user.avatar_emoji,
             "used_today": user.words_added_today,
             "daily_limit": daily_limit,
             "is_trial": is_trial,
@@ -456,6 +457,7 @@ class SettingsRequest(BaseModel):
     target_lang: str | None = None
     reminders_enabled: bool | None = None
     timezone: str | None = None
+    avatar_emoji: str | None = None
 
 
 @router.patch("/api/user/settings")
@@ -482,6 +484,11 @@ async def update_user_settings(data: SettingsRequest, telegram_id: int = Query(.
         if not isinstance(data.timezone, str) or len(data.timezone) > 50:
             raise HTTPException(status_code=400, detail="Bad timezone")
         updates["timezone"] = data.timezone
+    if data.avatar_emoji is not None:
+        from core.avatars import ALLOWED_AVATARS
+        if data.avatar_emoji not in ALLOWED_AVATARS:
+            raise HTTPException(status_code=400, detail="Unsupported avatar_emoji")
+        updates["avatar_emoji"] = data.avatar_emoji
 
     if not updates:
         raise HTTPException(status_code=400, detail="Nothing to update")
@@ -551,6 +558,8 @@ async def leaderboard(telegram_id: int = Query(...)):
             )).scalar() or 0
             my_rank = higher + 1
 
+        from core.avatars import resolve_avatar
+
         def _row(u: User, rank: int) -> dict:
             return {
                 "rank": rank,
@@ -558,6 +567,7 @@ async def leaderboard(telegram_id: int = Query(...)):
                 "target_lang": u.target_lang,
                 "total_xp": u.total_xp or 0,
                 "streak_days": u.streak_days or 0,
+                "avatar_emoji": resolve_avatar(u.avatar_emoji, u.telegram_id),
                 "is_self": u.telegram_id == telegram_id,
                 "is_pro": u.plan == "pro",
             }
@@ -568,6 +578,7 @@ async def leaderboard(telegram_id: int = Query(...)):
             "self_xp": me.total_xp or 0,
             "self_streak": me.streak_days or 0,
             "self_first_name": (me.first_name or "Ти")[:14],
+            "self_avatar_emoji": resolve_avatar(me.avatar_emoji, me.telegram_id),
             "self_is_pro": me.plan == "pro",
             "target_lang": target,
         }

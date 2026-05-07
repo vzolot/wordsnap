@@ -192,6 +192,8 @@ const T = {
     'pro.back': 'Back',
 
     'settings.title': 'Settings',
+    'settings.avatar': 'Avatar',
+    'settings.avatar_sub': 'How you appear on the leaderboard.',
     'settings.native_lang': 'Your language',
     'settings.native_lang_sub': 'Interface language and translation source.',
     'settings.target_lang': 'Learning',
@@ -401,6 +403,8 @@ const T = {
     'pro.back': 'Назад',
 
     'settings.title': 'Налаштування',
+    'settings.avatar': 'Аватар',
+    'settings.avatar_sub': 'Як ти виглядаєш у рейтингу.',
     'settings.native_lang': 'Твоя мова',
     'settings.native_lang_sub': 'Мова інтерфейсу та переклад слів.',
     'settings.target_lang': 'Вивчаю',
@@ -610,6 +614,8 @@ const T = {
     'pro.back': 'Atrás',
 
     'settings.title': 'Ajustes',
+    'settings.avatar': 'Avatar',
+    'settings.avatar_sub': 'Cómo apareces en el ranking.',
     'settings.native_lang': 'Tu idioma',
     'settings.native_lang_sub': 'Idioma de la interfaz y traducciones.',
     'settings.target_lang': 'Aprendiendo',
@@ -819,6 +825,8 @@ const T = {
     'pro.back': 'Wstecz',
 
     'settings.title': 'Ustawienia',
+    'settings.avatar': 'Awatar',
+    'settings.avatar_sub': 'Jak wyświetlasz się w rankingu.',
     'settings.native_lang': 'Twój język',
     'settings.native_lang_sub': 'Język interfejsu i tłumaczeń.',
     'settings.target_lang': 'Uczę się',
@@ -959,6 +967,8 @@ const T = {
     'pro.back': 'Zurück',
 
     'settings.title': 'Einstellungen',
+    'settings.avatar': 'Avatar',
+    'settings.avatar_sub': 'So erscheinst du in der Rangliste.',
     'settings.native_lang': 'Deine Sprache',
     'settings.native_lang_sub': 'Sprache der Oberfläche und Übersetzungen.',
     'settings.target_lang': 'Ich lerne',

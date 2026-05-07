@@ -68,6 +68,9 @@ function LeaderboardPage() {
             <div className="leaderboard-self-eyebrow">{t('leaderboard.your_rank')}</div>
             <div className="leaderboard-row self">
               <div className="leaderboard-rank">#{data.self_rank}</div>
+              {data.self_avatar_emoji && (
+                <div className="leaderboard-avatar">{data.self_avatar_emoji}</div>
+              )}
               <div className="leaderboard-name">
                 {data.self_first_name}
                 {data.self_is_pro && <span className="pro-mini">✨</span>}
@@ -85,6 +88,9 @@ function LeaderboardPage() {
           {data.top.map(row => (
             <div key={row.rank} className={`leaderboard-row ${row.is_self ? 'self' : ''} ${row.rank <= 3 ? 'top3' : ''}`}>
               <div className="leaderboard-rank">{rankDisplay(row.rank)}</div>
+              {row.avatar_emoji && (
+                <div className="leaderboard-avatar">{row.avatar_emoji}</div>
+              )}
               <div className="leaderboard-name">
                 {row.first_name}
                 {row.is_pro && <span className="pro-mini">✨</span>}

@@ -2008,6 +2008,51 @@
   text-align: center;
 }
 .leaderboard-row.top3 .leaderboard-rank { font-size: 22px; }
+.leaderboard-avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  font-size: 18px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.leaderboard-row.self .leaderboard-avatar {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: var(--violet);
+}
+
+.settings-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+}
+.settings-avatar-btn {
+  aspect-ratio: 1;
+  border: 2px solid var(--border);
+  background: var(--bg-card-2);
+  border-radius: var(--r-md);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.15s, background 0.15s;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.settings-avatar-btn:hover:not(:disabled) {
+  border-color: var(--violet);
+  background: var(--bg-card);
+}
+.settings-avatar-btn:disabled { opacity: 0.5; cursor: default; }
+.settings-avatar-btn.active {
+  border-color: var(--violet);
+  background: rgba(124, 58, 237, 0.12);
+  transform: scale(1.06);
+}
 .leaderboard-name {
   flex: 1;
   font-size: 14px;

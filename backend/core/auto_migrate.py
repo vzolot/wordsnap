@@ -63,6 +63,10 @@ MIGRATIONS: list[tuple[str, str]] = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_daily_push_date DATE",
     ),
     (
+        "users.avatar_emoji",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_emoji VARCHAR(16)",
+    ),
+    (
         "users.referral_code",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(16) UNIQUE",
     ),
