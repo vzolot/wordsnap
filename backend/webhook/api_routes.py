@@ -27,6 +27,7 @@ class WordRequest(BaseModel):
 class ReviewRequest(BaseModel):
     word_id: int
     quality: int = 3
+    mode: str | None = None  # cards | quiz | spelling — для аналітики
 
 
 def _serialize_word(w: Word) -> dict:
@@ -231,6 +232,7 @@ async def submit_review(data: ReviewRequest, telegram_id: int = Query(...)):
         "result": result,
         "quality": data.quality,
         "tier_up": bool(tier_up),
+        "mode": data.mode or "cards",
         "source": "miniapp",
     })
 
@@ -298,6 +300,15 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
     if not ai_data:
         image_task.cancel()
         raise HTTPException(status_code=502, detail="AI generation failed")
+
+    if ai_data.get("is_real") is False:
+        image_task.cancel()
+        analytics.capture(telegram_id, "word_rejected", {
+            "target_lang": user.target_lang,
+            "reason": "not_real",
+            "source": "miniapp",
+        })
+        return {"error": "not_real_word", "word": word}
 
     image_url = await image_task
 

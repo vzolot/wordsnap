@@ -137,6 +137,17 @@ async def handle_word(message: Message):
             await message.answer(bt("word.ai_failed", lang))
             return
 
+        if ai_data.get("is_real") is False:
+            stop_typing.set()
+            await typing_task
+            await message.answer(bt("word.not_real", lang, word=escape(word)))
+            analytics.capture(message.from_user.id, "word_rejected", {
+                "target_lang": user.target_lang,
+                "reason": "not_real",
+                "source": "bot_chat",
+            })
+            return
+
         image_keyword = ai_data.get("image_keyword", word)
         image_task = asyncio.create_task(search_image(image_keyword))
         image_url = await image_task

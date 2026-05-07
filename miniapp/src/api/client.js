@@ -42,8 +42,8 @@ api.interceptors.request.use((config) => {
 export const getWords = () => api.get('/api/words');
 export const getStats = () => api.get('/api/stats');
 export const getReviewWords = () => api.get('/api/review');
-export const submitReview = (wordId, quality) =>
-  api.post('/api/review', { word_id: wordId, quality });
+export const submitReview = (wordId, quality, mode = 'cards') =>
+  api.post('/api/review', { word_id: wordId, quality, mode });
 export const addWord = (word) => api.post('/api/words', { word });
 export const deleteWord = (wordId) => api.delete(`/api/words/${wordId}`);
 export const getSongs = () => api.get('/api/songs');

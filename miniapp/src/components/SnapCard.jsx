@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { addWord, clearCache, readCache, writeCache } from '../api/client';
 import { pollImage } from '../utils/pollImage';
 import { useT } from '../contexts/LangContext';
+import { track } from '../utils/analytics';
 import WordResult from './WordResult';
 
 function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
@@ -35,17 +36,32 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
     setError('');
     setErrorKind(null);
     activeWordIdRef.current = null;
+    track('add_word_attempted', { length: word.length, source: 'snap_card' });
     try {
       const r = await addWord(word);
       const data = r.data || {};
-      if (data.error === 'duplicate') { setError(t('snap.duplicate')); return; }
+      if (data.error === 'duplicate') {
+        track('add_word_failed', { reason: 'duplicate', source: 'snap_card' });
+        setError(t('snap.duplicate')); return;
+      }
       if (data.error === 'limit_reached') {
+        track('add_word_failed', { reason: 'limit_reached', source: 'snap_card' });
         setError(t('snap.limit'));
         setErrorKind('limit');
         return;
       }
-      if (data.error === 'setup_required') { setError(t('snap.setup_required')); return; }
-      if (!data.ok) { setError(t('snap.error')); return; }
+      if (data.error === 'setup_required') {
+        track('add_word_failed', { reason: 'setup_required', source: 'snap_card' });
+        setError(t('snap.setup_required')); return;
+      }
+      if (data.error === 'not_real_word') {
+        track('add_word_failed', { reason: 'not_real', source: 'snap_card' });
+        setError(t('snap.not_real', { word })); return;
+      }
+      if (!data.ok) {
+        track('add_word_failed', { reason: 'unknown', source: 'snap_card' });
+        setError(t('snap.error')); return;
+      }
       const merged = { ...(data.ai_data || {}), ...(data.word || {}) };
       const wordId = data.word?.id;
       setResult({
@@ -81,6 +97,7 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
       const detailStr = typeof detail === 'string'
         ? detail
         : detail ? JSON.stringify(detail) : err?.message || '';
+      track('add_word_failed', { reason: 'network_or_5xx', status: status || 0, source: 'snap_card' });
       setError(`${t('snap.error')} [${status || 'net'}] ${detailStr}`.trim());
     } finally {
       setLoading(false);

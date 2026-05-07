@@ -50,8 +50,14 @@ def build_user_prompt(word: str, target_lang: str, native_lang: str = "uk") -> s
 
     return (
         f'Word: "{word}". Target: {target_name}. Native: {native_name}.\n\n'
-        f'Return ONLY this JSON (no markdown):\n'
+        f'STEP 1 — verify: does "{word}" actually exist in {target_name} (or is it a '
+        f'common phrase / multi-word expression in {target_name})? Typos, gibberish, '
+        f'words from a different language, and proper-noun-only strings are NOT real '
+        f'{target_name} vocabulary. NEVER invent a translation for them.\n\n'
+        f'Return ONLY this JSON (no markdown). If the word is NOT a real {target_name} '
+        f'word, set is_real=false and leave examples=[], translation="", memory_tip="":\n'
         f'{{\n'
+        f'  "is_real": true|false,\n'
         f'  "translation": "<short translation in {native_name}>",\n'
         f'  "part_of_speech": "noun|verb|adjective|adverb|phrase",\n'
         f'  "difficulty": "A1|A2|B1|B2|C1|C2",\n'
@@ -132,6 +138,14 @@ async def _ask_openai_once(
 
         data = json.loads(content)
 
+        # AI вирішив, що слова не існує у target_lang — повертаємо як є,
+        # callers покажуть friendly помилку. Кешуємо, щоб не повторювати call.
+        if data.get("is_real") is False:
+            logger.info(f"OpenAI flagged '{word}' as not-real in {target_lang}")
+            data.setdefault("translation", "")
+            data.setdefault("examples", [])
+            return data
+
         if not data.get("translation"):
             logger.error(
                 f"OpenAI missing translation for '{word}' ({target_lang}/{native_lang}). "
@@ -145,6 +159,9 @@ async def _ask_openai_once(
 
         if not data.get("image_keyword"):
             data["image_keyword"] = word
+
+        # Коли is_real явно не виставлений, default true — це валідне слово
+        data.setdefault("is_real", True)
 
         if response.usage:
             tokens = response.usage.total_tokens

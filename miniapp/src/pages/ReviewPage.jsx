@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { clearCache, getReviewWords, getWords, readCache, submitReview } from '../api/client';
 import { useT } from '../contexts/LangContext';
+import { track } from '../utils/analytics';
 import AppBar from '../components/AppBar';
 import SpeakButton from '../components/SpeakButton';
 import WordPlaceholder from '../components/WordPlaceholder';
@@ -48,6 +49,7 @@ function ReviewPage() {
 
   const mode = MODES.includes(searchParams.get('mode')) ? searchParams.get('mode') : 'cards';
   const setMode = (m) => {
+    if (m !== mode) track('review_mode_selected', { mode: m, from: mode });
     setSearchParams({ mode: m });
     setIndex(0);
     setDone(false);
@@ -74,7 +76,7 @@ function ReviewPage() {
       mastered: s.mastered + (quality === 5 ? 1 : 0),
       xp: s.xp + xpGain,
     }));
-    submitReview(current.id, quality).catch(() => {});
+    submitReview(current.id, quality, mode).catch(() => {});
     clearCache('review');
     clearCache('stats');
     setTimeout(() => {
