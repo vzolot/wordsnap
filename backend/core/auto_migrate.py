@@ -59,6 +59,10 @@ MIGRATIONS: list[tuple[str, str]] = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_streak_save_date DATE",
     ),
     (
+        "users.last_daily_push_date",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_daily_push_date DATE",
+    ),
+    (
         "users.referral_code",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(16) UNIQUE",
     ),

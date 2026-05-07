@@ -51,6 +51,8 @@ class User(Base):
     reminders_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     # Антиспам для streak-save push (одне на день локального часу)
     last_streak_save_date: Mapped[date | None] = mapped_column(Date)
+    # Антиспам для денного word-of-the-day push (одне на локальний день)
+    last_daily_push_date: Mapped[date | None] = mapped_column(Date)
 
     # Referrals: унікальний код для запрошень + хто запросив + лічильник
     referral_code: Mapped[str | None] = mapped_column(String(16))
