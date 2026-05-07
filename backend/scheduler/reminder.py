@@ -21,6 +21,7 @@ from aiogram import Bot
 from sqlalchemy import select, update as sa_update
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from core import analytics
 from core.bot_i18n import t as bt
 from core.db import SessionLocal
 from core.models import User, Word
@@ -87,6 +88,11 @@ async def check_and_send_daily_pushes(bot: Bot) -> None:
                             )
                         )
                         await session.commit()
+                    analytics.capture(user.telegram_id, "daily_push_skipped", {
+                        "reason": "no_due_word",
+                        "hour_local": local_now.hour,
+                        "timezone": user.timezone or "Europe/Kiev",
+                    })
                     continue
 
                 lang = user.native_lang or "uk"
@@ -102,6 +108,13 @@ async def check_and_send_daily_pushes(bot: Bot) -> None:
                     text=text,
                     reply_markup=keyboard,
                 )
+                analytics.capture(user.telegram_id, "daily_push_sent", {
+                    "target_lang": user.target_lang,
+                    "native_lang": user.native_lang,
+                    "hour_local": local_now.hour,
+                    "timezone": user.timezone or "Europe/Kiev",
+                    "word_id": word.id,
+                })
                 await mark_word_reminded(word.id)
                 async with SessionLocal() as session:
                     await session.execute(

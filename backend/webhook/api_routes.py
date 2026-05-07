@@ -236,6 +236,22 @@ async def submit_review(data: ReviewRequest, telegram_id: int = Query(...)):
         "source": "miniapp",
     })
 
+    # Streak milestone — фіксується тільки коли це перший review за сьогодні
+    # (тобто streak саме інкрементнувся), щоб не задвоювати на наступних
+    # відповідях того самого дня.
+    from core.streaks import calculate_streak, reviewed_today
+    MILESTONES = {3, 7, 14, 30, 60, 100}
+    async with SessionLocal() as session:
+        user_for_streak = await _get_user(session, telegram_id)
+        if user_for_streak:
+            today_count = await reviewed_today(session, user_for_streak.id)
+            if today_count == 1:
+                new_streak = await calculate_streak(session, user_for_streak.id)
+                if new_streak in MILESTONES:
+                    analytics.capture(telegram_id, "streak_milestone", {
+                        "days": new_streak,
+                    })
+
     # Якщо переступили tier — надсилаємо сторіс-вітання у бот-чат
     if tier_up:
         analytics.capture(telegram_id, "tier_unlocked", {

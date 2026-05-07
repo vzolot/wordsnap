@@ -66,6 +66,10 @@ function ProPage() {
       const r = await createBuyLink(period);
       const url = r.data?.payment_url;
       if (!url) throw new Error('No payment URL');
+      track('buy_open_attempt', {
+        period,
+        opener: tg?.openLink ? 'telegram' : 'window',
+      });
       if (tg?.openLink) tg.openLink(url);
       else window.open(url, '_blank');
     } catch (e) {
