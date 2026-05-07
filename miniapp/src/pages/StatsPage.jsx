@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getStats, readCache, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
@@ -55,7 +56,12 @@ function StatsPage() {
       <AppBar isPro={isPro} />
 
       <div className="page">
-        <h1 className="h1" style={{ marginBottom: 14 }}>{t('stats.title')}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 10 }}>
+          <h1 className="h1" style={{ margin: 0 }}>{t('stats.title')}</h1>
+          <Link to="/leaderboard" className="leaderboard-cta">
+            🏆 <span>{t('leaderboard.cta')}</span>
+          </Link>
+        </div>
 
         <div className="xp-card">
           <div className="xp-card-head">

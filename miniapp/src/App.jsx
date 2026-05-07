@@ -17,6 +17,7 @@ const ProPage    = lazy(() => import('./pages/ProPage'));
 const SongsPage  = lazy(() => import('./pages/SongsPage'));
 const ThemesPage = lazy(() => import('./pages/ThemesPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
 
 function applyTheme(scheme) {
   document.documentElement.setAttribute('data-theme', scheme === 'dark' ? 'dark' : 'light');
@@ -102,6 +103,7 @@ function App() {
               <Route path="/stats" element={<StatsPage />} />
               <Route path="/pro" element={<ProPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/leaderboard" element={<LeaderboardPage />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </Suspense>

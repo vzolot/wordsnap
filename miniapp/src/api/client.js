@@ -50,6 +50,7 @@ export const getSongs = () => api.get('/api/songs');
 export const getThemes = () => api.get('/api/themes');
 export const createBuyLink = (period = 'monthly') => api.post('/api/buy', null, { params: { period } });
 export const getReferral = () => api.get('/api/referral');
+export const getLeaderboard = () => api.get('/api/leaderboard');
 export const updateSettings = (patch) => api.patch('/api/user/settings', patch);
 
 /**

@@ -1936,6 +1936,127 @@
   font-weight: 600;
 }
 
+/* ── Leaderboard ─────────────────────────────────────── */
+.leaderboard-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+  color: #fff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.25);
+  transition: transform 0.1s, filter 0.15s;
+}
+.leaderboard-cta:hover { filter: brightness(1.05); }
+.leaderboard-cta:active { transform: scale(0.97); }
+
+.leaderboard-self-card {
+  background: var(--bg-card);
+  border: 2px solid var(--violet);
+  border-radius: var(--r-lg);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.12);
+}
+.leaderboard-self-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--violet);
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.leaderboard-self-card .leaderboard-row {
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  transition: background 0.15s;
+}
+.leaderboard-row.top3 {
+  background: linear-gradient(135deg, rgba(124,58,237,0.06) 0%, rgba(236,72,153,0.06) 100%);
+}
+.leaderboard-row.self {
+  border: 2px solid var(--violet);
+  background: linear-gradient(135deg, rgba(124,58,237,0.10) 0%, rgba(236,72,153,0.06) 100%);
+}
+.leaderboard-rank {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-2);
+  width: 36px;
+  flex-shrink: 0;
+  text-align: center;
+}
+.leaderboard-row.top3 .leaderboard-rank { font-size: 22px; }
+.leaderboard-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.leaderboard-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.leaderboard-streak {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--coral);
+}
+.leaderboard-xp {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--violet);
+  font-variant-numeric: tabular-nums;
+}
+.leaderboard-self-tag {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: var(--violet);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+.pro-mini {
+  font-size: 11px;
+  background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
 /* ── Review modes (Cards / Quiz / Spelling) ──────────── */
 .review-mode-chips {
   display: flex;

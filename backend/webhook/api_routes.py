@@ -520,6 +520,59 @@ async def get_referral(telegram_id: int = Query(...)):
     }
 
 
+@router.get("/api/leaderboard")
+async def leaderboard(telegram_id: int = Query(...)):
+    """Топ-50 за total_xp серед тих хто вчить ту саму мову.
+    Повертає рядки + ранг самого юзера (якщо поза топом — окремо)."""
+    from sqlalchemy import func as sa_func
+
+    async with SessionLocal() as session:
+        me = await _get_user(session, telegram_id)
+        if not me or not me.target_lang:
+            return {"top": [], "self_rank": None, "target_lang": None}
+
+        target = me.target_lang
+        rows = (await session.execute(
+            select(User).where(
+                User.target_lang == target,
+                User.total_xp > 0,
+            ).order_by(User.total_xp.desc(), User.created_at.asc()).limit(50)
+        )).scalars().all()
+
+        # Ранг = кількість юзерів того ж target_lang з більшою кількістю XP + 1.
+        # Тільки якщо у юзера є хоч одне XP — інакше "не в рейтингу".
+        my_rank = None
+        if (me.total_xp or 0) > 0:
+            higher = (await session.execute(
+                select(sa_func.count(User.id)).where(
+                    User.target_lang == target,
+                    User.total_xp > me.total_xp,
+                )
+            )).scalar() or 0
+            my_rank = higher + 1
+
+        def _row(u: User, rank: int) -> dict:
+            return {
+                "rank": rank,
+                "first_name": (u.first_name or "Friend")[:14],
+                "target_lang": u.target_lang,
+                "total_xp": u.total_xp or 0,
+                "streak_days": u.streak_days or 0,
+                "is_self": u.telegram_id == telegram_id,
+                "is_pro": u.plan == "pro",
+            }
+
+        return {
+            "top": [_row(u, i + 1) for i, u in enumerate(rows)],
+            "self_rank": my_rank,
+            "self_xp": me.total_xp or 0,
+            "self_streak": me.streak_days or 0,
+            "self_first_name": (me.first_name or "Ти")[:14],
+            "self_is_pro": me.plan == "pro",
+            "target_lang": target,
+        }
+
+
 @router.get("/pay")
 async def pay_redirect(telegram_id: int = Query(...), period: str = Query("monthly")):
     """Auto-submit HTML page що POST'ить форму на WayForPay HPP.
