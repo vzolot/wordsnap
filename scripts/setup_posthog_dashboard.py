@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """Створює дашборд + 8 готових інсайтів у PostHog через REST API.
 
-Ідемпотентний — якщо інсайт із тим самим ім'ям уже є, пропускає його.
-Якщо дашборду нема — створює новий і пінить туди всі інсайти.
+Використовує СУЧАСНИЙ query-format (HogQL-based) — PostHog нещодавно
+заблокували legacy `filters` API для нових акаунтів.
+
+Ідемпотентний — якщо інсайт із тим самим ім'ям уже є на дашборді, пропускає.
 
 Використання:
-    export POSTHOG_PERSONAL_API_KEY='phx_...'   # створи у PostHog → Settings → Personal API Keys
-    export POSTHOG_PROJECT_ID='12345'           # числовий ID з URL: app.posthog.com/project/12345
-    export POSTHOG_HOST='https://eu.posthog.com'  # опційно, default EU
+    export POSTHOG_PERSONAL_API_KEY='phx_...'   # PostHog → Settings → Personal API Keys
+    export POSTHOG_PROJECT_ID='12345'           # числовий ID з URL
+    export POSTHOG_HOST='https://eu.posthog.com'  # опційно
     python3 scripts/setup_posthog_dashboard.py
-
-PERSONAL_API_KEY scope: треба `insight:write`, `dashboard:write` (можна просто
-поставити "Read & Write" на проєкт — PostHog UI спрощує).
 """
 from __future__ import annotations
 
-import json
 import os
 import sys
 from typing import Any
@@ -46,22 +44,55 @@ HEADERS = {
 BASE = f"{HOST}/api/projects/{PROJECT_ID}"
 
 
-def _events(*specs: tuple[str, dict | None]) -> list[dict]:
-    """Будує список events для filter у форматі PostHog (legacy filters API).
+# ── Query builders (modern PostHog query format) ────────────────────────
+def event_node(event: str, properties: dict | None = None, math: str = "total") -> dict:
+    """Будує EventsNode у форматі query API."""
+    node: dict[str, Any] = {"kind": "EventsNode", "event": event, "name": event, "math": math}
+    if properties:
+        node["properties"] = [
+            {"key": k, "value": v, "operator": "exact", "type": "event"}
+            for k, v in properties.items()
+        ]
+    return node
 
-    Кожен spec — (event_name, properties_dict | None). Props автоматично
-    обгортається у [{key, value, operator: "exact", type: "event"}].
-    """
-    out: list[dict] = []
-    for order, (name, props) in enumerate(specs):
-        item: dict[str, Any] = {"id": name, "order": order, "type": "events"}
-        if props:
-            item["properties"] = [
-                {"key": k, "value": v, "operator": "exact", "type": "event"}
-                for k, v in props.items()
-            ]
-        out.append(item)
-    return out
+
+def funnel_query(
+    series: list[dict],
+    window_interval: int,
+    window_unit: str,  # "second" | "minute" | "hour" | "day" | "week"
+    date_from: str = "-30d",
+    breakdown: str | None = None,
+) -> dict:
+    src: dict[str, Any] = {
+        "kind": "FunnelsQuery",
+        "series": series,
+        "funnelsFilter": {
+            "funnelWindowInterval": window_interval,
+            "funnelWindowIntervalUnit": window_unit,
+        },
+        "dateRange": {"date_from": date_from},
+    }
+    if breakdown:
+        src["breakdownFilter"] = {"breakdown": breakdown, "breakdown_type": "event"}
+    return {"kind": "InsightVizNode", "source": src}
+
+
+def trend_query(
+    series: list[dict],
+    breakdown: str | None = None,
+    interval: str = "week",
+    date_from: str = "-30d",
+) -> dict:
+    src: dict[str, Any] = {
+        "kind": "TrendsQuery",
+        "series": series,
+        "interval": interval,
+        "dateRange": {"date_from": date_from},
+        "trendsFilter": {"display": "ActionsLineGraph"},
+    }
+    if breakdown:
+        src["breakdownFilter"] = {"breakdown": breakdown, "breakdown_type": "event"}
+    return {"kind": "InsightVizNode", "source": src}
 
 
 # ── Інсайти ─────────────────────────────────────────────────────────────
@@ -69,136 +100,103 @@ INSIGHTS: list[dict] = [
     {
         "name": "1. Activation funnel (new user → first review)",
         "description": "З /start у боті до першого review_submitted. Drop-off показує де нові юзери губляться.",
-        "filters": {
-            "insight": "FUNNELS",
-            "events": _events(
-                ("user_started", None),
-                ("lang_selected", None),
-                ("region_selected", None),
-                ("word_added", {"source": "bot_setup"}),
-                ("review_submitted", None),
-            ),
-            "funnel_window_interval": 7,
-            "funnel_window_interval_unit": "day",
-            "date_from": "-30d",
-        },
+        "query": funnel_query(
+            series=[
+                event_node("user_started"),
+                event_node("lang_selected"),
+                event_node("region_selected"),
+                event_node("word_added", {"source": "bot_setup"}),
+                event_node("review_submitted"),
+            ],
+            window_interval=7,
+            window_unit="day",
+        ),
     },
     {
         "name": "2. Pro conversion (precise)",
         "description": "pro_page_viewed → buy_clicked → buy_open_attempt → payment_succeeded. Покаже на якому кроці втрачаєш конверсію.",
-        "filters": {
-            "insight": "FUNNELS",
-            "events": _events(
-                ("pro_page_viewed", None),
-                ("buy_clicked", None),
-                ("buy_open_attempt", None),
-                ("payment_succeeded", None),
-            ),
-            "funnel_window_interval": 30,
-            "funnel_window_interval_unit": "minute",
-            "date_from": "-30d",
-            "breakdown": "period",
-            "breakdown_type": "event",
-        },
+        "query": funnel_query(
+            series=[
+                event_node("pro_page_viewed"),
+                event_node("buy_clicked"),
+                event_node("buy_open_attempt"),
+                event_node("payment_succeeded"),
+            ],
+            window_interval=30,
+            window_unit="minute",
+            breakdown="period",
+        ),
     },
     {
         "name": "3. Paywall → upgrade",
         "description": "Як часто free-tier limit конвертить у Pro. Найважливіший монетизаційний funnel.",
-        "filters": {
-            "insight": "FUNNELS",
-            "events": _events(
-                ("paywall_hit", {"reason": "daily_limit"}),
-                ("pro_page_viewed", None),
-                ("buy_clicked", None),
-                ("payment_succeeded", None),
-            ),
-            "funnel_window_interval": 7,
-            "funnel_window_interval_unit": "day",
-            "date_from": "-30d",
-        },
+        "query": funnel_query(
+            series=[
+                event_node("paywall_hit", {"reason": "daily_limit"}),
+                event_node("pro_page_viewed"),
+                event_node("buy_clicked"),
+                event_node("payment_succeeded"),
+            ],
+            window_interval=7,
+            window_unit="day",
+        ),
     },
     {
         "name": "4. Welcome stories engagement",
-        "description": "Скільки людей долистує до s3 (там CTA +10 днів Pro). Drop-off на 1→2 — нудний перший слайд.",
-        "filters": {
-            "insight": "FUNNELS",
-            "events": _events(
-                ("welcome_started", None),
-                ("welcome_step_viewed", {"n": 2}),
-                ("welcome_step_viewed", {"n": 3}),
-                ("welcome_completed", None),
-            ),
-            "funnel_window_interval": 5,
-            "funnel_window_interval_unit": "minute",
-            "date_from": "-30d",
-        },
+        "description": "Скільки людей долистує до s3 (там CTA +10 днів Pro).",
+        "query": funnel_query(
+            series=[
+                event_node("welcome_started"),
+                event_node("welcome_step_viewed", {"n": 2}),
+                event_node("welcome_step_viewed", {"n": 3}),
+                event_node("welcome_completed"),
+            ],
+            window_interval=5,
+            window_unit="minute",
+        ),
     },
     {
         "name": "5. Add-word success rate (mini-app)",
-        "description": "add_word_attempted → word_added{source:miniapp}. Скільки спроб додати слово реально проходять.",
-        "filters": {
-            "insight": "FUNNELS",
-            "events": _events(
-                ("add_word_attempted", None),
-                ("word_added", {"source": "miniapp"}),
-            ),
-            "funnel_window_interval": 60,
-            "funnel_window_interval_unit": "second",
-            "date_from": "-30d",
-        },
+        "description": "add_word_attempted → word_added{source:miniapp}.",
+        "query": funnel_query(
+            series=[
+                event_node("add_word_attempted"),
+                event_node("word_added", {"source": "miniapp"}),
+            ],
+            window_interval=60,
+            window_unit="second",
+        ),
     },
     {
         "name": "6. Mode adoption (Cards / Quiz / Spelling)",
         "description": "Скільки разів кожен режим вибирали. Breakdown by mode.",
-        "filters": {
-            "insight": "TRENDS",
-            "events": [{"id": "review_mode_selected", "type": "events", "math": "total"}],
-            "breakdown": "mode",
-            "breakdown_type": "event",
-            "interval": "week",
-            "date_from": "-30d",
-            "display": "ActionsLineGraph",
-        },
+        "query": trend_query(
+            series=[event_node("review_mode_selected")],
+            breakdown="mode",
+        ),
     },
     {
         "name": "7. Mode quality (review_submitted by mode, easy answers)",
         "description": "Частка result=knew по режимах — який режим дає кращий learning outcome.",
-        "filters": {
-            "insight": "TRENDS",
-            "events": [{
-                "id": "review_submitted",
-                "type": "events",
-                "math": "total",
-                "properties": [
-                    {"key": "result", "value": "knew", "operator": "exact", "type": "event"},
-                ],
-            }],
-            "breakdown": "mode",
-            "breakdown_type": "event",
-            "interval": "week",
-            "date_from": "-30d",
-            "display": "ActionsLineGraph",
-        },
+        "query": trend_query(
+            series=[event_node("review_submitted", {"result": "knew"})],
+            breakdown="mode",
+        ),
     },
     {
         "name": "8. Streak milestones (3/7/14/30/60/100 days)",
         "description": "Скільки людей переступає кожен поріг serії. Health-метрика всього проєкту.",
-        "filters": {
-            "insight": "TRENDS",
-            "events": [{"id": "streak_milestone", "type": "events", "math": "total"}],
-            "breakdown": "days",
-            "breakdown_type": "event",
-            "interval": "week",
-            "date_from": "-90d",
-            "display": "ActionsLineGraph",
-        },
+        "query": trend_query(
+            series=[event_node("streak_milestone")],
+            breakdown="days",
+            date_from="-90d",
+        ),
     },
 ]
 
 
 # ── HTTP helpers ────────────────────────────────────────────────────────
 def get_dashboard_id(name: str) -> int | None:
-    """Шукає дашборд по імені, повертає id або None."""
     r = requests.get(f"{BASE}/dashboards/", headers=HEADERS, params={"limit": 200}, timeout=15)
     r.raise_for_status()
     for d in r.json().get("results", []):
@@ -219,25 +217,8 @@ def create_dashboard(name: str) -> int:
 
 
 def get_existing_insight_names(dashboard_id: int) -> set[str]:
-    """Повертає назви інсайтів, що вже на дашборді — щоб не дублювати.
-
-    PostHog API інколи 500-ить на GET /insights/?dashboards=... для щойно
-    створених дашбордів. Якщо filter падає — fallback через GET dashboard
-    detail (там у tiles є вкладені інсайти). Якщо й це падає — повертаємо
-    порожній set (краще створити дублі, ніж зломатись)."""
-    try:
-        r = requests.get(
-            f"{BASE}/insights/",
-            headers=HEADERS,
-            params={"dashboards": dashboard_id, "limit": 200},
-            timeout=15,
-        )
-        if r.status_code < 400:
-            return {i.get("name") for i in r.json().get("results", []) if i.get("name")}
-        print(f"  ! /insights filter returned {r.status_code}, falling back to dashboard detail")
-    except Exception as e:
-        print(f"  ! /insights filter failed: {e}, falling back to dashboard detail")
-
+    """Перевага — детальний dashboard endpoint (повертає tiles з вкладеними
+    insights). Filter API інколи 500-ить на щойно створених дашбордах."""
     try:
         r = requests.get(f"{BASE}/dashboards/{dashboard_id}/", headers=HEADERS, timeout=15)
         if r.status_code < 400:
@@ -250,7 +231,6 @@ def get_existing_insight_names(dashboard_id: int) -> set[str]:
             return names
     except Exception as e:
         print(f"  ! dashboard detail failed: {e}")
-
     return set()
 
 
@@ -258,12 +238,12 @@ def create_insight(spec: dict, dashboard_id: int) -> dict:
     payload = {
         "name": spec["name"],
         "description": spec.get("description", ""),
-        "filters": spec["filters"],
+        "query": spec["query"],
         "dashboards": [dashboard_id],
     }
     r = requests.post(f"{BASE}/insights/", headers=HEADERS, json=payload, timeout=15)
     if r.status_code >= 400:
-        print(f"  ✗ {spec['name']}: HTTP {r.status_code}\n{r.text[:400]}", file=sys.stderr)
+        print(f"  ✗ {spec['name']}: HTTP {r.status_code}\n{r.text[:600]}", file=sys.stderr)
         r.raise_for_status()
     return r.json()
 
