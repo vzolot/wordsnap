@@ -21,7 +21,7 @@ function AppBar({ showProLink = true, isPro = false }) {
         </Link>
         {showProLink && (
           isPro ? (
-            <span className="pro-active-badge">✨ PRO</span>
+            <Link to="/pro" className="pro-active-badge">✨ PRO</Link>
           ) : (
             <Link to="/pro" className="app-bar-pro">✨ Pro</Link>
           )
