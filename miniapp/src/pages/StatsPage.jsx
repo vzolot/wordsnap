@@ -5,6 +5,7 @@ import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 import TierLadder from '../components/TierLadder';
 import { replayWelcome } from '../components/WelcomeStories';
+import { StatsSkeleton } from '../components/Skeleton';
 
 function StatsPage() {
   const cached = readCache('stats');
@@ -20,7 +21,7 @@ function StatsPage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="page"><div className="center-loader"><span className="spinner" /></div></div>;
+  if (loading) return <><AppBar /><StatsSkeleton /></>;
 
   const isPro = stats?.plan === 'pro';
   const learning = (stats?.total_words || 0) - (stats?.learned_words || 0);

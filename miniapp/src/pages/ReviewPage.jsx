@@ -7,6 +7,7 @@ import { optimizeImage } from '../utils/optimizeImage';
 import AppBar from '../components/AppBar';
 import SpeakButton from '../components/SpeakButton';
 import WordPlaceholder from '../components/WordPlaceholder';
+import { ReviewSkeleton } from '../components/Skeleton';
 
 const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪' };
 
@@ -87,7 +88,7 @@ function ReviewPage() {
   };
 
   if (loading) {
-    return <div className="page"><div className="center-loader"><span className="spinner" /></div></div>;
+    return <><AppBar /><ReviewSkeleton /></>;
   }
 
   if (words.length === 0) {

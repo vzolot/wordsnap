@@ -4,7 +4,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <title>WordSnap</title>
+
+    <!-- Preconnect до критичних origins — DNS+TLS handshake поки HTML парситься -->
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
+    <link rel="preconnect" href="https://eu.posthog.com" crossorigin />
+    <link rel="dns-prefetch" href="https://worker-production-abd5.up.railway.app" />
+
+    <!-- Welcome story для новачків — вантажиться вперед main bundle -->
+    <link rel="preload" as="image" href="/onboarding/slide_1.png" fetchpriority="high" />
+
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
   <body>

@@ -5,6 +5,7 @@ import AppBar from '../components/AppBar';
 import ExportModal from '../components/ExportModal';
 import SpeakButton from '../components/SpeakButton';
 import WordDetailModal from '../components/WordDetailModal';
+import { SkeletonBox } from '../components/Skeleton';
 import { track } from '../utils/analytics';
 
 function badge(word, t) {
@@ -141,7 +142,11 @@ function WordsPage() {
         )}
 
         {loading ? (
-          <div className="center-loader"><span className="spinner" /></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonBox key={i} height={68} radius={14} />
+            ))}
+          </div>
         ) : visible.length === 0 ? (
           <div className="card-soft" style={{ textAlign: 'center', padding: 28 }}>
             <div className="body-2">{words.length === 0 ? t('words.empty') : t('words.no_matches')}</div>

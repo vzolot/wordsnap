@@ -4,6 +4,7 @@ import { getLeaderboard, readCache, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import { track } from '../utils/analytics';
 import AppBar from '../components/AppBar';
+import { LeaderboardSkeleton } from '../components/Skeleton';
 
 const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪' };
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -30,7 +31,7 @@ function LeaderboardPage() {
   }, []);
 
   if (loading) {
-    return <div className="page"><div className="center-loader"><span className="spinner" /></div></div>;
+    return <><AppBar /><LeaderboardSkeleton /></>;
   }
 
   if (!data || !data.top?.length) {

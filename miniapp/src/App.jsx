@@ -112,6 +112,15 @@ function App() {
     // Префетч даних після того як Telegram готовий — Home/Stats/Words рендеряться миттєво
     const prefetchTimer = setTimeout(() => prefetchAll(), 100);
 
+    // Реєструємо Service Worker — кешує тільки /assets/* (immutable hashed
+    // chunks). index.html та /api/* проходять без втручання, тому ризику
+    // зачекати stale UI на деплоях немає.
+    if ('serviceWorker' in navigator && import.meta.env.PROD) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('[wordsnap] SW register failed:', err?.message);
+      });
+    }
+
     // Префетч JS-чанків лазі-сторінок на idle. Перехід по табах стає миттєвим
     // (без waterfall: navigation → fetch chunk → parse → render).
     const idleCb = () => {
