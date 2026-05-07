@@ -112,6 +112,12 @@ async def handle_word(message: Message):
 
     can_add, reason = await can_add_word(user, lang)
     if not can_add:
+        analytics.capture(message.from_user.id, "paywall_hit", {
+            "reason": "daily_limit",
+            "plan": user.plan or "free",
+            "used_today": user.words_added_today or 0,
+            "source": "bot_chat",
+        })
         await message.answer(reason)
         return
 

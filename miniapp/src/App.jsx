@@ -76,14 +76,45 @@ function App() {
 
     // PostHog ініт + identify за telegram_id (співпадає з distinct_id бекенду).
     // Обгорнено у try/catch щоб збій аналітики не блокував рендер міні-апи.
+    const SESS_KEY = 'wordsnap.session.last_active';
+    const fireResumed = () => {
+      try {
+        const prev = parseInt(localStorage.getItem(SESS_KEY) || '0', 10);
+        if (prev > 0) {
+          const delta = Math.max(0, Math.floor((Date.now() - prev) / 1000));
+          track('session_resumed', { since_last_seconds: delta });
+        }
+      } catch { /* noop */ }
+    };
+    const stampActive = () => {
+      try { localStorage.setItem(SESS_KEY, String(Date.now())); } catch {}
+    };
+
     try {
       initAnalytics(getTelegramUserId());
       track('app_opened');
+      // Перше відкриття цієї сесії — порівнюємо з попередньою (якщо була).
+      fireResumed();
+      stampActive();
     } catch { /* noop */ }
+
+    // hidden  → запам'ятовуємо момент коли юзер пішов з апи
+    // visible → fire session_resumed для повернень всередині однієї вкладки
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') stampActive();
+      else if (document.visibilityState === 'visible') {
+        fireResumed();
+        stampActive();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
 
     // Префетч даних після того як Telegram готовий — Home/Stats/Words рендеряться миттєво
     const prefetchTimer = setTimeout(() => prefetchAll(), 100);
-    return () => clearTimeout(prefetchTimer);
+    return () => {
+      clearTimeout(prefetchTimer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   return (

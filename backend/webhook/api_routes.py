@@ -198,6 +198,7 @@ async def get_stats(telegram_id: int = Query(...)):
             "reminders_enabled": user.reminders_enabled,
             "timezone": user.timezone,
             "avatar_emoji": user.avatar_emoji,
+            "show_on_leaderboard": user.show_on_leaderboard,
             "used_today": user.words_added_today,
             "daily_limit": daily_limit,
             "is_trial": is_trial,
@@ -299,6 +300,12 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
 
     can, reason = await can_add_word(user, user.native_lang)
     if not can:
+        analytics.capture(telegram_id, "paywall_hit", {
+            "reason": "daily_limit",
+            "plan": user.plan or "free",
+            "used_today": user.words_added_today or 0,
+            "source": "miniapp",
+        })
         return {"error": "limit_reached", "message": reason}
 
     if await word_exists(user.id, word, user.target_lang):
@@ -458,6 +465,7 @@ class SettingsRequest(BaseModel):
     reminders_enabled: bool | None = None
     timezone: str | None = None
     avatar_emoji: str | None = None
+    show_on_leaderboard: bool | None = None
 
 
 @router.patch("/api/user/settings")
@@ -489,6 +497,8 @@ async def update_user_settings(data: SettingsRequest, telegram_id: int = Query(.
         if data.avatar_emoji not in ALLOWED_AVATARS:
             raise HTTPException(status_code=400, detail="Unsupported avatar_emoji")
         updates["avatar_emoji"] = data.avatar_emoji
+    if data.show_on_leaderboard is not None:
+        updates["show_on_leaderboard"] = bool(data.show_on_leaderboard)
 
     if not updates:
         raise HTTPException(status_code=400, detail="Nothing to update")
@@ -543,17 +553,19 @@ async def leaderboard(telegram_id: int = Query(...)):
             select(User).where(
                 User.target_lang == target,
                 User.total_xp > 0,
+                User.show_on_leaderboard == True,  # noqa: E712
             ).order_by(User.total_xp.desc(), User.created_at.asc()).limit(50)
         )).scalars().all()
 
         # Ранг = кількість юзерів того ж target_lang з більшою кількістю XP + 1.
-        # Тільки якщо у юзера є хоч одне XP — інакше "не в рейтингу".
+        # Тільки якщо у юзера є хоч одне XP І він opted-in.
         my_rank = None
-        if (me.total_xp or 0) > 0:
+        if (me.total_xp or 0) > 0 and me.show_on_leaderboard:
             higher = (await session.execute(
                 select(sa_func.count(User.id)).where(
                     User.target_lang == target,
                     User.total_xp > me.total_xp,
+                    User.show_on_leaderboard == True,  # noqa: E712
                 )
             )).scalar() or 0
             my_rank = higher + 1
@@ -639,9 +651,6 @@ async def pay_redirect(telegram_id: int = Query(...), period: str = Query("month
     return HTMLResponse(content=html)
 
 
-@router.post("/wayforpay/callback")  # legacy без /api — на випадок якщо у
-                                     # WayForPay Service URL вже налаштовано
-                                     # без префіксу
 @router.post("/api/wayforpay/callback")
 async def wayforpay_callback(request: Request):
     """Webhook від WayForPay після платежу. Активує Pro якщо платіж successful.

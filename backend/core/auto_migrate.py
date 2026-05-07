@@ -67,6 +67,10 @@ MIGRATIONS: list[tuple[str, str]] = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_emoji VARCHAR(16)",
     ),
     (
+        "users.show_on_leaderboard",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS show_on_leaderboard BOOLEAN NOT NULL DEFAULT TRUE",
+    ),
+    (
         "users.referral_code",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(16) UNIQUE",
     ),

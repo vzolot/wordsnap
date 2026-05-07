@@ -70,6 +70,7 @@ function SettingsPage() {
   const remindersEnabled = stats?.reminders_enabled !== false;
   const tz = stats?.timezone || 'Europe/Kiev';
   const avatar = stats?.avatar_emoji || null;
+  const showOnLeaderboard = stats?.show_on_leaderboard !== false;
 
   return (
     <>
@@ -147,6 +148,24 @@ function SettingsPage() {
               onClick={() => apply({ reminders_enabled: !remindersEnabled }, 'reminders_enabled')}
               type="button"
               aria-pressed={remindersEnabled}
+            >
+              <span className="settings-switch-knob" />
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="settings-row">
+            <div>
+              <div className="settings-section-title">{t('settings.leaderboard_visible')}</div>
+              <div className="settings-section-sub">{t('settings.leaderboard_visible_sub')}</div>
+            </div>
+            <button
+              className={`settings-switch ${showOnLeaderboard ? 'on' : ''}`}
+              disabled={saving === 'show_on_leaderboard'}
+              onClick={() => apply({ show_on_leaderboard: !showOnLeaderboard }, 'show_on_leaderboard')}
+              type="button"
+              aria-pressed={showOnLeaderboard}
             >
               <span className="settings-switch-knob" />
             </button>

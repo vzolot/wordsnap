@@ -28,6 +28,8 @@ class User(Base):
     region: Mapped[str | None] = mapped_column(String(50))
     # Аватар у leaderboard. None → детермінований default з telegram_id.
     avatar_emoji: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Opt-out з leaderboard. Default true (показувати).
+    show_on_leaderboard: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     # Підписка
     plan: Mapped[str] = mapped_column(String(20), default="free")
