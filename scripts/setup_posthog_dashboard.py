@@ -219,15 +219,39 @@ def create_dashboard(name: str) -> int:
 
 
 def get_existing_insight_names(dashboard_id: int) -> set[str]:
-    """Повертає назви інсайтів, що вже на дашборді — щоб не дублювати."""
-    r = requests.get(
-        f"{BASE}/insights/",
-        headers=HEADERS,
-        params={"dashboards": dashboard_id, "limit": 200},
-        timeout=15,
-    )
-    r.raise_for_status()
-    return {i.get("name") for i in r.json().get("results", []) if i.get("name")}
+    """Повертає назви інсайтів, що вже на дашборді — щоб не дублювати.
+
+    PostHog API інколи 500-ить на GET /insights/?dashboards=... для щойно
+    створених дашбордів. Якщо filter падає — fallback через GET dashboard
+    detail (там у tiles є вкладені інсайти). Якщо й це падає — повертаємо
+    порожній set (краще створити дублі, ніж зломатись)."""
+    try:
+        r = requests.get(
+            f"{BASE}/insights/",
+            headers=HEADERS,
+            params={"dashboards": dashboard_id, "limit": 200},
+            timeout=15,
+        )
+        if r.status_code < 400:
+            return {i.get("name") for i in r.json().get("results", []) if i.get("name")}
+        print(f"  ! /insights filter returned {r.status_code}, falling back to dashboard detail")
+    except Exception as e:
+        print(f"  ! /insights filter failed: {e}, falling back to dashboard detail")
+
+    try:
+        r = requests.get(f"{BASE}/dashboards/{dashboard_id}/", headers=HEADERS, timeout=15)
+        if r.status_code < 400:
+            tiles = r.json().get("tiles", []) or []
+            names: set[str] = set()
+            for tile in tiles:
+                ins = tile.get("insight") or {}
+                if ins.get("name"):
+                    names.add(ins["name"])
+            return names
+    except Exception as e:
+        print(f"  ! dashboard detail failed: {e}")
+
+    return set()
 
 
 def create_insight(spec: dict, dashboard_id: int) -> dict:
