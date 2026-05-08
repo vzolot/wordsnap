@@ -4,8 +4,9 @@
 > Telegram Mini App for the Eastern European diaspora learning languages.
 
 **Stack:** FastAPI (Python 3.12) + React 19 (Vite) · Supabase Postgres · Railway + Vercel
-**Status:** Production. ~9-day streak users, real payments, Sentry-quiet.
-**Last major release:** 2026-05-07 (Tier-B perf round + Service Worker)
+**Status:** Production. ~10-day streak users, real payments, Sentry-quiet.
+**Last major release:** 2026-05-08 (welcome onboarding + 6 langs + perceived-perf round)
+**Bot:** [@WordSnapBot](https://t.me/WordSnapBot) · **Mini-app URL:** https://miniapp-omega-three.vercel.app
 
 ---
 
