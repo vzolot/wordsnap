@@ -36,7 +36,7 @@ Three review modes feed the same SM-2 scheduler:
 | AI | OpenAI `gpt-4o-mini` | — | Backed by `ai_cache` table — 90%+ hit rate after warm-up. ~$0.0005 per cold call. |
 | Images | Unsplash API | — | Free tier; requests serialized in image-backfill scheduler. |
 | Payments | **WayForPay** | — | Recurring tokens stored in `users.payment_rec_token`. Service URL canonical at `/api/wayforpay/callback`. |
-| Errors | **Sentry** | Auto | Backend + frontend. Quiet 24h+ as of 2026-05-07. |
+| Errors | **Sentry** | Auto | Backend + frontend. Quiet as of last release. |
 | Analytics | **PostHog EU** | — | 30+ events. Dashboard auto-built via `scripts/setup_posthog_dashboard.py`. |
 
 **Stability signals:**
@@ -77,8 +77,16 @@ Three review modes feed the same SM-2 scheduler:
 | `/pro` | Subscription card (annual/monthly toggle) + referral block |
 | `/settings` | Avatar (32 emojis), native lang, target lang, reminders toggle, leaderboard opt-out, timezone |
 
-### 3.3 Onboarding stories
-3 swipeable slides shown on first open. Photo + DOM-overlay chips. Skip button + step CTAs. All steps tracked in PostHog (`welcome_step_viewed{n}`).
+### 3.3 Onboarding stories (in-app onboarding)
+**Primary onboarding surface** — works for users who arrive via direct mini-app link without ever touching the bot. 4 slides:
+1. **Snap mechanic** — hero photo with overlay chips. "Snap a word — that's it."
+2. **SRS roadmap** — 5-dot timeline visual (1d → 2d → 4d → 8d → ✓). "Remember it for good."
+3. **Native language picker** — 6-button grid, sets `native_lang` in real time.
+4. **Target language picker** — 6-button grid, sets `target_lang` and closes.
+
+On completion: `PATCH /api/user/settings` saves both langs, `setLang()` switches UI live, localStorage flag prevents re-show. Pre-filled from cached stats so users who already onboarded via bot just tap through.
+
+All steps tracked in PostHog (`welcome_started`, `welcome_step_viewed{n}`, `welcome_completed`/`welcome_skipped`, plus `lang_selected{role, source: "miniapp_welcome"}` so the same Activation funnel works for direct-link users).
 
 ### 3.4 Spaced repetition
 - SM-2 algorithm (`backend/core/srs.py`)
@@ -118,8 +126,9 @@ Payment flow: WayForPay HPP via auto-submitted POST form (`/pay` HTML route). Re
 - **Leaderboard** — top-50 by total XP, filtered by viewer's target language. Avatars (32 animal emojis, deterministic default from telegram_id).
 
 ### 3.8 i18n
-5 languages: 🇺🇦 uk · 🇬🇧 en · 🇪🇸 es · 🇵🇱 pl · 🇩🇪 de
-Both bot copy (`backend/core/bot_i18n.py`) and mini-app copy (`miniapp/src/i18n.js`).
+6 languages: 🇺🇦 uk · 🇬🇧 en · 🇫🇷 fr · 🇪🇸 es · 🇵🇱 pl · 🇩🇪 de
+- Mini-app: full coverage in `miniapp/src/i18n.js`. French has welcome + nav + common + snap + settings + leaderboard translated; rest falls back to `en`.
+- Bot: `backend/core/bot_i18n.py` covers uk/en/es/pl/de fully. French has no bot dict — fallback resolves to `en`.
 
 ### 3.9 Export
 Anki `.apkg` export from `/words` → Export modal. Tracked via `export_completed`.
@@ -170,9 +179,10 @@ Applied on: hero CTAs, "Pro" badge, leaderboard chip, streak card, gradient-text
 - Errors are friendly + actionable ("Не знайшов 'profik' у словнику. Перевір написання — можливо, друкарська помилка?").
 - No emoji-spam. Emojis used as icons (📚 🔥 ✨ 🏆), not decoration.
 
-### Logo
+### Logo & assets
 
-Square gradient tile with white "W" letterform. Used as bot avatar, mini-app `app-bar-logo`, share OG image.
+- **Square logo:** white "W" letterform on violet→pink gradient tile. Used as bot avatar, mini-app `app-bar-logo`.
+- **Wide banner (640×360):** `Downloads/wordsnap-banner-640x360.png` — used in BotFather Mini App settings + share previews. Generated via `/tmp/make_banner.py` (Pillow, programmatic). Brand directory: `Downloads/wordsnap-brand-png/` has full asset pack (logos, screens, patterns, profile cover 1920).
 
 ---
 
@@ -182,11 +192,12 @@ Square gradient tile with white "W" letterform. Used as bot avatar, mini-app `ap
 
 - **Threads (automated)** — daily posts via [vova-bot/wordsnap-threads-bot](https://github.com/vova-bot/wordsnap-threads-bot) (separate repo). Pulls product moments + screenshots, generates copy, queues at scheduled times. Currently the only paid acquisition channel.
 
-### Acquisition surfaces (built but not actively pushed)
+### Acquisition surfaces
 
-- **Referral system** — 17-day effective trial via `?start=ref_<code>`. Sharable link in Pro page.
-- **Telegram bot username** — direct discoverability.
-- **Onboarding stories** with embedded "+10 days Pro" CTA on slide 3.
+- **Direct mini-app link** (primary): `https://t.me/WordSnapBot/app` — tap → mini-app opens directly → welcome stories handle full onboarding. This is the URL Threads bot publishes. Configured via `/newapp` in BotFather, short_name = `app`.
+- **Bot chat fallback:** `https://t.me/WordSnapBot` — opens chat with "Open App" launch button.
+- **Referral system** — 17-day effective trial via `?start=ref_<code>`. Shareable link in Pro page (uses bot URL, not mini-app URL — old surface, candidate to migrate).
+- **Telegram bot username** — direct discoverability via Telegram search.
 
 ### Brand positioning
 
@@ -195,10 +206,11 @@ Square gradient tile with white "W" letterform. Used as bot avatar, mini-app `ap
 **Core audience:** Eastern European diaspora (UA / PL relocation, EU students) who already chat in their target language daily but don't formally study. Mini-app meets them where they already are (Telegram), zero install friction.
 
 **Proof points used in copy:**
-- 5 supported languages (uk/en/es/pl/de)
+- 6 supported languages (uk/en/fr/es/pl/de)
 - AI-generated examples in target language only (not lazy translation)
 - Mastered after 21 days (not arbitrary "level 5")
 - $1.49/mo or $8.99/yr — coffee-tier pricing
+- Quiz + Spelling drill modes alongside flashcards — varied practice, same SRS scheduler
 
 ### Pricing experiments to try
 - A/B annual vs monthly default (currently annual)
@@ -236,7 +248,7 @@ miniapp/
 │   ├── contexts/     LangContext (i18n)
 │   ├── utils/        analytics, optimizeImage, pollImage
 │   ├── api/client.js axios + stale-while-revalidate cache
-│   └── i18n.js       5-lang dictionary
+│   └── i18n.js       6-lang dictionary (uk/en/fr/es/pl/de)
 └── vite.config.js    manualChunks vendor split (react/router/http/misc)
 
 scripts/
