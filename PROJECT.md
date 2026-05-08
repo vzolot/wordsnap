@@ -6,7 +6,7 @@
 **Stack:** FastAPI (Python 3.12) + React 19 (Vite) · Supabase Postgres · Railway + Vercel
 **Status:** Production. ~10-day streak users, real payments, Sentry-quiet.
 **Last major release:** 2026-05-08 (welcome onboarding + 6 langs + perceived-perf round)
-**Bot:** [@WordSnapBot](https://t.me/WordSnapBot) · **Mini-app URL:** https://miniapp-omega-three.vercel.app
+**Bot:** [@WordSnapBot](https://t.me/WordSnapBot) · **Direct mini-app:** https://t.me/WordSnapBot/app · **Web:** https://miniapp-omega-three.vercel.app
 
 ---
 
