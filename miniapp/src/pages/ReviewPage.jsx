@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { clearCache, getReviewWords, getWords, readCache, submitReview } from '../api/client';
+import { getReviewWords, getWords, readCache, submitReview, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import { track } from '../utils/analytics';
 import { optimizeImage } from '../utils/optimizeImage';
@@ -79,8 +79,27 @@ function ReviewPage() {
       xp: s.xp + xpGain,
     }));
     submitReview(current.id, quality, mode).catch(() => {});
-    clearCache('review');
-    clearCache('stats');
+
+    // Оптимістично оновлюємо кеш stats — щоб HomePage при поверненні
+    // ВІДРАЗУ показав актуальні цифри без блимання нулями.
+    const cachedStats = readCache('stats', { ignoreTtl: true });
+    if (cachedStats) {
+      writeCache('stats', {
+        ...cachedStats,
+        total_reviews: (cachedStats.total_reviews || 0) + 1,
+        reviewed_today: (cachedStats.reviewed_today || 0) + 1,
+        xp_today: (cachedStats.xp_today || 0) + xpGain,
+        total_xp: (cachedStats.total_xp || 0) + xpGain,
+      });
+    }
+
+    // Прибираємо щойно повторене слово з кешу review-черги (а не дропаємо
+    // весь кеш). Так due-count на Home декрементиться миттєво.
+    const cachedReview = readCache('review', { ignoreTtl: true });
+    if (Array.isArray(cachedReview)) {
+      writeCache('review', cachedReview.filter(w => w.id !== current.id));
+    }
+
     setTimeout(() => {
       if (index + 1 >= words.length) setDone(true);
       else setIndex(i => i + 1);
