@@ -1265,6 +1265,107 @@
   -webkit-user-drag: none;
 }
 .welcome-hero-spacer { flex: 1; }
+
+/* SRS-timeline для слайду "Запам'ятовуєш надовго" */
+.welcome-hero-srs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6%;
+  background: linear-gradient(135deg, rgba(124,58,237,0.08) 0%, rgba(236,72,153,0.06) 100%);
+}
+.welcome-srs {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.welcome-srs-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+.welcome-srs-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(124,58,237,0.25), rgba(236,72,153,0.4));
+  margin-right: 6px;
+}
+.welcome-srs-bubble {
+  flex-shrink: 0;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--violet);
+  background: var(--bg-card);
+  border: 2px solid var(--violet);
+  box-shadow: 0 4px 12px rgba(124,58,237,0.18);
+}
+.welcome-srs-bubble.mastered {
+  color: #fff;
+  background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+  border-color: transparent;
+  font-size: 18px;
+}
+[data-theme="dark"] .welcome-srs-bubble {
+  background: var(--bg-card);
+  color: #C4B5FD;
+}
+
+/* Lang-picker слайди — повноекранна сітка з 5 кнопок */
+.welcome-hero-picker {
+  background: var(--bg);
+  padding: 24px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.welcome-lang-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.welcome-lang-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 14px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  border-radius: var(--r-lg);
+  color: var(--text-1);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.15s, background 0.15s;
+  text-align: left;
+  font-family: inherit;
+}
+.welcome-lang-btn:hover:not(:disabled) {
+  border-color: var(--violet);
+  background: var(--bg-card-2);
+}
+.welcome-lang-btn:disabled { opacity: 0.55; cursor: default; }
+.welcome-lang-btn.active {
+  border-color: var(--violet);
+  background: linear-gradient(135deg, rgba(124,58,237,0.16) 0%, rgba(236,72,153,0.10) 100%);
+  box-shadow: 0 4px 14px rgba(124,58,237,0.25);
+  transform: scale(1.02);
+}
+.welcome-lang-flag { font-size: 22px; line-height: 1; flex-shrink: 0; }
+.welcome-lang-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .welcome-hero-chips {
   position: absolute;
   bottom: 8%;
