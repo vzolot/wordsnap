@@ -6,7 +6,7 @@ import { track } from '../utils/analytics';
 import AppBar from '../components/AppBar';
 import { LeaderboardSkeleton } from '../components/Skeleton';
 
-const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪' };
+const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪', fr: '🇫🇷' };
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 function rankDisplay(rank) {

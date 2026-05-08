@@ -1266,63 +1266,79 @@
 }
 .welcome-hero-spacer { flex: 1; }
 
-/* SRS-timeline для слайду "Запам'ятовуєш надовго" */
+/* SRS-roadmap для слайду "Закріплюємо надовго" — 5 рівновіддалених точок,
+ * з'єднаних однією лінією. Усе в межах екрану, без overflow. */
 .welcome-hero-srs {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 6%;
-  background: linear-gradient(135deg, rgba(124,58,237,0.08) 0%, rgba(236,72,153,0.06) 100%);
+  padding: 0 24px;
+  overflow: hidden;
 }
 .welcome-srs {
   width: 100%;
+  max-width: 360px;
   display: flex;
-  align-items: center;
-  gap: 0;
-}
-.welcome-srs-cell {
+  align-items: stretch;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  padding: 8px 0 24px;
+}
+.welcome-srs-step {
+  flex: 1 1 0;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
 }
-.welcome-srs-line {
-  flex: 1;
-  height: 2px;
-  background: linear-gradient(90deg, rgba(124,58,237,0.25), rgba(236,72,153,0.4));
-  margin-right: 6px;
-}
-.welcome-srs-bubble {
-  flex-shrink: 0;
-  min-width: 44px;
-  height: 44px;
-  padding: 0 12px;
+/* Лінія йде від центру попередньої точки до центру цієї — намалюй її від
+ * краю до краю флекс-комірки. */
+.welcome-srs-track {
+  position: absolute;
+  top: 21px;          /* центр кружечка (44/2) - 1 (зміщення лінії в центр) */
+  left: -50%;
+  right: 50%;
+  height: 3px;
+  background: linear-gradient(90deg,
+    rgba(124, 58, 237, 0.5),
+    rgba(236, 72, 153, 0.5)
+  );
+  z-index: 0;
   border-radius: 999px;
+}
+.welcome-srs-dot {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid var(--violet);
   display: grid;
   place-items: center;
   font-weight: 800;
   font-size: 13px;
   color: var(--violet);
-  background: var(--bg-card);
-  border: 2px solid var(--violet);
-  box-shadow: 0 4px 12px rgba(124,58,237,0.18);
+  z-index: 1;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.22);
 }
-.welcome-srs-bubble.mastered {
-  color: #fff;
+.welcome-srs-dot.mastered {
   background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
   border-color: transparent;
-  font-size: 18px;
+  color: #fff;
+  font-size: 22px;
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.35);
 }
-[data-theme="dark"] .welcome-srs-bubble {
-  background: var(--bg-card);
-  color: #C4B5FD;
+.welcome-srs-label {
+  margin-top: 10px;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-1);
+  white-space: nowrap;
 }
 
-/* Lang-picker слайди — повноекранна сітка з 5 кнопок */
+/* Lang-picker слайди — прозорі, фон Welcome-градієнта проступає крізь */
 .welcome-hero-picker {
-  background: var(--bg);
-  padding: 24px 18px;
+  background: transparent;
+  padding: 16px 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1337,11 +1353,13 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 14px;
-  border: 2px solid var(--border);
-  background: var(--bg-card);
+  padding: 14px 14px;
+  border: 2px solid rgba(15, 15, 20, 0.10);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-radius: var(--r-lg);
-  color: var(--text-1);
+  color: var(--ink);
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
@@ -1351,13 +1369,14 @@
 }
 .welcome-lang-btn:hover:not(:disabled) {
   border-color: var(--violet);
-  background: var(--bg-card-2);
+  background: rgba(255, 255, 255, 0.92);
 }
 .welcome-lang-btn:disabled { opacity: 0.55; cursor: default; }
 .welcome-lang-btn.active {
   border-color: var(--violet);
-  background: linear-gradient(135deg, rgba(124,58,237,0.16) 0%, rgba(236,72,153,0.10) 100%);
-  box-shadow: 0 4px 14px rgba(124,58,237,0.25);
+  background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
   transform: scale(1.02);
 }
 .welcome-lang-flag { font-size: 22px; line-height: 1; flex-shrink: 0; }

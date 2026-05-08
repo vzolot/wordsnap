@@ -3,7 +3,7 @@ import { optimizeImage } from '../utils/optimizeImage';
 import SpeakButton from './SpeakButton';
 import WordPlaceholder from './WordPlaceholder';
 
-const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪' };
+const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪', fr: '🇫🇷' };
 
 function WordResult({ data, nativeLang, targetLang }) {
   const { t, lang } = useT();

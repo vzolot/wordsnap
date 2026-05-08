@@ -8,6 +8,7 @@ const STORAGE_KEY = 'wordsnap.welcome_seen';
 const LANGS = [
   { code: 'uk', flag: '🇺🇦', name: 'Українська' },
   { code: 'en', flag: '🇬🇧', name: 'English' },
+  { code: 'fr', flag: '🇫🇷', name: 'Français' },
   { code: 'es', flag: '🇪🇸', name: 'Español' },
   { code: 'pl', flag: '🇵🇱', name: 'Polski' },
   { code: 'de', flag: '🇩🇪', name: 'Deutsch' },
@@ -56,22 +57,22 @@ export function replayWelcome() {
   window.dispatchEvent(new CustomEvent('wordsnap:replay-welcome'));
 }
 
-function SrsTimeline({ t }) {
-  // Візуалізація інтервалів повторень. Збільшення відстані передає
-  // центральну ідею: повторення розтягуються — слово закріплюється надовго.
+function SrsTimeline() {
+  // Roadmap: 5 рівновіддалених точок зі з'єднувальною лінією під ними.
+  // Інтервал — у самому кружечку. Останній — checkmark у бренд-градієнті.
   const stops = [
-    { label: t('welcome.srs.now'), gap: 0 },
-    { label: '2d', gap: 1 },
-    { label: '4d', gap: 1.6 },
-    { label: '8d', gap: 2.5 },
-    { label: '21d', gap: 3.6, mastered: true },
+    { label: '1d' },
+    { label: '2d' },
+    { label: '4d' },
+    { label: '8d' },
+    { mastered: true },
   ];
   return (
     <div className="welcome-srs">
       {stops.map((s, i) => (
-        <div key={i} className="welcome-srs-cell" style={{ flex: s.gap || 0.5 }}>
-          {i > 0 && <div className="welcome-srs-line" />}
-          <div className={`welcome-srs-bubble ${s.mastered ? 'mastered' : ''}`}>
+        <div key={i} className="welcome-srs-step">
+          {i > 0 && <div className="welcome-srs-track" />}
+          <div className={`welcome-srs-dot ${s.mastered ? 'mastered' : ''}`}>
             {s.mastered ? '✓' : s.label}
           </div>
         </div>
@@ -158,14 +159,9 @@ function WelcomeStories({ onClose }) {
   };
 
   const pickLang = (field, code) => {
+    // Тільки виставляємо вибір — без auto-advance. Юзер сам тапне "Далі"
+    // коли готовий, або переключиться між мовами якщо передумав.
     setSelections(prev => ({ ...prev, [field]: code }));
-    // Невелика затримка щоб юзер встиг відчути feedback від тапу
-    setTimeout(() => {
-      if (field === SLIDES[index].field) {
-        if (isLast) persistAndClose('complete');
-        else setIndex(i => i + 1);
-      }
-    }, 280);
   };
 
   // CTA доступне тільки якщо зібрано всі обовʼязкові поля до цього кроку
@@ -210,7 +206,7 @@ function WelcomeStories({ onClose }) {
 
       {slide.type === 'srs' && (
         <div className="welcome-hero welcome-hero-srs">
-          <SrsTimeline t={t} />
+          <SrsTimeline />
         </div>
       )}
 
@@ -250,14 +246,10 @@ function WelcomeStories({ onClose }) {
             />
           ))}
         </div>
-        {/* На lang-picker слайдах CTA-кнопка прихована: тап по мові сам
-            переводить на наступний крок — менше тертя. */}
-        {slide.type !== 'lang-picker' && (
-          <button className="welcome-cta" onClick={next} disabled={!canAdvance || saving}>
-            <span>{isLast ? t('welcome.start') : t('welcome.next')}</span>
-            <span className="welcome-cta-arrow">→</span>
-          </button>
-        )}
+        <button className="welcome-cta" onClick={next} disabled={!canAdvance || saving}>
+          <span>{isLast ? t('welcome.start') : t('welcome.next')}</span>
+          <span className="welcome-cta-arrow">→</span>
+        </button>
       </div>
     </div>
   );

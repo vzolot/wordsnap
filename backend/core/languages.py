@@ -4,6 +4,7 @@ LANGUAGES = {
     "es": ("Español", "🇪🇸"),
     "pl": ("Polski", "🇵🇱"),
     "de": ("Deutsch", "🇩🇪"),
+    "fr": ("Français", "🇫🇷"),
 }
 
 

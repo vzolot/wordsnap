@@ -5,7 +5,7 @@ import { optimizeImage } from '../utils/optimizeImage';
 import SpeakButton from './SpeakButton';
 import WordPlaceholder from './WordPlaceholder';
 
-const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪' };
+const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪', fr: '🇫🇷' };
 
 function badgeClass(word) {
   if (word.status === 'mastered') return 'badge-mastered';

@@ -983,8 +983,10 @@ T: dict[str, dict[str, str]] = {
 
 
 def t(key: str, lang: str = "uk", **vars: Any) -> str:
-    dict_ = T.get(lang) or T["uk"]
-    s = dict_.get(key) or T["uk"].get(key) or key
+    # Для мов, для яких ще нема повного перекладу (наприклад "fr"), —
+    # фолбек на англійську, не на українську (так універсальніше).
+    dict_ = T.get(lang) or T.get("en") or T["uk"]
+    s = dict_.get(key) or T.get("en", {}).get(key) or T["uk"].get(key) or key
     for k, v in vars.items():
         s = s.replace("{" + k + "}", str(v))
     return s

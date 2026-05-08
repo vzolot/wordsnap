@@ -37,7 +37,7 @@ const T = {
     'theme.dark': 'Dark',
 
     'welcome.snap.title': 'Snap a word — that\'s it.',
-    'welcome.snap.body': 'See an unfamiliar word anywhere — chat, book, sign. Type it in. AI gives you the translation, an example, and a picture in 2 seconds.',
+    'welcome.snap.body': 'See an unfamiliar word anywhere — chat, book, sign. Type it in. WordSnap gives you the translation, an example, and a picture in 2 seconds.',
     'welcome.snap.chip': 'New word',
     'welcome.srs.title': 'Remember it for good.',
     'welcome.srs.body': 'We remind you to repeat at the perfect moment — tomorrow, then 2 days, 4, 8, until it sticks.',
@@ -253,7 +253,7 @@ const T = {
     'theme.dark': 'Темна',
 
     'welcome.snap.title': 'Снепнув слово — і все.',
-    'welcome.snap.body': 'Побачив незнайоме слово — у чаті, в книзі, на вивісці. Введи його. AI за 2 секунди дасть переклад, приклад і картинку.',
+    'welcome.snap.body': 'Побачив незнайоме слово — у чаті, в книзі, на вивісці. Введи його. WordSnap за 2 секунди дасть переклад, приклад і картинку.',
     'welcome.snap.chip': 'Нове слово',
     'welcome.srs.title': 'Закріплюємо надовго.',
     'welcome.srs.body': 'Нагадаємо повторити в ідеальний момент — завтра, через 2 дні, 4, 8, поки слово не приживеться.',
@@ -469,7 +469,7 @@ const T = {
     'theme.dark': 'Oscuro',
 
     'welcome.snap.title': 'Captura una palabra — listo.',
-    'welcome.snap.body': 'Ves una palabra desconocida — en un chat, libro o cartel. Escríbela. La IA te da traducción, ejemplo e imagen en 2 segundos.',
+    'welcome.snap.body': 'Ves una palabra desconocida — en un chat, libro o cartel. Escríbela. WordSnap te da traducción, ejemplo e imagen en 2 segundos.',
     'welcome.snap.chip': 'Palabra nueva',
     'welcome.srs.title': 'Recuerda para siempre.',
     'welcome.srs.body': 'Te recordamos repasar en el momento perfecto — mañana, a los 2 días, 4, 8, hasta que se quede.',
@@ -685,7 +685,7 @@ const T = {
     'theme.dark': 'Ciemny',
 
     'welcome.snap.title': 'Złap słowo — i to wszystko.',
-    'welcome.snap.body': 'Widzisz nieznane słowo — w czacie, książce, na szyldzie. Wpisz je. AI w 2 sekundy daje tłumaczenie, przykład i obraz.',
+    'welcome.snap.body': 'Widzisz nieznane słowo — w czacie, książce, na szyldzie. Wpisz je. WordSnap w 2 sekundy daje tłumaczenie, przykład i obraz.',
     'welcome.snap.chip': 'Nowe słowo',
     'welcome.srs.title': 'Zapamiętaj na zawsze.',
     'welcome.srs.body': 'Przypomnimy ci powtórzyć w idealnym momencie — jutro, za 2 dni, 4, 8, aż słowo zostanie.',
@@ -1007,7 +1007,7 @@ const T = {
     'theme.dark': 'Dunkel',
 
     'welcome.snap.title': 'Wort schnappen — fertig.',
-    'welcome.snap.body': 'Du siehst ein unbekanntes Wort — im Chat, im Buch, auf einem Schild. Tippe es ein. KI gibt dir Übersetzung, Beispiel und Bild in 2 Sekunden.',
+    'welcome.snap.body': 'Du siehst ein unbekanntes Wort — im Chat, im Buch, auf einem Schild. Tippe es ein. WordSnap gibt dir Übersetzung, Beispiel und Bild in 2 Sekunden.',
     'welcome.snap.chip': 'Neues Wort',
     'welcome.srs.title': 'Bleibt im Kopf.',
     'welcome.srs.body': 'Wir erinnern dich genau im richtigen Moment — morgen, nach 2 Tagen, 4, 8, bis es sitzt.',
@@ -1079,9 +1079,86 @@ const T = {
     'unit.day_one': 'Tag', 'unit.day_other': 'Tage',
     'unit.word_one': 'Wort', 'unit.word_other': 'Wörter',
   },
+
+  fr: {
+    'app.subtitle': 'mini app',
+    'nav.home': 'Accueil', 'nav.songs': 'Chansons', 'nav.themes': 'Thèmes',
+    'nav.words': 'Mots', 'nav.review': 'Réviser', 'nav.stats': 'Stats',
+    'common.back': 'Retour', 'common.loading': 'Chargement…',
+
+    'home.greeting.morning': 'Bonjour',
+    'home.greeting.afternoon': 'Bonjour',
+    'home.greeting.evening': 'Bonsoir',
+    'home.greeting.night': 'Bonne nuit',
+    'home.ready.before': 'Prêt à', 'home.ready.accent': 'en ajouter ?',
+    'home.streak.label': 'Série',
+    'home.streak.due': 'Continue — aujourd\'hui {n} {word}',
+    'home.streak.nothing': 'Rien à réviser aujourd\'hui — bravo',
+    'home.stat.learning': 'En cours', 'home.stat.mastered': 'Maîtrisés',
+    'home.stat.due_now': 'À faire', 'home.stat.xp': 'XP', 'home.stat.xp_today': 'XP aujourd\'hui',
+
+    'snap.title': 'Ajouter un mot', 'snap.placeholder': 'Tape un mot ou une phrase…',
+    'snap.button': 'Ajouter', 'snap.button_loading': 'En cours…',
+    'snap.added_n': '{used}/{limit} aujourd\'hui',
+    'snap.duplicate': 'Tu as déjà ce mot.',
+    'snap.limit': 'Limite quotidienne atteinte. Réessaie demain ou passe à Pro.',
+    'snap.buy_pro': 'Passer à Pro — illimité',
+    'snap.error': 'Une erreur est survenue. Réessaie.',
+    'snap.not_real': 'Je n\'ai pas trouvé "{word}" dans le dictionnaire. Vérifie l\'orthographe — peut-être une faute de frappe ?',
+    'snap.setup_required': 'Choisis ta langue d\'abord — ouvre le bot et lance /start.',
+    'snap.success': 'Mot ajouté !',
+    'snap.another': 'Ajouter un autre',
+
+    'theme.light': 'Clair',
+    'theme.dark': 'Sombre',
+
+    'welcome.snap.title': 'Snappe un mot — c\'est tout.',
+    'welcome.snap.body': 'Tu vois un mot inconnu — dans un chat, un livre, sur un panneau. Saisis-le. WordSnap te donne traduction, exemple et image en 2 secondes.',
+    'welcome.snap.chip': 'Nouveau mot',
+    'welcome.srs.title': 'Mémorise pour de bon.',
+    'welcome.srs.body': 'On te rappelle de réviser au moment idéal — demain, dans 2 jours, 4, 8, jusqu\'à ce que ça reste.',
+    'welcome.srs.now': 'aujourd\'hui',
+    'welcome.native.title': 'Tu parles…',
+    'welcome.native.body': 'Langue de l\'interface et source des traductions.',
+    'welcome.target.title': 'Tu veux apprendre…',
+    'welcome.target.body': 'Les nouveaux mots seront enregistrés dans cette langue.',
+    'welcome.next': 'Suivant',
+    'welcome.skip': 'Passer',
+    'welcome.start': 'C\'est parti',
+    'welcome.replay': '↻ Revoir l\'intro',
+
+    'settings.title': 'Réglages',
+    'settings.avatar': 'Avatar',
+    'settings.avatar_sub': 'Comment tu apparais dans le classement.',
+    'settings.native_lang': 'Ta langue',
+    'settings.native_lang_sub': 'Langue de l\'interface et des traductions.',
+    'settings.target_lang': 'Tu apprends',
+    'settings.target_lang_sub': 'Les nouveaux mots seront dans cette langue.',
+    'settings.reminders': 'Rappels',
+    'settings.reminders_sub': 'Un rappel quotidien pour réviser tes mots.',
+    'settings.leaderboard_visible': 'Apparaître dans le classement',
+    'settings.leaderboard_visible_sub': 'Désactivé — ton nom n\'apparaîtra pas dans le classement public.',
+    'settings.timezone': 'Fuseau horaire',
+    'settings.timezone_sub': 'Pour les rappels et les séries.',
+    'settings.saved': 'Enregistré',
+    'settings.save_error': 'Échec de l\'enregistrement. Réessaie.',
+    'settings.back': 'Retour',
+
+    'leaderboard.cta': 'Classement',
+    'leaderboard.title': 'Classement',
+    'leaderboard.subtitle': 'Top XP parmi ceux qui apprennent {flag}',
+    'leaderboard.your_rank': 'Ton classement',
+    'leaderboard.you': 'toi',
+    'leaderboard.empty.title': 'Pas encore de données',
+    'leaderboard.empty.sub': 'Apprends quelques mots pour entrer dans le classement.',
+    'leaderboard.privacy_note': 'Affichage : prénom + ta langue d\'apprentissage. XP uniquement — rien d\'autre n\'est partagé.',
+
+    'unit.day_one': 'jour', 'unit.day_other': 'jours',
+    'unit.word_one': 'mot', 'unit.word_other': 'mots',
+  },
 };
 
-export const SUPPORTED_LANGS = ['en', 'uk', 'es', 'pl', 'de'];
+export const SUPPORTED_LANGS = ['en', 'uk', 'es', 'pl', 'de', 'fr'];
 
 export function t(key, lang = 'en', vars = {}) {
   const dict = T[lang] || T.en;

@@ -8,6 +8,7 @@ import { track } from '../utils/analytics';
 const LANGS = [
   { code: 'uk', flag: '🇺🇦', name: 'Українська' },
   { code: 'en', flag: '🇬🇧', name: 'English' },
+  { code: 'fr', flag: '🇫🇷', name: 'Français' },
   { code: 'es', flag: '🇪🇸', name: 'Español' },
   { code: 'pl', flag: '🇵🇱', name: 'Polski' },
   { code: 'de', flag: '🇩🇪', name: 'Deutsch' },

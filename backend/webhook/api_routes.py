@@ -493,7 +493,7 @@ async def update_user_settings(data: SettingsRequest, telegram_id: int = Query(.
     """Часткове оновлення налаштувань юзера. Тільки задані поля міняються."""
     from sqlalchemy import update as sa_update
 
-    SUPPORTED_LANGS = {"uk", "en", "es", "pl", "de"}
+    SUPPORTED_LANGS = {"uk", "en", "es", "pl", "de", "fr"}
 
     updates: dict = {}
     if data.native_lang is not None:

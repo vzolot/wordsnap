@@ -9,7 +9,7 @@ import SpeakButton from '../components/SpeakButton';
 import WordPlaceholder from '../components/WordPlaceholder';
 import { ReviewSkeleton } from '../components/Skeleton';
 
-const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪' };
+const FLAGS = { uk: '🇺🇦', en: '🇬🇧', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪', fr: '🇫🇷' };
 
 const MODES = ['cards', 'quiz', 'spelling'];
 
