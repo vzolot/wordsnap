@@ -7,7 +7,6 @@ import uuid
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -58,11 +57,26 @@ def _get_unique_statement_name():
     return f"__asyncpg_{uuid.uuid4().hex}__"
 
 
-# Engine з налаштуваннями для Supabase Pooler (pgbouncer transaction mode)
+# Engine для Supabase Pooler (pgbouncer transaction mode).
+#
+# Раніше тут стояв NullPool — кожен запит відкривав свіже TCP+TLS+PG
+# з'єднання, що додавало ~2-3 секунди на простий SELECT 1. NullPool
+# був не потрібен — pgbouncer-сумісність забезпечують ось ці параметри:
+#   - statement_cache_size=0 + prepared_statement_cache_size=0
+#     → asyncpg не кешує prepared statements, які зламали б transaction-mode
+#   - prepared_statement_name_func → унікальне ім'я per-call, на випадок
+#     якщо asyncpg все ж створить ad-hoc prepared statement
+#
+# З нормальним pool маємо warm з'єднання, /health → ~150мс замість 2.5с,
+# /api/stats з 6 паралельних запитів → ~150мс замість 5.7с.
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
-    poolclass=NullPool,  # Не кешуємо з'єднання — критично для pgbouncer
+    pool_size=5,           # Базовий пул — стільки warm з'єднань тримаємо
+    max_overflow=10,       # Burst-овери при сплеску трафіку (peak = 15)
+    pool_pre_ping=True,    # Перевіряти SELECT 1 перед повторним використанням,
+                           # щоб не натрапити на закрите Supabase-з'єднання
+    pool_recycle=1800,     # Через 30 хв ідлу — рециклити (Supabase сам ріже idle)
     connect_args={
         "statement_cache_size": 0,
         "prepared_statement_cache_size": 0,
