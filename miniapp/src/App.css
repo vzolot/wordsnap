@@ -2353,7 +2353,11 @@
   transition: background 0.18s ease;
   flex-shrink: 0;
 }
-.settings-switch.on { background: var(--violet); }
+.settings-switch.on,
+[data-theme="dark"] .settings-switch.on {
+  background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+}
 .settings-switch:disabled { opacity: 0.5; cursor: default; }
 .settings-switch-knob {
   position: absolute;
@@ -2367,7 +2371,7 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 .settings-switch.on .settings-switch-knob { transform: translateX(20px); }
-[data-theme="dark"] .settings-switch { background: rgba(255, 255, 255, 0.18); }
+[data-theme="dark"] .settings-switch:not(.on) { background: rgba(255, 255, 255, 0.18); }
 
 .settings-select {
   width: 100%;
