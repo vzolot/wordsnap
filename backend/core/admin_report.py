@@ -1,4 +1,4 @@
-"""Збираємо щоденний звіт по продукту для адміна.
+"""Збираємо щоденний / місячний звіт по продукту для адміна.
 
 Вся статистика — з нашої БД (User, Word, Review, PaymentHistory). PostHog
 не зачіпаємо: тут детальніша картина, плюс це швидше і не залежить від
@@ -8,12 +8,15 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 from html import escape
+from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import func, or_, select
 
 from .db import SessionLocal
 from .models import PaymentHistory, Review, User, Word
+
+PeriodKind = Literal["today_live", "yesterday_full", "month_30d"]
 
 
 def _kyiv_today() -> date:
@@ -23,40 +26,82 @@ def _kyiv_today() -> date:
         return datetime.now(timezone.utc).date()
 
 
-def _utc_window(start_local: date, days: int = 1) -> tuple[datetime, datetime]:
-    """Повертає UTC-проміжок який покриває [start_local, start_local+days)
-    у Києві — для фільтрування по UTC-стампах reviewed_at/created_at."""
+def _kyiv_tz() -> ZoneInfo | timezone:
     try:
-        kyiv = ZoneInfo("Europe/Kiev")
+        return ZoneInfo("Europe/Kiev")
     except ZoneInfoNotFoundError:
-        kyiv = timezone.utc
+        return timezone.utc
+
+
+def _utc_window(start_local: date, days: int) -> tuple[datetime, datetime]:
+    kyiv = _kyiv_tz()
     start_dt = datetime.combine(start_local, datetime.min.time(), tzinfo=kyiv)
     end_dt = start_dt + timedelta(days=days)
     return start_dt.astimezone(timezone.utc), end_dt.astimezone(timezone.utc)
 
 
-async def _gather_metrics(report_day: date, is_partial_day: bool) -> dict:
-    """Збирає метрики за `report_day` (Europe/Kiev day).
-
-    is_partial_day=True означає що день ще йде (use case: /stats live).
-    Тоді кінцеве вікно — поточний UTC-момент. Інакше — повних 24 години."""
-    day_start_utc, day_end_utc = _utc_window(report_day, 1)
+def _resolve_period(period: PeriodKind) -> dict:
+    """Повертає bounds + display-label під обраний режим."""
     today_local = _kyiv_today()
-    week_start_utc, _ = _utc_window(today_local - timedelta(days=6), 7)
     now = datetime.now(timezone.utc)
-    if is_partial_day and day_end_utc > now:
+
+    if period == "today_live":
+        start_local = today_local
+        days = 1
+        is_partial = True
+        period_label = f"сьогодні (live, {today_local})"
+        active_label = "Активних сьогодні"
+        period_word = "за добу"
+    elif period == "yesterday_full":
+        start_local = today_local - timedelta(days=1)
+        days = 1
+        is_partial = False
+        period_label = f"за {start_local}"
+        active_label = "Активних того дня"
+        period_word = "за добу"
+    else:  # month_30d
+        start_local = today_local - timedelta(days=29)
+        days = 30
+        is_partial = True
+        period_label = f"за 30 днів ({start_local} — {today_local})"
+        active_label = "Активних за період"
+        period_word = "за період"
+
+    day_start_utc, day_end_utc = _utc_window(start_local, days)
+    if is_partial and day_end_utc > now:
         day_end_utc = now
 
+    return {
+        "start_local": start_local,
+        "end_local_exclusive": start_local + timedelta(days=days),
+        "day_start_utc": day_start_utc,
+        "day_end_utc": day_end_utc,
+        "now": now,
+        "today_local": today_local,
+        "is_partial": is_partial,
+        "period_label": period_label,
+        "active_label": active_label,
+        "period_word": period_word,
+    }
+
+
+async def _gather_metrics(p: dict) -> dict:
+    day_start_utc = p["day_start_utc"]
+    day_end_utc = p["day_end_utc"]
+    today_local = p["today_local"]
+    now = p["now"]
+    week_start_utc, _ = _utc_window(today_local - timedelta(days=6), 7)
+
     async with SessionLocal() as s:
-        # Users — single sweep + кілька маленьких scalar-запитів
+        # Users — point-in-time totals + period-bounded counts
         total_users = (await s.execute(select(func.count(User.id)))).scalar() or 0
-        new_users_today = (await s.execute(
+        new_users_in_period = (await s.execute(
             select(func.count(User.id)).where(
                 User.created_at >= day_start_utc,
                 User.created_at < day_end_utc,
             )
         )).scalar() or 0
-        dau = (await s.execute(
+        active_in_period = (await s.execute(
             select(func.count(User.id)).where(
                 User.last_active_at >= day_start_utc,
                 User.last_active_at < day_end_utc,
@@ -66,7 +111,7 @@ async def _gather_metrics(report_day: date, is_partial_day: bool) -> dict:
             select(func.count(User.id)).where(User.last_active_at >= week_start_utc)
         )).scalar() or 0
 
-        # Pro & trial
+        # Pro & trial — всі point-in-time
         active_pro = (await s.execute(
             select(func.count(User.id)).where(
                 User.plan == "pro",
@@ -92,14 +137,14 @@ async def _gather_metrics(report_day: date, is_partial_day: bool) -> dict:
             PaymentHistory.status == "success",
             PaymentHistory.transaction_status == "Approved",
         )
-        revenue_today = (await s.execute(
+        revenue_period = (await s.execute(
             select(func.coalesce(func.sum(PaymentHistory.amount), 0)).where(
                 revenue_filter,
                 PaymentHistory.created_at >= day_start_utc,
                 PaymentHistory.created_at < day_end_utc,
             )
         )).scalar() or 0
-        payments_today_count = (await s.execute(
+        payments_period_count = (await s.execute(
             select(func.count(PaymentHistory.id)).where(
                 revenue_filter,
                 PaymentHistory.created_at >= day_start_utc,
@@ -110,14 +155,14 @@ async def _gather_metrics(report_day: date, is_partial_day: bool) -> dict:
             select(func.coalesce(func.sum(PaymentHistory.amount), 0)).where(revenue_filter)
         )).scalar() or 0
 
-        # Words on report-day + by source
-        words_today = (await s.execute(
+        # Words in period + by source
+        words_in_period = (await s.execute(
             select(func.count(Word.id)).where(
                 Word.created_at >= day_start_utc,
                 Word.created_at < day_end_utc,
             )
         )).scalar() or 0
-        unique_word_users_today = (await s.execute(
+        unique_word_users = (await s.execute(
             select(func.count(func.distinct(Word.user_id))).where(
                 Word.created_at >= day_start_utc,
                 Word.created_at < day_end_utc,
@@ -130,20 +175,20 @@ async def _gather_metrics(report_day: date, is_partial_day: bool) -> dict:
             ).group_by(Word.source)
         )).all()
 
-        # Reviews on report-day
-        reviews_today = (await s.execute(
+        # Reviews in period
+        reviews_in_period = (await s.execute(
             select(func.count(Review.id)).where(
                 Review.reviewed_at >= day_start_utc,
                 Review.reviewed_at < day_end_utc,
             )
         )).scalar() or 0
 
-        # Engagement: avg streak among users that have at least 1 review ever
+        # Engagement: avg streak among active learners (point-in-time)
         avg_streak = (await s.execute(
             select(func.avg(User.streak_days)).where(User.streak_days > 0)
         )).scalar() or 0
 
-        # Top streak users (3)
+        # Top 3 streaks
         top_users_rows = (await s.execute(
             select(User.first_name, User.streak_days, User.total_xp)
             .where(User.streak_days > 0)
@@ -152,31 +197,32 @@ async def _gather_metrics(report_day: date, is_partial_day: bool) -> dict:
         )).all()
 
     return {
-        "report_day": report_day,
-        "is_partial": is_partial_day,
         "users": {
             "total": int(total_users),
-            "new_today": int(new_users_today),
-            "dau": int(dau),
+            "new_in_period": int(new_users_in_period),
+            "active_in_period": int(active_in_period),
             "wau": int(wau),
         },
         "pro": {
             "active": int(active_pro),
             "trial": int(trial_users),
             "trial_ending_soon": int(trial_ending_soon),
-            "payments_today_count": int(payments_today_count),
-            "revenue_today": float(revenue_today),
+            "payments_count": int(payments_period_count),
+            "revenue_period": float(revenue_period),
             "revenue_total": float(revenue_total),
         },
         "activity": {
-            "words_added": int(words_today),
-            "unique_word_users": int(unique_word_users_today),
+            "words_added": int(words_in_period),
+            "unique_word_users": int(unique_word_users),
             "words_by_source": [(src or "unknown", int(n)) for src, n in words_by_source],
-            "reviews": int(reviews_today),
+            "reviews": int(reviews_in_period),
         },
         "engagement": {
             "avg_streak": round(float(avg_streak), 1),
-            "reviews_per_dau": round(reviews_today / dau, 1) if dau else 0,
+            "reviews_per_active": (
+                round(reviews_in_period / active_in_period, 1)
+                if active_in_period else 0
+            ),
         },
         "top_users": [
             {
@@ -189,9 +235,9 @@ async def _gather_metrics(report_day: date, is_partial_day: bool) -> dict:
     }
 
 
-def _format_html(m: dict) -> str:
+def _format_html(p: dict, m: dict) -> str:
     u = m["users"]
-    p = m["pro"]
+    pr = m["pro"]
     a = m["activity"]
     e = m["engagement"]
 
@@ -206,28 +252,21 @@ def _format_html(m: dict) -> str:
     ) or "  —"
 
     trial_note = (
-        f" (з них {p['trial_ending_soon']} закінчуються 1-2 дні)"
-        if p["trial_ending_soon"] else ""
+        f" (з них {pr['trial_ending_soon']} закінчуються 1-2 дні)"
+        if pr["trial_ending_soon"] else ""
     )
-
-    period_label = (
-        f"сьогодні (live, {m['report_day']})"
-        if m["is_partial"]
-        else f"за {m['report_day']}"
-    )
-    active_label = "Активних сьогодні" if m["is_partial"] else "Активних того дня"
 
     return (
-        f"📊 <b>WordSnap — {period_label}</b>\n"
+        f"📊 <b>WordSnap — {p['period_label']}</b>\n"
         f"\n"
         f"👥 <b>Юзери</b>\n"
-        f"  Всього: {u['total']} (+{u['new_today']} нових)\n"
-        f"  {active_label}: {u['dau']} · тиждень: {u['wau']}\n"
+        f"  Всього: {u['total']} (+{u['new_in_period']} нових)\n"
+        f"  {p['active_label']}: {u['active_in_period']} · тиждень: {u['wau']}\n"
         f"\n"
         f"💰 <b>Pro</b>\n"
-        f"  Активних: {p['active']} · Trial: {p['trial']}{trial_note}\n"
-        f"  Платежів за добу: {p['payments_today_count']} · ${p['revenue_today']:.2f}\n"
-        f"  Total revenue: ${p['revenue_total']:.2f}\n"
+        f"  Активних: {pr['active']} · Trial: {pr['trial']}{trial_note}\n"
+        f"  Платежів {p['period_word']}: {pr['payments_count']} · ${pr['revenue_period']:.2f}\n"
+        f"  Total revenue: ${pr['revenue_total']:.2f}\n"
         f"\n"
         f"📚 <b>Активність</b>\n"
         f"  Слів додано: {a['words_added']} ({a['unique_word_users']} юзерів)\n"
@@ -235,25 +274,20 @@ def _format_html(m: dict) -> str:
         f"  Повторень: {a['reviews']}\n"
         f"\n"
         f"🎯 <b>Engagement</b>\n"
-        f"  Avg streak: {e['avg_streak']}d · Reviews/DAU: {e['reviews_per_dau']}\n"
+        f"  Avg streak: {e['avg_streak']}d · Reviews/active: {e['reviews_per_active']}\n"
         f"\n"
         f"🔥 <b>Топ streaks</b>\n"
         f"{top_lines}"
     )
 
 
-async def build_daily_report(*, for_yesterday: bool) -> str:
-    """Збирає метрики і повертає HTML-форматований звіт.
+async def build_report(period: PeriodKind) -> str:
+    """Збирає метрики за вказаний період і повертає HTML-форматований звіт."""
+    p = _resolve_period(period)
+    metrics = await _gather_metrics(p)
+    return _format_html(p, metrics)
 
-    for_yesterday=True → повних 24 год вчора Kyiv (use case: 09:00 авто-push)
-    for_yesterday=False → сьогодні з опівночі до зараз (use case: /stats live)
-    """
-    today_local = _kyiv_today()
-    if for_yesterday:
-        report_day = today_local - timedelta(days=1)
-        is_partial = False
-    else:
-        report_day = today_local
-        is_partial = True
-    metrics = await _gather_metrics(report_day, is_partial)
-    return _format_html(metrics)
+
+# Backwards-compat alias — стара назва функції з попередньої ітерації.
+async def build_daily_report(*, for_yesterday: bool) -> str:
+    return await build_report("yesterday_full" if for_yesterday else "today_live")

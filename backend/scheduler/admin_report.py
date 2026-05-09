@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from aiogram import Bot
 
-from core.admin_report import build_daily_report
+from core.admin_report import build_report
 from core.constants import admin_telegram_id
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ async def _maybe_send(bot: Bot) -> None:
     try:
         # Звіт за повну вчорашню добу — щоб ранкова розсилка показувала
         # завершений 24-годинний зріз, а не 9 годин ранку поточного дня.
-        text = await build_daily_report(for_yesterday=True)
+        text = await build_report("yesterday_full")
         await bot.send_message(chat_id=admin_id, text=text, parse_mode="HTML")
         _last_sent_date = today
         logger.info(f"📊 Admin report sent to {admin_id}")

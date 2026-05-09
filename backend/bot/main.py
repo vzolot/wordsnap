@@ -13,7 +13,7 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo,
-    BotCommand, BotCommandScopeDefault,
+    BotCommand, BotCommandScopeDefault, BotCommandScopeChat,
 )
 from dotenv import load_dotenv
 
@@ -371,6 +371,26 @@ async def setup_bot_commands():
         BotCommand(command="help", description="Як користуватись"),
     ]
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+
+    # Admin scope: для chat_id=ADMIN_TELEGRAM_ID показуємо ВСІ user-команди +
+    # 3 admin-команди для звітів. Telegram chat-scope перебиває default,
+    # тому без додавання default-команд адмін втратив би їх у меню.
+    from core.constants import admin_telegram_id
+    admin_id = admin_telegram_id()
+    if admin_id is not None:
+        admin_commands = commands + [
+            BotCommand(command="stats_admin", description="📊 Live-зріз сьогодні"),
+            BotCommand(command="stats_admin_day", description="📊 За вчорашню добу"),
+            BotCommand(command="stats_admin_month", description="📊 За останні 30 днів"),
+        ]
+        try:
+            await bot.set_my_commands(
+                admin_commands,
+                scope=BotCommandScopeChat(chat_id=admin_id),
+            )
+            logger.info(f"📊 Admin commands set for chat {admin_id}")
+        except Exception as e:
+            logger.warning(f"Failed to set admin commands: {e}")
 
     # Опис у профілі бота (видно при пошуку та коли користувач натискає на ім'я)
     description_uk = (

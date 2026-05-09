@@ -1,7 +1,11 @@
 """Admin-only команди для @WordSnapBot.
 
-/stats — миттєвий снапшот ключових метрик. Доступна лише користувачу
-із telegram_id == ADMIN_TELEGRAM_ID (env var).
+/stats_admin       — live-зріз поточного дня (з 00:00 Kyiv до зараз)
+/stats_admin_day   — повна вчорашня доба (той самий зріз що в 09:00 push)
+/stats_admin_month — за останні 30 днів (включно з сьогодні-live)
+
+Доступні лише користувачу із telegram_id == ADMIN_TELEGRAM_ID. Для всіх
+інших — тиха відмова, щоб не палити існування команди.
 """
 import logging
 
@@ -9,7 +13,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from core.admin_report import build_daily_report
+from core.admin_report import PeriodKind, build_report
 from core.constants import admin_telegram_id
 
 logger = logging.getLogger(__name__)
@@ -21,30 +25,27 @@ def _is_admin(message: Message) -> bool:
     return aid is not None and message.from_user.id == aid
 
 
-@router.message(Command("admin"))
-async def cmd_admin(message: Message) -> None:
-    """Live-зріз поточного дня (з 00:00 Kyiv до зараз). Admin only.
-
-    Не /stats — там уже існує юзерський хендлер ("Твоя статистика").
-    """
+async def _send_report(message: Message, period: PeriodKind, command_name: str) -> None:
     if not _is_admin(message):
         return  # тиха відмова
     try:
-        text = await build_daily_report(for_yesterday=False)
+        text = await build_report(period)
         await message.answer(text, parse_mode="HTML")
     except Exception as e:
-        logger.error(f"/admin failed: {e}", exc_info=True)
+        logger.error(f"/{command_name} failed: {e}", exc_info=True)
         await message.answer("⚠️ Звіт не вдалось зібрати — глянь логи.")
 
 
-@router.message(Command("admin_yesterday"))
-async def cmd_admin_yesterday(message: Message) -> None:
-    """Повна вчорашня доба — той самий зріз що приходить о 09:00."""
-    if not _is_admin(message):
-        return
-    try:
-        text = await build_daily_report(for_yesterday=True)
-        await message.answer(text, parse_mode="HTML")
-    except Exception as e:
-        logger.error(f"/admin_yesterday failed: {e}", exc_info=True)
-        await message.answer("⚠️ Звіт не вдалось зібрати — глянь логи.")
+@router.message(Command("stats_admin"))
+async def cmd_stats_admin(message: Message) -> None:
+    await _send_report(message, "today_live", "stats_admin")
+
+
+@router.message(Command("stats_admin_day"))
+async def cmd_stats_admin_day(message: Message) -> None:
+    await _send_report(message, "yesterday_full", "stats_admin_day")
+
+
+@router.message(Command("stats_admin_month"))
+async def cmd_stats_admin_month(message: Message) -> None:
+    await _send_report(message, "month_30d", "stats_admin_month")
