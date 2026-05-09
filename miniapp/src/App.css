@@ -2311,10 +2311,20 @@
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: left;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
-.quiz-option:hover:not(:disabled) {
+/* :hover скоупимо тільки на дeвайси з курсором — iOS Safari інакше "залипає"
+   у hover-стані після тапу і нова картка показує підсвічену кнопку на тій
+   самій позиції. */
+@media (hover: hover) and (pointer: fine) {
+  .quiz-option:hover:not(:disabled) {
+    border-color: var(--violet);
+    background: var(--bg-card);
+  }
+}
+.quiz-option:focus-visible {
   border-color: var(--violet);
-  background: var(--bg-card);
 }
 .quiz-option:disabled { cursor: default; }
 .quiz-option.correct {
