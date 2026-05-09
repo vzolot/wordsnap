@@ -10,3 +10,13 @@ def bot_username() -> str:
     через getMe у bot/main.py і пишеться в os.environ['BOT_USERNAME'],
     тому тут читаємо лазі-функцією, а не модульною константою."""
     return os.getenv("BOT_USERNAME") or "WordSnapBot"
+
+
+def admin_telegram_id() -> int | None:
+    """Telegram ID адміна — кому шлемо щоденні /stats звіти і хто
+    може викликати команду /stats у боті. Повертає None якщо не задано."""
+    raw = os.getenv("ADMIN_TELEGRAM_ID", "").strip()
+    try:
+        return int(raw) if raw else None
+    except ValueError:
+        return None

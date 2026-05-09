@@ -26,6 +26,7 @@ from bot.handlers.word_handler import router as word_router
 from bot.handlers.review_handler import router as review_router
 from bot.handlers.setup_handler import router as setup_router, native_lang_keyboard, ask_native_lang_text
 from bot.handlers.songs_handler import router as songs_router
+from bot.handlers.admin_handler import router as admin_router
 from core.bot_i18n import help_text, premium_text, buy_text, t as bt
 from core.constants import MINI_APP_URL
 from core.languages import lang_flag, lang_name
@@ -34,6 +35,7 @@ from scheduler.reminder import reminder_loop
 from scheduler.recurring_charges import recurring_charges_loop
 from scheduler.streak_save import streak_save_loop
 from scheduler.image_backfill import image_backfill_loop
+from scheduler.admin_report import admin_report_loop
 from webhook.server import app as webhook_app
 from core.user_service import (
     get_or_create_user,
@@ -346,7 +348,10 @@ async def cmd_unsubscribe(message: Message):
         await message.answer(bt("unsub.error", lang))
 
 
-# Підключаємо роутери (setup першим — має пріоритет над word_router)
+# Підключаємо роутери (setup першим — має пріоритет над word_router).
+# admin_router до word_router — щоб /stats не зловив word-handler як просто
+# текст слова.
+dp.include_router(admin_router)
 dp.include_router(setup_router)
 dp.include_router(songs_router)
 dp.include_router(review_router)
@@ -449,6 +454,7 @@ async def main():
         recurring_charges_loop(bot),
         streak_save_loop(bot),
         image_backfill_loop(bot),
+        admin_report_loop(bot),
         server.serve(),
     )
 
