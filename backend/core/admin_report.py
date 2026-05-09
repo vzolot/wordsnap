@@ -35,20 +35,32 @@ def _utc_window(start_local: date, days: int = 1) -> tuple[datetime, datetime]:
     return start_dt.astimezone(timezone.utc), end_dt.astimezone(timezone.utc)
 
 
-async def _gather_metrics() -> dict:
+async def _gather_metrics(report_day: date, is_partial_day: bool) -> dict:
+    """Збирає метрики за `report_day` (Europe/Kiev day).
+
+    is_partial_day=True означає що день ще йде (use case: /stats live).
+    Тоді кінцеве вікно — поточний UTC-момент. Інакше — повних 24 години."""
+    day_start_utc, day_end_utc = _utc_window(report_day, 1)
     today_local = _kyiv_today()
-    today_start_utc, today_end_utc = _utc_window(today_local, 1)
     week_start_utc, _ = _utc_window(today_local - timedelta(days=6), 7)
     now = datetime.now(timezone.utc)
+    if is_partial_day and day_end_utc > now:
+        day_end_utc = now
 
     async with SessionLocal() as s:
         # Users — single sweep + кілька маленьких scalar-запитів
         total_users = (await s.execute(select(func.count(User.id)))).scalar() or 0
         new_users_today = (await s.execute(
-            select(func.count(User.id)).where(User.created_at >= today_start_utc)
+            select(func.count(User.id)).where(
+                User.created_at >= day_start_utc,
+                User.created_at < day_end_utc,
+            )
         )).scalar() or 0
         dau = (await s.execute(
-            select(func.count(User.id)).where(User.last_active_at >= today_start_utc)
+            select(func.count(User.id)).where(
+                User.last_active_at >= day_start_utc,
+                User.last_active_at < day_end_utc,
+            )
         )).scalar() or 0
         wau = (await s.execute(
             select(func.count(User.id)).where(User.last_active_at >= week_start_utc)
@@ -83,37 +95,47 @@ async def _gather_metrics() -> dict:
         revenue_today = (await s.execute(
             select(func.coalesce(func.sum(PaymentHistory.amount), 0)).where(
                 revenue_filter,
-                PaymentHistory.created_at >= today_start_utc,
+                PaymentHistory.created_at >= day_start_utc,
+                PaymentHistory.created_at < day_end_utc,
             )
         )).scalar() or 0
         payments_today_count = (await s.execute(
             select(func.count(PaymentHistory.id)).where(
                 revenue_filter,
-                PaymentHistory.created_at >= today_start_utc,
+                PaymentHistory.created_at >= day_start_utc,
+                PaymentHistory.created_at < day_end_utc,
             )
         )).scalar() or 0
         revenue_total = (await s.execute(
             select(func.coalesce(func.sum(PaymentHistory.amount), 0)).where(revenue_filter)
         )).scalar() or 0
 
-        # Words today + by source
+        # Words on report-day + by source
         words_today = (await s.execute(
-            select(func.count(Word.id)).where(Word.created_at >= today_start_utc)
+            select(func.count(Word.id)).where(
+                Word.created_at >= day_start_utc,
+                Word.created_at < day_end_utc,
+            )
         )).scalar() or 0
         unique_word_users_today = (await s.execute(
             select(func.count(func.distinct(Word.user_id))).where(
-                Word.created_at >= today_start_utc
+                Word.created_at >= day_start_utc,
+                Word.created_at < day_end_utc,
             )
         )).scalar() or 0
         words_by_source = (await s.execute(
             select(Word.source, func.count(Word.id)).where(
-                Word.created_at >= today_start_utc
+                Word.created_at >= day_start_utc,
+                Word.created_at < day_end_utc,
             ).group_by(Word.source)
         )).all()
 
-        # Reviews today
+        # Reviews on report-day
         reviews_today = (await s.execute(
-            select(func.count(Review.id)).where(Review.reviewed_at >= today_start_utc)
+            select(func.count(Review.id)).where(
+                Review.reviewed_at >= day_start_utc,
+                Review.reviewed_at < day_end_utc,
+            )
         )).scalar() or 0
 
         # Engagement: avg streak among users that have at least 1 review ever
@@ -130,7 +152,8 @@ async def _gather_metrics() -> dict:
         )).all()
 
     return {
-        "today_local": today_local,
+        "report_day": report_day,
+        "is_partial": is_partial_day,
         "users": {
             "total": int(total_users),
             "new_today": int(new_users_today),
@@ -187,12 +210,19 @@ def _format_html(m: dict) -> str:
         if p["trial_ending_soon"] else ""
     )
 
+    period_label = (
+        f"сьогодні (live, {m['report_day']})"
+        if m["is_partial"]
+        else f"за {m['report_day']}"
+    )
+    active_label = "Активних сьогодні" if m["is_partial"] else "Активних того дня"
+
     return (
-        f"📊 <b>WordSnap — {m['today_local']}</b>\n"
+        f"📊 <b>WordSnap — {period_label}</b>\n"
         f"\n"
         f"👥 <b>Юзери</b>\n"
         f"  Всього: {u['total']} (+{u['new_today']} нових)\n"
-        f"  Активних сьогодні: {u['dau']} · тиждень: {u['wau']}\n"
+        f"  {active_label}: {u['dau']} · тиждень: {u['wau']}\n"
         f"\n"
         f"💰 <b>Pro</b>\n"
         f"  Активних: {p['active']} · Trial: {p['trial']}{trial_note}\n"
@@ -212,7 +242,18 @@ def _format_html(m: dict) -> str:
     )
 
 
-async def build_daily_report() -> str:
-    """Збирає метрики з БД і повертає HTML-форматований звіт."""
-    metrics = await _gather_metrics()
+async def build_daily_report(*, for_yesterday: bool) -> str:
+    """Збирає метрики і повертає HTML-форматований звіт.
+
+    for_yesterday=True → повних 24 год вчора Kyiv (use case: 09:00 авто-push)
+    for_yesterday=False → сьогодні з опівночі до зараз (use case: /stats live)
+    """
+    today_local = _kyiv_today()
+    if for_yesterday:
+        report_day = today_local - timedelta(days=1)
+        is_partial = False
+    else:
+        report_day = today_local
+        is_partial = True
+    metrics = await _gather_metrics(report_day, is_partial)
     return _format_html(metrics)

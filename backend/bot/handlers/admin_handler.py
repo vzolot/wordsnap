@@ -16,15 +16,32 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
+def _is_admin(message: Message) -> bool:
+    aid = admin_telegram_id()
+    return aid is not None and message.from_user.id == aid
+
+
 @router.message(Command("stats"))
 async def cmd_stats(message: Message) -> None:
-    admin_id = admin_telegram_id()
-    if admin_id is None or message.from_user.id != admin_id:
-        # Тиха відмова — не палимо існування команди для не-адмінів
-        return
+    """Live-зріз поточного дня (з 00:00 Kyiv до зараз)."""
+    if not _is_admin(message):
+        return  # тиха відмова
     try:
-        text = await build_daily_report()
+        text = await build_daily_report(for_yesterday=False)
         await message.answer(text, parse_mode="HTML")
     except Exception as e:
         logger.error(f"/stats failed: {e}", exc_info=True)
+        await message.answer("⚠️ Звіт не вдалось зібрати — глянь логи.")
+
+
+@router.message(Command("stats_yesterday"))
+async def cmd_stats_yesterday(message: Message) -> None:
+    """Повна вчорашня доба — той самий зріз що приходить о 09:00."""
+    if not _is_admin(message):
+        return
+    try:
+        text = await build_daily_report(for_yesterday=True)
+        await message.answer(text, parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"/stats_yesterday failed: {e}", exc_info=True)
         await message.answer("⚠️ Звіт не вдалось зібрати — глянь логи.")

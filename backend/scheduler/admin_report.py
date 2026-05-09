@@ -45,7 +45,9 @@ async def _maybe_send(bot: Bot) -> None:
         return
 
     try:
-        text = await build_daily_report()
+        # Звіт за повну вчорашню добу — щоб ранкова розсилка показувала
+        # завершений 24-годинний зріз, а не 9 годин ранку поточного дня.
+        text = await build_daily_report(for_yesterday=True)
         await bot.send_message(chat_id=admin_id, text=text, parse_mode="HTML")
         _last_sent_date = today
         logger.info(f"📊 Admin report sent to {admin_id}")
