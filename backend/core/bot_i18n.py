@@ -178,6 +178,7 @@ T: dict[str, dict[str, str]] = {
         # — reminders —
         "remind.title": "🔔 <b>Час повторити слово!</b>",
         "remind.hint": "<i>Згадав переклад? Натисни щоб перевірити 👇</i>",
+        "remind.more_waiting": "🔁 <b>+{n}</b> у черзі — відкрий додаток щоб повторити решту.",
         "streak_save.title": "🔥 <b>Серія в небезпеці</b>",
         "streak_save.body": "У тебе {streak} днів поспіль — і сьогодні ще нуль повторень.\n\nЗалишилось 2 години щоб не зірвати. Одне слово — це 30 секунд.",
         "referral.invitee_welcome": "🎁 Тебе запросив друг. Тримай <b>{days} днів Pro</b> у подарунок.",
@@ -369,6 +370,7 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>Time to review a word!</b>",
         "remind.hint": "<i>Remember the translation? Tap to check 👇</i>",
+        "remind.more_waiting": "🔁 <b>+{n}</b> more waiting — open the app to review the rest.",
         "streak_save.title": "🔥 <b>Streak at risk</b>",
         "streak_save.body": "You're on a {streak}-day streak — and zero reviews today.\n\n2 hours left to keep it. One word takes 30 seconds.",
         "referral.invitee_welcome": "🎁 A friend invited you. Enjoy <b>{days} days of Pro</b> on the house.",
@@ -560,6 +562,7 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>¡Hora de repasar una palabra!</b>",
         "remind.hint": "<i>¿Recuerdas la traducción? Pulsa para verificar 👇</i>",
+        "remind.more_waiting": "🔁 <b>+{n}</b> en cola — abre la app para repasar el resto.",
         "streak_save.title": "🔥 <b>Tu racha está en riesgo</b>",
         "streak_save.body": "Llevas {streak} días seguidos — y hoy cero repasos.\n\nQuedan 2 horas. Una palabra son 30 segundos.",
         "referral.invitee_welcome": "🎁 Un amigo te invitó. Disfruta <b>{days} días de Pro</b> gratis.",
@@ -751,6 +754,7 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>Czas na powtórkę słowa!</b>",
         "remind.hint": "<i>Pamiętasz tłumaczenie? Naciśnij, by sprawdzić 👇</i>",
+        "remind.more_waiting": "🔁 <b>+{n}</b> w kolejce — otwórz aplikację, by powtórzyć resztę.",
         "streak_save.title": "🔥 <b>Twoja seria w niebezpieczeństwie</b>",
         "streak_save.body": "Masz {streak} dni z rzędu — a dziś zero powtórzeń.\n\nZostały 2 godziny. Jedno słowo to 30 sekund.",
         "referral.invitee_welcome": "🎁 Znajomy cię zaprosił. Masz <b>{days} dni Pro</b> w prezencie.",
@@ -942,6 +946,7 @@ T: dict[str, dict[str, str]] = {
 
         "remind.title": "🔔 <b>Zeit für eine Wiederholung!</b>",
         "remind.hint": "<i>Erinnerst du dich an die Übersetzung? Tippe zum Prüfen 👇</i>",
+        "remind.more_waiting": "🔁 <b>+{n}</b> in der Warteschlange — öffne die App, um den Rest zu wiederholen.",
         "streak_save.title": "🔥 <b>Deine Serie ist in Gefahr</b>",
         "streak_save.body": "Du hast eine {streak}-Tage-Serie — und heute null Wiederholungen.\n\n2 Stunden bleiben. Ein Wort dauert 30 Sekunden.",
         "referral.invitee_welcome": "🎁 Ein Freund hat dich eingeladen. Hier sind <b>{days} Tage Pro</b> geschenkt.",

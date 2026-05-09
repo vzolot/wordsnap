@@ -18,7 +18,7 @@ from datetime import datetime, timezone, timedelta
 from html import escape
 
 from aiogram import Bot
-from sqlalchemy import select, update as sa_update
+from sqlalchemy import func, select, update as sa_update
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from core import analytics
@@ -29,6 +29,20 @@ from core.word_service import mark_word_reminded
 from bot.keyboards.review_keyboards import show_translation_keyboard
 
 logger = logging.getLogger(__name__)
+
+
+async def _count_due_words(user_id: int) -> int:
+    """Скільки слів готові до повторення прямо зараз (next_review ≤ now)."""
+    async with SessionLocal() as session:
+        now = datetime.now(timezone.utc)
+        n = (await session.execute(
+            select(func.count(Word.id)).where(
+                Word.user_id == user_id,
+                Word.status == "learning",
+                Word.next_review <= now,
+            )
+        )).scalar()
+        return int(n or 0)
 
 
 def _user_tz(user: User) -> ZoneInfo:
@@ -96,10 +110,19 @@ async def check_and_send_daily_pushes(bot: Bot) -> None:
                     continue
 
                 lang = user.native_lang or "uk"
+                due_total = await _count_due_words(user.id)
+                # Якщо в черзі більше одного слова — додаємо рядок "+N more"
+                # щоб юзер розумів скільки реально чекає.
+                more_line = ""
+                if due_total > 1:
+                    more = due_total - 1
+                    more_line = "\n\n" + bt("remind.more_waiting", lang, n=more)
+
                 text = (
                     f"{bt('remind.title', lang)}\n\n"
                     f"📚 <b>{escape(word.word)}</b>\n\n"
                     f"{bt('remind.hint', lang)}"
+                    f"{more_line}"
                 )
                 keyboard = show_translation_keyboard(word.id, source="rem", lang=lang)
 
@@ -114,6 +137,7 @@ async def check_and_send_daily_pushes(bot: Bot) -> None:
                     "hour_local": local_now.hour,
                     "timezone": user.timezone or "Europe/Kiev",
                     "word_id": word.id,
+                    "due_total": due_total,
                 })
                 await mark_word_reminded(word.id)
                 async with SessionLocal() as session:
