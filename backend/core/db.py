@@ -74,8 +74,10 @@ engine = create_async_engine(
     echo=False,
     pool_size=5,           # Базовий пул — стільки warm з'єднань тримаємо
     max_overflow=10,       # Burst-овери при сплеску трафіку (peak = 15)
-    pool_pre_ping=True,    # Перевіряти SELECT 1 перед повторним використанням,
-                           # щоб не натрапити на закрите Supabase-з'єднання
+    pool_pre_ping=False,   # Не робимо extra SELECT 1 перед reuse — це додає
+                           # +1 RTT до кожного запиту, що при високому Railway↔
+                           # Supabase RTT суттєво помітно. Покладаємось на
+                           # pool_recycle і ловимо broken-connection помилки.
     pool_recycle=1800,     # Через 30 хв ідлу — рециклити (Supabase сам ріже idle)
     connect_args={
         "statement_cache_size": 0,

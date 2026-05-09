@@ -10,8 +10,10 @@ class TestTranslateFn:
     def test_known_key_uk(self):
         assert t("setup.saved", "uk").startswith("✅")
 
-    def test_unknown_lang_falls_back_to_uk(self):
-        assert t("setup.saved", "xx") == t("setup.saved", "uk")
+    def test_unknown_lang_falls_back_to_en(self):
+        # Fallback переключено з "uk" → "en" разом з додаванням French —
+        # англійська універсальніша як default для мов без власного перекладу.
+        assert t("setup.saved", "xx") == t("setup.saved", "en")
 
     def test_unknown_key_returns_key(self):
         assert t("nonexistent.key", "uk") == "nonexistent.key"
