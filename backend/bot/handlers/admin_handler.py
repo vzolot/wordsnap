@@ -21,21 +21,24 @@ def _is_admin(message: Message) -> bool:
     return aid is not None and message.from_user.id == aid
 
 
-@router.message(Command("stats"))
-async def cmd_stats(message: Message) -> None:
-    """Live-зріз поточного дня (з 00:00 Kyiv до зараз)."""
+@router.message(Command("admin"))
+async def cmd_admin(message: Message) -> None:
+    """Live-зріз поточного дня (з 00:00 Kyiv до зараз). Admin only.
+
+    Не /stats — там уже існує юзерський хендлер ("Твоя статистика").
+    """
     if not _is_admin(message):
         return  # тиха відмова
     try:
         text = await build_daily_report(for_yesterday=False)
         await message.answer(text, parse_mode="HTML")
     except Exception as e:
-        logger.error(f"/stats failed: {e}", exc_info=True)
+        logger.error(f"/admin failed: {e}", exc_info=True)
         await message.answer("⚠️ Звіт не вдалось зібрати — глянь логи.")
 
 
-@router.message(Command("stats_yesterday"))
-async def cmd_stats_yesterday(message: Message) -> None:
+@router.message(Command("admin_yesterday"))
+async def cmd_admin_yesterday(message: Message) -> None:
     """Повна вчорашня доба — той самий зріз що приходить о 09:00."""
     if not _is_admin(message):
         return
@@ -43,5 +46,5 @@ async def cmd_stats_yesterday(message: Message) -> None:
         text = await build_daily_report(for_yesterday=True)
         await message.answer(text, parse_mode="HTML")
     except Exception as e:
-        logger.error(f"/stats_yesterday failed: {e}", exc_info=True)
+        logger.error(f"/admin_yesterday failed: {e}", exc_info=True)
         await message.answer("⚠️ Звіт не вдалось зібрати — глянь логи.")
