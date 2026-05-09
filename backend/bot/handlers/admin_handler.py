@@ -49,3 +49,40 @@ async def cmd_stats_admin_day(message: Message) -> None:
 @router.message(Command("stats_admin_month"))
 async def cmd_stats_admin_month(message: Message) -> None:
     await _send_report(message, "month_30d", "stats_admin_month")
+
+
+@router.message(Command("test_remind"))
+async def cmd_test_remind(message: Message) -> None:
+    """Force-надсилає денний пуш зараз, ігноруючи час/дату/cooldown.
+    Корисно для дебагу: чи працює сама send-логіка, чи проблема у scheduler-таймері."""
+    if not _is_admin(message):
+        return
+
+    from sqlalchemy import select
+    from core.db import SessionLocal
+    from core.models import User
+    from scheduler.reminder import send_daily_push_for_user
+
+    async with SessionLocal() as s:
+        user = (await s.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )).scalar_one_or_none()
+
+    if not user:
+        await message.answer("⚠️ Не знайшов твій user-row у БД.")
+        return
+
+    status = await send_daily_push_for_user(message.bot, user, force=True)
+    if status == "sent":
+        # Окреме повідомлення не шлемо — пуш сам прийшов як окрема нотифікація.
+        return
+
+    explanations = {
+        "no_due_word": (
+            "🤷 Нема learning-слів зі статусом due (next_review ≤ now).\n"
+            "→ Перевір у мініапі вкладку \"Повторення\" — якщо там empty, "
+            "то й бот не має що нагадати."
+        ),
+        "send_failed": "⚠️ bot.send_message впав — глянь логи Railway.",
+    }
+    await message.answer(explanations.get(status, f"⚠️ status={status}"))

@@ -382,6 +382,7 @@ async def setup_bot_commands():
             BotCommand(command="stats_admin", description="📊 Live-зріз сьогодні"),
             BotCommand(command="stats_admin_day", description="📊 За вчорашню добу"),
             BotCommand(command="stats_admin_month", description="📊 За останні 30 днів"),
+            BotCommand(command="test_remind", description="🧪 Force-надіслати denний пуш (debug)"),
         ]
         try:
             await bot.set_my_commands(

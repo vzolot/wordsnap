@@ -72,6 +72,90 @@ async def _pick_daily_word(user_id: int) -> Word | None:
         return result.scalar_one_or_none()
 
 
+async def send_daily_push_for_user(bot: Bot, user: User, *, force: bool = False) -> str:
+    """Шле денний пуш одному юзеру.
+
+    force=False — звичайна планова перевірка (час/дата/cooldown).
+    force=True  — ігноруємо час, дату і per-user антиспам, шлемо зараз.
+                  Корисно для дебагу через /test_remind та для on-demand тестів.
+
+    Повертає коротку рядок-статус: "sent" | "wrong_hour" | "already_sent_today"
+    | "no_due_word" | "send_failed".
+    """
+    tz = _user_tz(user)
+    local_now = datetime.now(tz)
+    today_local = local_now.date()
+
+    if not force:
+        target_hour = (user.reminder_time.hour if user.reminder_time else 9)
+        if local_now.hour != target_hour:
+            return "wrong_hour"
+        if user.last_daily_push_date == today_local:
+            return "already_sent_today"
+
+    word = await _pick_daily_word(user.id)
+    if not word:
+        if not force:
+            # Stamp щоб не перевіряти повторно цю годину
+            async with SessionLocal() as session:
+                await session.execute(
+                    sa_update(User).where(User.id == user.id).values(
+                        last_daily_push_date=today_local
+                    )
+                )
+                await session.commit()
+            analytics.capture(user.telegram_id, "daily_push_skipped", {
+                "reason": "no_due_word",
+                "hour_local": local_now.hour,
+                "timezone": user.timezone or "Europe/Kiev",
+            })
+        return "no_due_word"
+
+    lang = user.native_lang or "uk"
+    due_total = await _count_due_words(user.id)
+    more_line = ""
+    if due_total > 1:
+        more_line = "\n\n" + bt("remind.more_waiting", lang, n=due_total - 1)
+
+    text = (
+        f"{bt('remind.title', lang)}\n\n"
+        f"📚 <b>{escape(word.word)}</b>\n\n"
+        f"{bt('remind.hint', lang)}"
+        f"{more_line}"
+    )
+    keyboard = show_translation_keyboard(word.id, source="rem", lang=lang)
+
+    try:
+        await bot.send_message(
+            chat_id=user.telegram_id,
+            text=text,
+            reply_markup=keyboard,
+        )
+    except Exception as e:
+        logger.warning(f"daily_push bot.send_message failed for {user.telegram_id}: {e}")
+        return "send_failed"
+
+    analytics.capture(user.telegram_id, "daily_push_sent", {
+        "target_lang": user.target_lang,
+        "native_lang": user.native_lang,
+        "hour_local": local_now.hour,
+        "timezone": user.timezone or "Europe/Kiev",
+        "word_id": word.id,
+        "due_total": due_total,
+        "forced": force,
+    })
+    await mark_word_reminded(word.id)
+    if not force:
+        async with SessionLocal() as session:
+            await session.execute(
+                sa_update(User).where(User.id == user.id).values(
+                    last_daily_push_date=today_local
+                )
+            )
+            await session.commit()
+    return "sent"
+
+
 async def check_and_send_daily_pushes(bot: Bot) -> None:
     try:
         async with SessionLocal() as session:
@@ -82,73 +166,10 @@ async def check_and_send_daily_pushes(bot: Bot) -> None:
         sent = 0
         for user in users:
             try:
-                tz = _user_tz(user)
-                local_now = datetime.now(tz)
-                target_hour = (user.reminder_time.hour if user.reminder_time else 9)
-                if local_now.hour != target_hour:
-                    continue
-
-                today_local = local_now.date()
-                if user.last_daily_push_date == today_local:
-                    continue
-
-                word = await _pick_daily_word(user.id)
-                if not word:
-                    # Все одно ставимо stamp — щоб не перевіряти повторно цю годину
-                    async with SessionLocal() as session:
-                        await session.execute(
-                            sa_update(User).where(User.id == user.id).values(
-                                last_daily_push_date=today_local
-                            )
-                        )
-                        await session.commit()
-                    analytics.capture(user.telegram_id, "daily_push_skipped", {
-                        "reason": "no_due_word",
-                        "hour_local": local_now.hour,
-                        "timezone": user.timezone or "Europe/Kiev",
-                    })
-                    continue
-
-                lang = user.native_lang or "uk"
-                due_total = await _count_due_words(user.id)
-                # Якщо в черзі більше одного слова — додаємо рядок "+N more"
-                # щоб юзер розумів скільки реально чекає.
-                more_line = ""
-                if due_total > 1:
-                    more = due_total - 1
-                    more_line = "\n\n" + bt("remind.more_waiting", lang, n=more)
-
-                text = (
-                    f"{bt('remind.title', lang)}\n\n"
-                    f"📚 <b>{escape(word.word)}</b>\n\n"
-                    f"{bt('remind.hint', lang)}"
-                    f"{more_line}"
-                )
-                keyboard = show_translation_keyboard(word.id, source="rem", lang=lang)
-
-                await bot.send_message(
-                    chat_id=user.telegram_id,
-                    text=text,
-                    reply_markup=keyboard,
-                )
-                analytics.capture(user.telegram_id, "daily_push_sent", {
-                    "target_lang": user.target_lang,
-                    "native_lang": user.native_lang,
-                    "hour_local": local_now.hour,
-                    "timezone": user.timezone or "Europe/Kiev",
-                    "word_id": word.id,
-                    "due_total": due_total,
-                })
-                await mark_word_reminded(word.id)
-                async with SessionLocal() as session:
-                    await session.execute(
-                        sa_update(User).where(User.id == user.id).values(
-                            last_daily_push_date=today_local
-                        )
-                    )
-                    await session.commit()
-                sent += 1
-                await asyncio.sleep(0.05)
+                status = await send_daily_push_for_user(bot, user)
+                if status == "sent":
+                    sent += 1
+                    await asyncio.sleep(0.05)
             except Exception as e:
                 logger.warning(
                     f"daily_push send failed for user {user.telegram_id}: {e}"
