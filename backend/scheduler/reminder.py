@@ -123,7 +123,9 @@ async def send_daily_push_for_user(bot: Bot, user: User, *, force: bool = False)
         f"{bt('remind.hint', lang)}"
         f"{more_line}"
     )
-    keyboard = show_translation_keyboard(word.id, source="rem", lang=lang)
+    keyboard = show_translation_keyboard(
+        word.id, source="rem", lang=lang, due_total=due_total,
+    )
 
     try:
         await bot.send_message(

@@ -174,6 +174,7 @@ T: dict[str, dict[str, str]] = {
         "rev.btn.forgot": "❌ Забув",
         "rev.btn.reveal": "👁 Показати переклад",
         "rev.btn.open_app": "📱 Відкрити App",
+        "rev.btn.review_all_in_app": "📱 Повторити всі ({n}) у додатку",
 
         # — reminders —
         "remind.title": "🔔 <b>Час повторити слово!</b>",
@@ -367,6 +368,7 @@ T: dict[str, dict[str, str]] = {
         "rev.btn.forgot": "❌ Forgot",
         "rev.btn.reveal": "👁 Show translation",
         "rev.btn.open_app": "📱 Open App",
+        "rev.btn.review_all_in_app": "📱 Review all ({n}) in app",
 
         "remind.title": "🔔 <b>Time to review a word!</b>",
         "remind.hint": "<i>Remember the translation? Tap to check 👇</i>",
@@ -559,6 +561,7 @@ T: dict[str, dict[str, str]] = {
         "rev.btn.forgot": "❌ Olvidé",
         "rev.btn.reveal": "👁 Mostrar traducción",
         "rev.btn.open_app": "📱 Abrir App",
+        "rev.btn.review_all_in_app": "📱 Repasar todas ({n}) en la app",
 
         "remind.title": "🔔 <b>¡Hora de repasar una palabra!</b>",
         "remind.hint": "<i>¿Recuerdas la traducción? Pulsa para verificar 👇</i>",
@@ -751,6 +754,7 @@ T: dict[str, dict[str, str]] = {
         "rev.btn.forgot": "❌ Zapomniałem",
         "rev.btn.reveal": "👁 Pokaż tłumaczenie",
         "rev.btn.open_app": "📱 Otwórz App",
+        "rev.btn.review_all_in_app": "📱 Powtórz wszystkie ({n}) w aplikacji",
 
         "remind.title": "🔔 <b>Czas na powtórkę słowa!</b>",
         "remind.hint": "<i>Pamiętasz tłumaczenie? Naciśnij, by sprawdzić 👇</i>",
@@ -943,6 +947,7 @@ T: dict[str, dict[str, str]] = {
         "rev.btn.forgot": "❌ Vergessen",
         "rev.btn.reveal": "👁 Übersetzung zeigen",
         "rev.btn.open_app": "📱 App öffnen",
+        "rev.btn.review_all_in_app": "📱 Alle ({n}) in der App üben",
 
         "remind.title": "🔔 <b>Zeit für eine Wiederholung!</b>",
         "remind.hint": "<i>Erinnerst du dich an die Übersetzung? Tippe zum Prüfen 👇</i>",

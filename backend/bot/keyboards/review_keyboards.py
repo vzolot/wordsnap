@@ -28,8 +28,18 @@ def review_answer_keyboard(word_id: int, source: str = "rev", lang: str = "uk") 
     return builder.as_markup()
 
 
-def show_translation_keyboard(word_id: int, source: str = "rev", lang: str = "uk") -> InlineKeyboardMarkup:
-    """Кнопка 'Показати переклад'. Для нагадувань додаємо ще 'Open App'."""
+def show_translation_keyboard(
+    word_id: int,
+    source: str = "rev",
+    lang: str = "uk",
+    due_total: int = 0,
+) -> InlineKeyboardMarkup:
+    """Кнопка 'Показати переклад'. Для нагадувань додаємо ще 'Open App'.
+
+    Якщо `due_total > 1` — окрема кнопка "Повторити всі (N) у додатку",
+    що веде на /review мініапи (батч-повторення для черги). Інакше —
+    звичайний 'Open App' на головну.
+    """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
@@ -38,10 +48,18 @@ def show_translation_keyboard(word_id: int, source: str = "rev", lang: str = "uk
         )
     )
     if source == "rem":
-        builder.row(
-            InlineKeyboardButton(
-                text=bt("rev.btn.open_app", lang),
-                web_app=WebAppInfo(url=MINI_APP_URL),
+        if due_total > 1:
+            builder.row(
+                InlineKeyboardButton(
+                    text=bt("rev.btn.review_all_in_app", lang, n=due_total),
+                    web_app=WebAppInfo(url=f"{MINI_APP_URL}/review"),
+                )
             )
-        )
+        else:
+            builder.row(
+                InlineKeyboardButton(
+                    text=bt("rev.btn.open_app", lang),
+                    web_app=WebAppInfo(url=MINI_APP_URL),
+                )
+            )
     return builder.as_markup()
