@@ -52,10 +52,10 @@ function ReviewPage() {
   const mode = MODES.includes(searchParams.get('mode')) ? searchParams.get('mode') : 'cards';
   const setMode = (m) => {
     if (m !== mode) track('review_mode_selected', { mode: m, from: mode });
+    // Зберігаємо позицію в черзі (index), сесію (stats) та done-стан між
+    // режимами. Раніше переключення скидало index=0 → ті самі слова
+    // показувались наново → submitReview викликався вдруге → XP дублювався.
     setSearchParams({ mode: m });
-    setIndex(0);
-    setDone(false);
-    setStats({ reviewed: 0, mastered: 0, xp: 0 });
   };
 
   useEffect(() => {
