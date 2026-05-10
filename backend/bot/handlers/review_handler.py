@@ -152,15 +152,17 @@ async def handle_review_answer(callback: CallbackQuery):
             tier_up_text(lang, threshold, tier_key, reward_key)
         )
 
-    if source != "rev":
-        logger.info(f"User answered '{result}' for word_id={word_id} (from reminder)")
-        return
-
+    # Auto-chain через всю чергу due-слів — і для /review (source=rev), і для
+    # нагадувань (source=rem). Раніше для rem був early return → юзер бачив
+    # тільки 1 слово на день навіть якщо в черзі 16. Тепер відповідь на
+    # нагадування продовжує сесію і ловить решту прямо в чаті.
+    # Зберігаємо `source` у наступному слові щоб PostHog міг атрибутувати
+    # довгу сесію до її стартового тригера (push vs /review).
     words = await get_words_due_review(word.user_id, limit=10)
     if words:
         await callback.message.answer(bt("review.left_more", lang, n=len(words)))
-        await send_review_word(callback.message, words[0], source="rev", lang=lang)
+        await send_review_word(callback.message, words[0], source=source, lang=lang)
     else:
         await callback.message.answer(bt("review.all_done", lang))
 
-    logger.info(f"User answered '{result}' for word_id={word_id}")
+    logger.info(f"User answered '{result}' for word_id={word_id} (source={source})")
