@@ -72,47 +72,63 @@ async def _pick_daily_word(user_id: int) -> Word | None:
         return result.scalar_one_or_none()
 
 
+ACTIVE_WINDOW_HOURS = 12  # Тривалість активного push-вікна після reminder_time
+PUSH_COOLDOWN_HOURS = 5   # Мінімальний інтервал між пушами одному юзеру
+CATCHUP_THRESHOLD = 3     # Скільки due-слів треба для повторного (не першого) пушу
+
+
 async def send_daily_push_for_user(bot: Bot, user: User, *, force: bool = False) -> str:
-    """Шле денний пуш одному юзеру.
+    """Шле reminder-push одному юзеру.
 
-    force=False — звичайна планова перевірка (час/дата/cooldown).
-    force=True  — ігноруємо час, дату і per-user антиспам, шлемо зараз.
-                  Корисно для дебагу через /test_remind та для on-demand тестів.
+    Multi-push policy (force=False):
+      • Активне вікно: reminder_time.hour ... +12h локального часу
+      • Cooldown 5h між пушами одному юзеру
+      • Перший пуш дня — за наявності хоч одного due-слова
+      • Наступні (catch-up) пуші — за наявності ≥3 due-слів
+      • Природньо обмежено ~3 пушами/день (12h / 5h ≈ 3 слоти)
 
-    Повертає коротку рядок-статус: "sent" | "wrong_hour" | "already_sent_today"
-    | "no_due_word" | "send_failed".
+    force=True — ігноруємо вікно, cooldown і пороги. Для /test_remind.
+
+    Повертає статус: "sent" | "outside_window" | "cooldown" |
+    "below_threshold" | "no_due_word" | "send_failed".
     """
     tz = _user_tz(user)
     local_now = datetime.now(tz)
+    now_utc = datetime.now(timezone.utc)
     today_local = local_now.date()
 
+    is_first_push_today = (
+        user.last_push_at is None or
+        user.last_push_at.astimezone(tz).date() != today_local
+    )
+
     if not force:
-        target_hour = (user.reminder_time.hour if user.reminder_time else 9)
-        if local_now.hour != target_hour:
-            return "wrong_hour"
-        if user.last_daily_push_date == today_local:
-            return "already_sent_today"
+        primary_hour = (user.reminder_time.hour if user.reminder_time else 9)
+        active_end = primary_hour + ACTIVE_WINDOW_HOURS
+        # Активне вікно реалізуємо просто на годинах, без перетину опівночі —
+        # бо primary_hour 9..12 + 12 = 21..24, не перевалить за 24.
+        if local_now.hour < primary_hour or local_now.hour >= active_end:
+            return "outside_window"
+
+        # Cooldown: минуло ≥5h з останнього пушу (для catch-up пушів)
+        if user.last_push_at and not is_first_push_today:
+            since = now_utc - user.last_push_at
+            if since < timedelta(hours=PUSH_COOLDOWN_HOURS):
+                return "cooldown"
 
     word = await _pick_daily_word(user.id)
     if not word:
-        if not force:
-            # Stamp щоб не перевіряти повторно цю годину
-            async with SessionLocal() as session:
-                await session.execute(
-                    sa_update(User).where(User.id == user.id).values(
-                        last_daily_push_date=today_local
-                    )
-                )
-                await session.commit()
-            analytics.capture(user.telegram_id, "daily_push_skipped", {
-                "reason": "no_due_word",
-                "hour_local": local_now.hour,
-                "timezone": user.timezone or "Europe/Kiev",
-            })
         return "no_due_word"
 
     lang = user.native_lang or "uk"
     due_total = await _count_due_words(user.id)
+
+    if not force:
+        # Catch-up пуш потребує більшого порогу — щоб не дзвонити на 1 слово
+        threshold = 1 if is_first_push_today else CATCHUP_THRESHOLD
+        if due_total < threshold:
+            return "below_threshold"
+
     more_line = ""
     if due_total > 1:
         more_line = "\n\n" + bt("remind.more_waiting", lang, n=due_total - 1)
@@ -145,13 +161,15 @@ async def send_daily_push_for_user(bot: Bot, user: User, *, force: bool = False)
         "word_id": word.id,
         "due_total": due_total,
         "forced": force,
+        "is_first_push_today": is_first_push_today,
     })
     await mark_word_reminded(word.id)
     if not force:
         async with SessionLocal() as session:
             await session.execute(
                 sa_update(User).where(User.id == user.id).values(
-                    last_daily_push_date=today_local
+                    last_push_at=now_utc,
+                    last_daily_push_date=today_local,  # legacy stamp — лишаємо
                 )
             )
             await session.commit()

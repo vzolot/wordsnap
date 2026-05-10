@@ -55,8 +55,13 @@ class User(Base):
     reminders_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     # Антиспам для streak-save push (одне на день локального часу)
     last_streak_save_date: Mapped[date | None] = mapped_column(Date)
-    # Антиспам для денного word-of-the-day push (одне на локальний день)
+    # Антиспам для денного word-of-the-day push (legacy, лишилось як date —
+    # використовується для backwards-compat міграції; нова логіка cooldown'у
+    # читає last_push_at нижче)
     last_daily_push_date: Mapped[date | None] = mapped_column(Date)
+    # Час останнього reminder-push (UTC). Scheduler шле повторні пуші коли
+    # черга росте: до 3/день у вікні reminder_time...+12h з 5h cooldown.
+    last_push_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Referrals: унікальний код для запрошень + хто запросив + лічильник
     referral_code: Mapped[str | None] = mapped_column(String(16))

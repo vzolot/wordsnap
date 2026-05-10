@@ -71,6 +71,10 @@ MIGRATIONS: list[tuple[str, str]] = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS show_on_leaderboard BOOLEAN NOT NULL DEFAULT TRUE",
     ),
     (
+        "users.last_push_at",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_push_at TIMESTAMPTZ",
+    ),
+    (
         "users.referral_code",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(16) UNIQUE",
     ),
