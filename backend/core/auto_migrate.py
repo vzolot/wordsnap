@@ -75,6 +75,17 @@ MIGRATIONS: list[tuple[str, str]] = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_push_at TIMESTAMPTZ",
     ),
     (
+        "app_state table",
+        """
+        CREATE TABLE IF NOT EXISTS app_state (
+            key VARCHAR(64) PRIMARY KEY,
+            value TEXT,
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+        """,
+    ),
+    ("rls.app_state", "ALTER TABLE app_state ENABLE ROW LEVEL SECURITY"),
+    (
         "users.referral_code",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(16) UNIQUE",
     ),
