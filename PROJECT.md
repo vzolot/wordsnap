@@ -188,13 +188,21 @@ Applied on: hero CTAs, "Pro" badge, leaderboard chip, streak card, gradient-text
 
 ## 5. Marketing
 
+All marketing automation lives in the separate repo [vova-bot/wordsnap-threads-bot](https://github.com/vova-bot/wordsnap-threads-bot) (Threads + Instagram organic + Instagram paid ads + engagement). It deep-links into this mini-app.
+
 ### Active channels
 
-- **Threads (automated)** — daily posts via [vova-bot/wordsnap-threads-bot](https://github.com/vova-bot/wordsnap-threads-bot) (separate repo). Pulls product moments + screenshots, generates copy, queues at scheduled times. Currently the only paid acquisition channel.
+- **Threads — organic, automated.** Daily text posts + Reels: pulls product moments / screenshots, generates copy via Claude, Telegram-approval, publishes via Threads Graph API. Free.
+- **Instagram — organic + paid.**
+  - *Organic:* single-image word cards (~5/wk) + vertical Reels (Pillow-rendered frames + ElevenLabs music/TTS), Telegram-approval, published via Instagram Graph API. Cross-posted to Threads as video. Free.
+  - *Paid:* Meta Marketing API automation — `scripts/ads_pipeline.py` + `src/meta_ads_api.py` in the threads-bot repo (docs: `docs/META_ADS_SETUP.md`, `docs/ADS_CAMPAIGN_PLAN.md`). CLI: `account / interests / create / report / pause / activate`. Everything created starts **PAUSED**; campaigns track to a Supabase `ad_campaigns` table; weekly digest via `ads-report.yml`; on-demand `/stats_ads` command in the engagement bot.
+    - **First campaign — live since 2026-05-11** (`WordSnap · Traffic · Validation`, campaign_id `120247072797960057`): OUTCOME_TRAFFIC → `https://t.me/WordSnapBot/app?startapp=igads_val_2605` (the `startapp` value is the PostHog cohort). $20/day, geo PL/DE/CZ, age 22–45, Instagram-only placements, interests Duolingo + Language education. A/B: a Reel-video ad vs a static word-card ad in one ad set.
+    - **Validation gates:** kill if after ~$80 spend CPC > $1 / Mini-app opens < 20% of link clicks / D1 activation < 15%. Scale to Phase 1 ($25–30+/day, geo splits, retargeting) if CPC < $0.40 & D1 activation ≥ 25%.
+    - **Meta infra:** Business portfolio `984506147595109`, ad account `act_26992688363704873` (USD), FB Page `1042894552250387`, IG actor `17841408392302831`, system user `wsadsbot`, Meta app `1289392066593154` (now Live, with the "Create & manage ads with Marketing API" use case — same app used for IG/Threads organic). Privacy Policy at `https://wordsnap-mu.vercel.app/privacy.html` (= `/privacy` on the mini-app; `public/privacy.html` in this repo and `miniapp/public/privacy.html`) — registered in the Meta app, was a prerequisite for publishing it Live.
 
 ### Acquisition surfaces
 
-- **Direct mini-app link** (primary): `https://t.me/WordSnapBot/app` — tap → mini-app opens directly → welcome stories handle full onboarding. This is the URL Threads bot publishes. Configured via `/newapp` in BotFather, short_name = `app`.
+- **Direct mini-app link** (primary): `https://t.me/WordSnapBot/app` — tap → mini-app opens directly → welcome stories handle full onboarding. This is what the marketing automation publishes / links to. Configured via `/newapp` in BotFather, short_name = `app`. Supports `?startapp=<param>` for campaign attribution (arrives as `start_param` / `tgWebAppStartParam`).
 - **Bot chat fallback:** `https://t.me/WordSnapBot` — opens chat with "Open App" launch button.
 - **Referral system** — 17-day effective trial via `?start=ref_<code>`. Shareable link in Pro page (uses bot URL, not mini-app URL — old surface, candidate to migrate).
 - **Telegram bot username** — direct discoverability via Telegram search.
@@ -273,6 +281,7 @@ Keep this file updated when:
 - New page / route is added
 - Pricing changes
 - A new acquisition channel is launched
+- A paid-ads campaign goes live / is killed / scales (update §5 — campaign id, budget, gate outcomes)
 - Brand colors / fonts evolve
 - A scheduler is added or removed
 
