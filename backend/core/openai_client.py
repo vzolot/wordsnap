@@ -22,7 +22,24 @@ LANGUAGE_NAMES = {
     "fr": "French",
 }
 
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Lazily-created OpenAI client. This used to be a module-level
+# `AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))` — but the OpenAI SDK raises
+# if the key is missing, so an unset OPENAI_API_KEY crashed the *whole* backend
+# on import (bot + API + schedulers), not just word resolution. Creating it on
+# first use means a missing key now only disables word resolution (the error
+# bubbles into `_ask_openai_once`'s existing try/except → None → callers show a
+# friendly message) while everything else keeps running.
+_openai_client: AsyncOpenAI | None = None
+
+
+def _get_openai_client() -> AsyncOpenAI:
+    global _openai_client
+    if _openai_client is None:
+        key = os.getenv("OPENAI_API_KEY")
+        if not key:
+            raise RuntimeError("OPENAI_API_KEY is not set — word resolution unavailable")
+        _openai_client = AsyncOpenAI(api_key=key)
+    return _openai_client
 
 
 class WordExample(TypedDict):
@@ -121,7 +138,7 @@ async def _ask_openai_once(
 ) -> WordData | None:
     """Один сирий виклик OpenAI з валідацією. None при будь-якій помилці."""
     try:
-        response = await client.chat.completions.create(
+        response = await _get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
