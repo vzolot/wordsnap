@@ -1,8 +1,11 @@
 """Admin-only команди для @WordSnapBot.
 
-/stats_admin       — live-зріз поточного дня (з 00:00 Kyiv до зараз)
-/stats_admin_day   — повна вчорашня доба (той самий зріз що в 09:00 push)
-/stats_admin_month — за останні 30 днів (включно з сьогодні-live)
+/stats_admin           — live-зріз поточного дня (з 00:00 Kyiv до зараз)
+/stats_admin_day       — повна вчорашня доба (той самий зріз що в 09:00 push)
+/stats_admin_month     — за останні 30 днів (включно з сьогодні-live)
+/stats_admin_ads       — платна реклама (Meta) за сьогодні
+/stats_admin_ads_day   — платна реклама за вчора
+/stats_admin_ads_month — платна реклама за останні 30 днів
 
 Доступні лише користувачу із telegram_id == ADMIN_TELEGRAM_ID. Для всіх
 інших — тиха відмова, щоб не палити існування команди.
@@ -15,6 +18,7 @@ from aiogram.types import Message
 
 from core.admin_report import PeriodKind, build_report
 from core.constants import admin_telegram_id
+from core.meta_ads import AdsPeriod, build_ads_report
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -49,6 +53,32 @@ async def cmd_stats_admin_day(message: Message) -> None:
 @router.message(Command("stats_admin_month"))
 async def cmd_stats_admin_month(message: Message) -> None:
     await _send_report(message, "month_30d", "stats_admin_month")
+
+
+async def _send_ads_report(message: Message, period: AdsPeriod, command_name: str) -> None:
+    if not _is_admin(message):
+        return  # тиха відмова
+    try:
+        text = await build_ads_report(period)
+        await message.answer(text, parse_mode="HTML", disable_web_page_preview=True)
+    except Exception as e:
+        logger.error(f"/{command_name} failed: {e}", exc_info=True)
+        await message.answer("⚠️ Звіт по рекламі не вдалось зібрати — глянь логи.")
+
+
+@router.message(Command("stats_admin_ads"))
+async def cmd_stats_admin_ads(message: Message) -> None:
+    await _send_ads_report(message, "today", "stats_admin_ads")
+
+
+@router.message(Command("stats_admin_ads_day"))
+async def cmd_stats_admin_ads_day(message: Message) -> None:
+    await _send_ads_report(message, "yesterday", "stats_admin_ads_day")
+
+
+@router.message(Command("stats_admin_ads_month"))
+async def cmd_stats_admin_ads_month(message: Message) -> None:
+    await _send_ads_report(message, "last_30d", "stats_admin_ads_month")
 
 
 @router.message(Command("test_remind"))
