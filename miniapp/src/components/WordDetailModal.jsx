@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { deleteWord } from '../api/client';
+import { useEffect, useRef, useState } from 'react';
+import { deleteWord, updateWordTranslation } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import { optimizeImage } from '../utils/optimizeImage';
+import { track } from '../utils/analytics';
 import SpeakButton from './SpeakButton';
 import WordPlaceholder from './WordPlaceholder';
 
@@ -19,10 +20,24 @@ function badgeLabel(word, t) {
   return t('badge.learning');
 }
 
-function WordDetailModal({ open, word, onClose, onDeleted, nativeLang }) {
+function WordDetailModal({ open, word, onClose, onDeleted, onUpdated, nativeLang }) {
   const { t } = useT();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+  const editRef = useRef(null);
+
+  // Скидаємо edit-стан коли модалка закривається або змінюється word
+  useEffect(() => {
+    if (!open) { setEditing(false); setEditError(''); }
+  }, [open, word?.id]);
+
+  useEffect(() => {
+    if (editing && editRef.current) editRef.current.focus();
+  }, [editing]);
 
   if (!open || !word) return null;
   const flag = FLAGS[nativeLang] || '🌐';
@@ -43,7 +58,35 @@ function WordDetailModal({ open, word, onClose, onDeleted, nativeLang }) {
   };
 
   const reset = () => { setConfirming(false); setDeleting(false); };
-  const closeAndReset = () => { reset(); onClose?.(); };
+  const closeAndReset = () => { reset(); setEditing(false); setEditError(''); onClose?.(); };
+
+  const startEdit = () => {
+    setDraft(word.translation || '');
+    setEditError('');
+    setEditing(true);
+    track('word_translation_edit_opened', { word_id: word.id });
+  };
+
+  const cancelEdit = () => { setEditing(false); setEditError(''); };
+
+  const saveEdit = async () => {
+    const value = draft.trim();
+    if (!value) { setEditError(t('word_detail.translation_empty')); return; }
+    if (value.length > 500) { setEditError(t('word_detail.translation_too_long')); return; }
+    if (value === (word.translation || '').trim()) { setEditing(false); return; }
+    setSaving(true);
+    try {
+      const r = await updateWordTranslation(word.id, value);
+      const fresh = r.data?.word;
+      if (fresh) onUpdated?.(fresh);
+      track('word_translation_edited', { word_id: word.id });
+      setEditing(false);
+    } catch {
+      setEditError(t('snap.error'));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="day-modal-backdrop" onClick={closeAndReset}>
@@ -64,7 +107,52 @@ function WordDetailModal({ open, word, onClose, onDeleted, nativeLang }) {
           <div className="word-detail-word">{word.word}</div>
           <SpeakButton text={word.word} lang={word.target_lang} size="md" />
         </div>
-        <div className="word-detail-translation">{flag} {word.translation}</div>
+        {!editing ? (
+          <div className="word-detail-translation-row">
+            <div className="word-detail-translation">{flag} {word.translation}</div>
+            <button
+              type="button"
+              className="word-detail-edit-btn"
+              onClick={startEdit}
+              aria-label={t('word_detail.edit_translation')}
+              title={t('word_detail.edit_translation')}
+            >
+              ✏️
+            </button>
+          </div>
+        ) : (
+          <div className="word-detail-edit-wrap">
+            <textarea
+              ref={editRef}
+              className="word-detail-edit-input"
+              value={draft}
+              onChange={e => { setDraft(e.target.value); if (editError) setEditError(''); }}
+              maxLength={500}
+              rows={2}
+            />
+            {editError && <div className="snap-error" style={{ marginTop: 6 }}>{editError}</div>}
+            <div className="word-detail-edit-actions">
+              <button
+                type="button"
+                className="btn btn-gradient"
+                disabled={saving}
+                onClick={saveEdit}
+                style={{ flex: 1 }}
+              >
+                {saving ? '…' : t('word_detail.save')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={saving}
+                onClick={cancelEdit}
+                style={{ flex: 1 }}
+              >
+                {t('word_detail.cancel')}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="word-detail-status-row">
           <span className={`badge ${badgeClass(word)}`}>{badgeLabel(word, t)}</span>

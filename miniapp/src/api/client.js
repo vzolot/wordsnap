@@ -46,6 +46,8 @@ export const submitReview = (wordId, quality, mode = 'cards') =>
   api.post('/api/review', { word_id: wordId, quality, mode });
 export const addWord = (word) => api.post('/api/words', { word });
 export const deleteWord = (wordId) => api.delete(`/api/words/${wordId}`);
+export const updateWordTranslation = (wordId, translation) =>
+  api.patch(`/api/words/${wordId}`, { translation });
 export const getSongs = () => api.get('/api/songs');
 export const getThemes = () => api.get('/api/themes');
 export const createBuyLink = (period = 'monthly') => api.post('/api/buy', null, { params: { period } });

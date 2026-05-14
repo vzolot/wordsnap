@@ -122,15 +122,27 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
       {!result ? (
         <form onSubmit={submit}>
           <div className="snap-input-row">
-            <input
-              className="snap-input"
-              type="text"
-              value={value}
-              onChange={e => setValue(e.target.value)}
-              placeholder={t('snap.placeholder')}
-              disabled={loading}
-              autoComplete="off"
-            />
+            <div className="snap-input-wrap">
+              <input
+                className="snap-input"
+                type="text"
+                value={value}
+                onChange={e => { setValue(e.target.value); if (error) { setError(''); setErrorKind(null); } }}
+                placeholder={t('snap.placeholder')}
+                disabled={loading}
+                autoComplete="off"
+              />
+              {value && !loading && (
+                <button
+                  type="button"
+                  className="snap-input-clear"
+                  onClick={() => { setValue(''); setError(''); setErrorKind(null); }}
+                  aria-label={t('snap.clear')}
+                >
+                  ×
+                </button>
+              )}
+            </div>
             <button type="submit" className="snap-submit" disabled={loading || !value.trim()}>
               {loading ? <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> : '✨'}
               <span>{loading ? t('snap.button_loading') : t('snap.button')}</span>

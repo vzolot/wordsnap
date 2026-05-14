@@ -75,6 +75,17 @@ function WordsPage() {
     setActive(null);
   };
 
+  const handleUpdated = (fresh) => {
+    setWords(prev => {
+      const next = prev.map(w => w.id === fresh.id ? { ...w, ...fresh } : w);
+      writeCache('words', next);
+      return next;
+    });
+    setActive(prev => prev && prev.id === fresh.id ? { ...prev, ...fresh } : prev);
+    // /review кеш міг містити старе значення translation — інвалідуємо
+    clearCache('review');
+  };
+
   return (
     <>
       <AppBar />
@@ -182,6 +193,7 @@ function WordsPage() {
         word={active}
         onClose={() => setActive(null)}
         onDeleted={handleDeleted}
+        onUpdated={handleUpdated}
         nativeLang={nativeLang}
       />
       <ExportModal

@@ -188,17 +188,29 @@ Applied on: hero CTAs, "Pro" badge, leaderboard chip, streak card, gradient-text
 
 ## 5. Marketing
 
-All marketing automation lives in the separate repo [vova-bot/wordsnap-threads-bot](https://github.com/vova-bot/wordsnap-threads-bot) (Threads + Instagram organic + Instagram paid ads + engagement). It deep-links into this mini-app.
+Marketing automation is split across **two separate repos**, both deep-linking into this mini-app:
+
+- [vova-bot/wordsnap-threads-bot](https://github.com/vova-bot/wordsnap-threads-bot) — **brand account** (@wordsnapapp on Threads + IG) + **paid Instagram ads** (Meta Marketing API).
+- [vzolot/wordsnap-personal-bot](https://github.com/vzolot/wordsnap-personal-bot) (private) — **founder personal account** (@vzolottop on Threads + IG). Founder-voice build-in-public + 5 founder-voice pillars; complements brand reach with first-person credibility.
+
+Both repos share one Supabase project (`personal_*` table prefix on the founder side to avoid collisions), use Claude (`claude-opus-4-7`) for generation, and route every draft through a Telegram approval bot before publishing.
 
 ### Active channels
 
-- **Threads — organic, automated.** Daily text posts + Reels: pulls product moments / screenshots, generates copy via Claude, Telegram-approval, publishes via Threads Graph API. Free.
-- **Instagram — organic + paid.**
+- **Threads (brand @wordsnapapp) — organic, automated.** Daily text posts + Reels: pulls product moments / screenshots, generates copy via Claude, Telegram-approval, publishes via Threads Graph API. Free.
+- **Instagram (brand @wordsnapapp) — organic + paid.**
   - *Organic:* single-image word cards (~5/wk) + vertical Reels (Pillow-rendered frames + ElevenLabs music/TTS), Telegram-approval, published via Instagram Graph API. Cross-posted to Threads as video. Free.
   - *Paid:* Meta Marketing API automation — `scripts/ads_pipeline.py` + `src/meta_ads_api.py` in the threads-bot repo (docs: `docs/META_ADS_SETUP.md`, `docs/ADS_CAMPAIGN_PLAN.md`). CLI: `account / interests / create / report / pause / activate`. Everything created starts **PAUSED**; campaigns track to a Supabase `ad_campaigns` table; weekly digest via `ads-report.yml`; on-demand `/stats_ads` command in the engagement bot.
     - **First campaign — live since 2026-05-11** (`WordSnap · Traffic · Validation`, campaign_id `120247072797960057`): OUTCOME_TRAFFIC → `https://t.me/WordSnapBot/app?startapp=igads_val_2605` (the `startapp` value is the PostHog cohort). $20/day, geo PL/DE/CZ, age 22–45, Instagram-only placements, interests Duolingo + Language education. A/B: a Reel-video ad vs a static word-card ad in one ad set.
     - **Validation gates:** kill if after ~$80 spend CPC > $1 / Mini-app opens < 20% of link clicks / D1 activation < 15%. Scale to Phase 1 ($25–30+/day, geo splits, retargeting) if CPC < $0.40 & D1 activation ≥ 25%.
     - **Meta infra:** Business portfolio `984506147595109`, ad account `act_26992688363704873` (USD), FB Page `1042894552250387`, IG actor `17841408392302831`, system user `wsadsbot`, Meta app `1289392066593154` (now Live, with the "Create & manage ads with Marketing API" use case — same app used for IG/Threads organic). Privacy Policy at `https://wordsnap-mu.vercel.app/privacy.html` (= `/privacy` on the mini-app; `public/privacy.html` in this repo and `miniapp/public/privacy.html`) — registered in the Meta app, was a prerequisite for publishing it Live.
+
+- **Founder account (@vzolottop) — organic, automated.** Threads + Instagram cross-post, first-person Володимир voice, complements the brand reach with a build-in-public arc.
+  - *Pipeline:* GitHub Actions cron `daily-content.yml` runs daily at **06:00 UTC (08:00 Kyiv)**: `scripts.content_generator --n 3` (Claude tool-use with validator loop) → `scripts.approve` (Telegram bot **@personal_wsbot**, 30-min decision window, ✅/🔁/❌ per draft) → `scripts.publish --all-approved --platform threads --platform instagram`. Threads gets native text (≤500 chars); IG gets a Pillow-rendered 1080×1350 PNG card (off-white BG, violet→pink gradient strip, Inter Bold body, handle + brand mark + link footer). Per-platform `external_id` dedup means a post can land on Threads later than IG without re-publishing.
+  - *5 founder-voice pillars* (`src/prompts/pillars/`): `word_from_life`, `diaspora_pain`, `build_in_public`, `etymology`, `user_stories`. Pillar rotation is target-weighted against recent history (30/20/20/15/15).
+  - *Style validator* (`src/content/validator.py`) enforces banned words at generation time — most importantly **«бот» → «додаток» / «Mini App»** (Telegram-spam association), plus «корисний контент», «топовий», «крутий», «залітайте», «друзі». Violations trigger a regen with a hint, up to 3 attempts.
+  - *Engagement bot* **@personal_engage_wsbot** — long-running Worker on Railway (separate BotFather token, because Telegram `getUpdates` is exclusive per token, so the cron-time approval bot and this daemon can't share one). Founder sends a **screenshot** of someone's Threads/IG post (optionally with a caption); Claude vision reads the post text from the image and returns a 5-pattern reply (`word_in_context` / `decompose_pain` / `soft_funnel` / `complement` / `sacred_thread`) as a tap-to-copy `<pre><code>` block with ✅/🔁/❌. URL+text fallback also supported. **No auto-publish** — Threads API does not permit `reply_to_id` on other people's posts, so the user pastes the approved reply manually. All replies tracked in `personal_replies` for future self-learning.
+  - *Why this matters for §3 acquisition:* founder posts drive **first-person credibility** that the brand account can't replicate. Engagement replies are the channel — they put `t.me/WordSnapBot/app` in front of the exact people who would benefit (someone in a Polish Threads complaining about vocab → context-aware reply with a soft funnel).
 
 ### Acquisition surfaces
 

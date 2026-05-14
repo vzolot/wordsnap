@@ -30,6 +30,10 @@ class ReviewRequest(BaseModel):
     mode: str | None = None  # cards | quiz | spelling — для аналітики
 
 
+class WordUpdateRequest(BaseModel):
+    translation: str
+
+
 def _serialize_word(w: Word) -> dict:
     return {
         "id": w.id,
@@ -62,6 +66,47 @@ async def get_words(telegram_id: int = Query(...)):
             select(Word).where(Word.user_id == user.id).order_by(Word.created_at.desc())
         )
         return [_serialize_word(w) for w in result.scalars().all()]
+
+
+@router.patch("/api/words/{word_id}")
+async def update_word(
+    word_id: int, payload: WordUpdateRequest, telegram_id: int = Query(...),
+):
+    """Редагування перекладу. Дозволяємо юзеру замінити AI-варіант на свій
+    (часто діаспора має родинні/регіональні переклади). SRS-стан не чіпаємо."""
+    translation = (payload.translation or "").strip()
+    if not translation:
+        raise HTTPException(status_code=400, detail="empty_translation")
+    if len(translation) > 500:
+        raise HTTPException(status_code=400, detail="too_long")
+
+    from sqlalchemy import update as sa_update
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        word = (await session.execute(
+            select(Word).where(Word.id == word_id, Word.user_id == user.id)
+        )).scalar_one_or_none()
+        if not word:
+            raise HTTPException(status_code=404, detail="Word not found")
+        old_translation = word.translation
+        await session.execute(
+            sa_update(Word).where(Word.id == word_id).values(translation=translation)
+        )
+        await session.commit()
+        # Перетягуємо щоб віддати свіжий обʼєкт назад
+        word = (await session.execute(
+            select(Word).where(Word.id == word_id)
+        )).scalar_one()
+
+    analytics.capture(telegram_id, "word_translation_edited", {
+        "target_lang": word.target_lang,
+        "old_len": len(old_translation or ""),
+        "new_len": len(translation),
+        "review_count": word.review_count,
+    })
+    return {"ok": True, "word": _serialize_word(word)}
 
 
 @router.delete("/api/words/{word_id}")

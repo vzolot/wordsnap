@@ -927,9 +927,14 @@
   align-items: stretch;
 }
 
+.snap-input-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+}
 .snap-input {
   flex: 1;
-  padding: 12px 14px;
+  padding: 12px 38px 12px 14px;
   background: var(--bg-card-2);
   border: 1px solid transparent;
   border-radius: var(--r-md);
@@ -940,6 +945,27 @@
 }
 .snap-input:focus { border-color: var(--violet); background: var(--bg-card); }
 .snap-input::placeholder { color: var(--text-3); }
+.snap-input-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+}
+.snap-input-clear:hover { background: rgba(255,255,255,0.22); color: var(--text-1); }
+.snap-input-clear:active { transform: translateY(-50%) scale(0.92); }
 
 .snap-submit {
   background: var(--gradient);
@@ -1705,6 +1731,49 @@
   margin-bottom: 12px;
 }
 [data-theme="dark"] .word-detail-translation { color: #C4A8FF; }
+.word-detail-translation-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.word-detail-translation-row .word-detail-translation {
+  flex: 1;
+  margin-bottom: 0;
+}
+.word-detail-edit-btn {
+  background: rgba(255,255,255,0.08);
+  border: 0;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+}
+.word-detail-edit-btn:hover { background: rgba(255,255,255,0.16); }
+.word-detail-edit-btn:active { transform: scale(0.94); }
+.word-detail-edit-wrap {
+  margin-bottom: 12px;
+}
+.word-detail-edit-input {
+  width: 100%;
+  background: var(--bg-card-2);
+  border: 1px solid var(--violet);
+  border-radius: var(--r-md);
+  color: var(--text-1);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 10px 12px;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.word-detail-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
 .word-detail-status-row {
   display: flex;
   align-items: center;
