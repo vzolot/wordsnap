@@ -10,6 +10,8 @@ const HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://eu.posthog.com';
 let posthog = null;
 let initStarted = false;
 let pendingDistinctId = null;
+let pendingSuperProps = null;
+let pendingPersonOnceProps = null;
 const queue = [];
 
 function flushQueue() {
@@ -20,9 +22,23 @@ function flushQueue() {
   }
 }
 
-export function initAnalytics(distinctId) {
+export function initAnalytics(distinctId, opts = {}) {
+  // opts.superProps — приклеяться до КОЖНОЇ події (через register())
+  // opts.personOnceProps — first-touch person props (через $set_once на identify)
+  if (opts.superProps) pendingSuperProps = { ...(pendingSuperProps || {}), ...opts.superProps };
+  if (opts.personOnceProps) pendingPersonOnceProps = { ...(pendingPersonOnceProps || {}), ...opts.personOnceProps };
+
   if (!KEY || initStarted) {
     pendingDistinctId = distinctId || pendingDistinctId;
+    // Якщо PostHog вже піднявся — застосовуємо одразу
+    if (posthog) {
+      if (opts.superProps) {
+        try { posthog.register(opts.superProps); } catch {}
+      }
+      if (opts.personOnceProps && pendingDistinctId) {
+        try { posthog.identify(String(pendingDistinctId), undefined, opts.personOnceProps); } catch {}
+      }
+    }
     return;
   }
   initStarted = true;
@@ -41,8 +57,15 @@ export function initAnalytics(distinctId) {
           disable_session_recording: true,
           loaded: () => {
             posthog = ph;
+            // Спершу super-props щоб identify-події одразу полетіли з атрибуцією
+            if (pendingSuperProps) {
+              try { ph.register(pendingSuperProps); } catch {}
+            }
             if (pendingDistinctId) {
-              try { ph.identify(String(pendingDistinctId)); } catch {}
+              try {
+                // 3-й аргумент = $set_once (first-touch persistent)
+                ph.identify(String(pendingDistinctId), undefined, pendingPersonOnceProps || undefined);
+              } catch {}
             }
             flushQueue();
           },

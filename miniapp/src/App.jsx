@@ -7,6 +7,7 @@ import WelcomeStories, { shouldShowWelcome } from './components/WelcomeStories';
 import { LangProvider } from './contexts/LangContext';
 import { getTelegramUserId, prefetchAll } from './api/client';
 import { initAnalytics, track } from './utils/analytics';
+import { getAttribution } from './utils/attribution';
 import './App.css';
 
 // Code-split важкі сторінки — кожна підвантажиться лише коли користувач переходить
@@ -91,8 +92,26 @@ function App() {
     };
 
     try {
-      initAnalytics(getTelegramUserId());
-      track('app_opened');
+      const attr = getAttribution();
+      // superProps — приклеюються до кожної події (легко сегментувати funnel)
+      // personOnceProps — first-touch для cohort'а (НЕ перетирається)
+      initAnalytics(getTelegramUserId(), {
+        superProps: {
+          acquisition_source: attr.acquisition_source,
+          acquisition_campaign: attr.acquisition_campaign,
+          acquisition_raw: attr.acquisition_raw,
+        },
+        personOnceProps: {
+          acquisition_source: attr.acquisition_source,
+          acquisition_campaign: attr.acquisition_campaign,
+          acquisition_raw: attr.acquisition_raw,
+          acquisition_first_seen_at: attr.acquisition_first_seen_at,
+        },
+      });
+      track('app_opened', {
+        last_touch_source: attr.last_touch_source,
+        last_touch_campaign: attr.last_touch_campaign,
+      });
       // Перше відкриття цієї сесії — порівнюємо з попередньою (якщо була).
       fireResumed();
       stampActive();
