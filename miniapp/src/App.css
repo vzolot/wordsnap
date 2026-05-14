@@ -929,6 +929,7 @@
 
 .snap-input-wrap {
   flex: 1;
+  min-width: 0;
   position: relative;
   display: flex;
 }
@@ -980,6 +981,7 @@
   justify-content: center;
   gap: 6px;
   min-width: 96px;
+  flex-shrink: 0;
 }
 .snap-submit:active { transform: scale(0.97); }
 .snap-submit:disabled { opacity: 0.6; }
