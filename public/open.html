@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#7C3AED" />
+  <title>WordSnap — Open in Telegram</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --violet: #7C3AED;
+      --pink: #EC4899;
+      --bg: #0B0610;
+      --card: rgba(255,255,255,0.06);
+      --text: #ffffff;
+      --text-2: rgba(255,255,255,0.7);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(124,58,237,0.35) 0%, transparent 55%),
+        radial-gradient(circle at 80% 80%, rgba(236,72,153,0.30) 0%, transparent 50%);
+    }
+    .wrap {
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+    }
+    .logo {
+      width: 72px; height: 72px;
+      margin: 0 auto 18px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 36px; color: #fff;
+      box-shadow: 0 10px 30px rgba(124,58,237,0.45);
+      letter-spacing: -1px;
+    }
+    h1 {
+      font-size: 28px; font-weight: 800; margin: 0 0 8px;
+      letter-spacing: -0.5px;
+    }
+    .sub {
+      color: var(--text-2); font-size: 15px;
+      margin: 0 0 28px; line-height: 1.5;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 10px;
+      width: 100%; max-width: 320px;
+      padding: 16px 22px;
+      background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+      color: #fff;
+      font-weight: 700; font-size: 16px;
+      text-decoration: none;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.45);
+      transition: transform 0.12s, box-shadow 0.2s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn svg { width: 22px; height: 22px; }
+    .hint {
+      margin-top: 18px;
+      color: var(--text-2); font-size: 13px; line-height: 1.5;
+    }
+    .hint code {
+      background: var(--card); padding: 2px 6px; border-radius: 4px;
+      font-size: 12px; color: var(--text);
+    }
+    .pulse {
+      display: inline-block; width: 8px; height: 8px;
+      background: #84CC16; border-radius: 50%;
+      margin-right: 6px;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.35; transform: scale(0.85); }
+      50%      { opacity: 1;    transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">W</div>
+    <h1>Відкриваємо WordSnap…</h1>
+    <p class="sub"><span class="pulse"></span>Якщо Telegram не відкрився сам — тапни кнопку нижче</p>
+    <a id="cta" class="btn" href="#" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M9.04 16.6l-.36 5.05c.51 0 .73-.22.99-.48l2.38-2.27 4.93 3.6c.9.5 1.55.24 1.79-.83l3.25-15.2v-.01c.28-1.34-.48-1.86-1.36-1.54L1.13 9.7C-.18 10.2-.15 10.93.9 11.25l4.85 1.51 11.27-7.1c.53-.34 1.02-.16.62.21" />
+      </svg>
+      Open in Telegram
+    </a>
+    <p class="hint">Не маєш Telegram? <a href="https://telegram.org/" style="color:#A78BFA;">Завантаж тут</a> — займе хвилину.</p>
+  </div>
+
+  <script>
+    (function () {
+      // 1. Parse cohort tag
+      const params = new URLSearchParams(window.location.search);
+      const ref = (params.get('ref') || params.get('startapp') || '').trim();
+      const BOT = 'WordSnapBot';
+      const APP = 'app';
+
+      // 2. Build URLs
+      // Primary (https) — uses Telegram Universal Links, works in most browsers including IG webview
+      const httpsUrl = ref
+        ? `https://t.me/${BOT}/${APP}?startapp=${encodeURIComponent(ref)}`
+        : `https://t.me/${BOT}/${APP}`;
+      // Custom-scheme — fastest path when Telegram is installed (iOS Safari, Chrome)
+      const tgUrl = ref
+        ? `tg://resolve?domain=${BOT}&appname=${APP}&startapp=${encodeURIComponent(ref)}`
+        : `tg://resolve?domain=${BOT}&appname=${APP}`;
+
+      // 3. Wire the CTA — clicking always goes to https (most universally reliable)
+      const cta = document.getElementById('cta');
+      cta.href = httpsUrl;
+
+      // 4. Auto-attempt the tg:// scheme on load — Safari/Chrome will switch to
+      //    Telegram silently; in-app browsers will typically reject and just
+      //    keep the visible button as the fallback. We do NOT redirect to https
+      //    automatically because in IG webview that just reloads inside webview
+      //    without opening Telegram — user MUST tap the button.
+      const isIgInApp = /Instagram/i.test(navigator.userAgent);
+      const isFbInApp = /FBAN|FBAV|FB_IAB/i.test(navigator.userAgent);
+      if (!isIgInApp && !isFbInApp) {
+        // Outside Meta in-app browsers — try the deep link
+        setTimeout(() => {
+          try { window.location.href = tgUrl; } catch (e) { /* noop */ }
+        }, 250);
+      }
+    })();
+  </script>
+</body>
+</html>
