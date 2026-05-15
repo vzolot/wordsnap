@@ -103,6 +103,18 @@
     <p class="hint">Не маєш Telegram? <a href="https://telegram.org/" style="color:#A78BFA;">Завантаж тут</a> — займе хвилину.</p>
   </div>
 
+  <!-- PostHog snippet (EU host). Async load — never blocks the page. -->
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    posthog.init('phc_nUWid6hPkYMGNSKQh2t3N4jHxM2ZAEvq3ctHZneY7pLE', {
+      api_host: 'https://eu.posthog.com',
+      capture_pageview: false,
+      autocapture: false,
+      persistence: 'localStorage',
+      disable_session_recording: true
+    });
+  </script>
+
   <script>
     (function () {
       // 1. Parse cohort tag
@@ -110,34 +122,84 @@
       const ref = (params.get('ref') || params.get('startapp') || '').trim();
       const BOT = 'WordSnapBot';
       const APP = 'app';
+      const ua = navigator.userAgent || '';
+      const isIgInApp = /Instagram/i.test(ua);
+      const isFbInApp = /FBAN|FBAV|FB_IAB/i.test(ua);
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      const isAndroid = /Android/i.test(ua);
 
       // 2. Build URLs
-      // Primary (https) — uses Telegram Universal Links, works in most browsers including IG webview
       const httpsUrl = ref
         ? `https://t.me/${BOT}/${APP}?startapp=${encodeURIComponent(ref)}`
         : `https://t.me/${BOT}/${APP}`;
-      // Custom-scheme — fastest path when Telegram is installed (iOS Safari, Chrome)
       const tgUrl = ref
         ? `tg://resolve?domain=${BOT}&appname=${APP}&startapp=${encodeURIComponent(ref)}`
         : `tg://resolve?domain=${BOT}&appname=${APP}`;
 
-      // 3. Wire the CTA — clicking always goes to https (most universally reliable)
+      // 3. Common analytics tags — додаємо до всіх подій, щоб у PostHog можна було
+      //    зробити повну funnel-сегментацію по кампанії і платформі.
+      const commonProps = {
+        ref: ref || null,
+        ig_in_app: isIgInApp,
+        fb_in_app: isFbInApp,
+        ios: isIOS,
+        android: isAndroid,
+      };
+      try { posthog.register(commonProps); } catch (e) {}
+
+      // Якщо є ref — паримо source/campaign так само як це робить мініапа,
+      // щоб когорта igads/val_2605_v2 збігалася між landing і app_opened.
+      if (ref) {
+        const idx = ref.indexOf('_');
+        const acquisition_source   = idx === -1 ? ref : ref.slice(0, idx);
+        const acquisition_campaign = idx === -1 ? null : ref.slice(idx + 1);
+        try {
+          posthog.register({
+            acquisition_source,
+            acquisition_campaign,
+            acquisition_raw: ref,
+          });
+        } catch (e) {}
+      }
+
+      // 4. Fire landing_visited ASAP — це наша точка №1 у воронці
+      try { posthog.capture('landing_visited'); } catch (e) {}
+
+      // 5. Wire the CTA — manual tap = найнадійніше відкрити Telegram
       const cta = document.getElementById('cta');
       cta.href = httpsUrl;
+      cta.addEventListener('click', () => {
+        try { posthog.capture('tg_open_clicked', { method: 'manual_tap' }); } catch (e) {}
+      });
 
-      // 4. Auto-attempt the tg:// scheme on load — Safari/Chrome will switch to
-      //    Telegram silently; in-app browsers will typically reject and just
-      //    keep the visible button as the fallback. We do NOT redirect to https
-      //    automatically because in IG webview that just reloads inside webview
-      //    without opening Telegram — user MUST tap the button.
-      const isIgInApp = /Instagram/i.test(navigator.userAgent);
-      const isFbInApp = /FBAN|FBAV|FB_IAB/i.test(navigator.userAgent);
-      if (!isIgInApp && !isFbInApp) {
-        // Outside Meta in-app browsers — try the deep link
-        setTimeout(() => {
-          try { window.location.href = tgUrl; } catch (e) { /* noop */ }
-        }, 250);
-      }
+      // 6. visibilitychange → hidden після нашого редиректу = сильний сигнал
+      //    що Telegram відкрився (сторінка втратила focus → app switch).
+      //    Шлемо одну подію не частіше ніж раз на сторінку.
+      let fired = false;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden' && !fired) {
+          fired = true;
+          try { posthog.capture('tg_app_likely_opened'); } catch (e) {}
+        }
+      });
+
+      // 7. Auto-redirect — тепер агресивніше:
+      //    - 250мс: спроба tg:// (миттєвий launch на Safari/Chrome iOS,
+      //      Chrome Android). В IG webview може не спрацювати — це норма.
+      //    - 1500мс: повний https://t.me/ редірект для ВСІХ, включно з IG/FB
+      //      webview. Універсальні Links Telegram має перехопити і відкрити
+      //      нативний додаток. Якщо ні — юзер бачить t.me web page з кнопкою
+      //      "Open in Telegram" (стандартний fallback Telegram).
+      setTimeout(() => {
+        try { posthog.capture('tg_auto_redirect_attempted', { stage: 'tg_scheme' }); } catch (e) {}
+        try { window.location.href = tgUrl; } catch (e) {}
+      }, 250);
+
+      setTimeout(() => {
+        if (fired) return; // вже відкрили Telegram — не перебиваємо
+        try { posthog.capture('tg_auto_redirect_attempted', { stage: 'https_fallback' }); } catch (e) {}
+        try { window.location.href = httpsUrl; } catch (e) {}
+      }, 1500);
     })();
   </script>
 </body>
