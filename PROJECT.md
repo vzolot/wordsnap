@@ -30,7 +30,7 @@ Three review modes feed the same SM-2 scheduler:
 
 | Layer | Provider | Auto-deploy | Notes |
 |---|---|---|---|
-| Backend (FastAPI + aiogram bot + scheduler) | **Railway** | Yes, on `git push origin main` | One Worker service: API + bot polling + 4 schedulers (reminder, streak-save, recurring-charges, image-backfill) |
+| Backend (FastAPI + aiogram bot + scheduler) | **Railway** | Yes, on `git push origin main` | One Worker service: API + bot polling + 6 schedulers (reminder, streak-save, recurring-charges, image-backfill, admin-report, **re-engage**) |
 | Mini-app (Vite SPA) | **Vercel** | Yes, on `git push origin main` | Project root: `miniapp/`. Service Worker caches hashed assets. |
 | Database | **Supabase Postgres** | — | Row-Level Security enabled on all tables; backend connects as superuser, public REST API returns 401. |
 | AI | OpenAI `gpt-4o-mini` | — | Backed by `ai_cache` table — 90%+ hit rate after warm-up. ~$0.0005 per cold call. |
@@ -99,6 +99,9 @@ All steps tracked in PostHog (`welcome_started`, `welcome_step_viewed{n}`, `welc
 - Sends one word per local day at user's `reminder_time` (default 09:00 in their `timezone`)
 - Anti-spam: `users.last_daily_push_date` (one per local day)
 - Stamp date even if no due word so re-checks don't repeat
+
+### 3.5.1 Re-engagement push (added 2026-05-17)
+For users who haven't reviewed anything in **7+ days** (`MAX(reviews.reviewed_at) < now - 7d`). One warm pick — preferring their last `forgot`-result word so we surface a real point of friction. Cooldown 30 days per user via `users.last_reengage_push_at` (auto-migrated column). Different message from daily push: this one names the days-since-last-review explicitly and acknowledges the gap ("Давно не бачились"). Lives in `scheduler/reengage.py`; analytics event `reengage_push_sent`.
 
 ### 3.6 Pro / monetization
 

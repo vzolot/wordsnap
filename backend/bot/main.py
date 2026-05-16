@@ -34,6 +34,7 @@ from core.auto_migrate import run_auto_migrations
 from scheduler.reminder import reminder_loop
 from scheduler.recurring_charges import recurring_charges_loop
 from scheduler.streak_save import streak_save_loop
+from scheduler.reengage import reengage_loop
 from scheduler.image_backfill import image_backfill_loop
 from scheduler.admin_report import admin_report_loop
 from webhook.server import app as webhook_app
@@ -471,12 +472,13 @@ async def main():
     logger.info(f"📡 Webhook server starting on port {port}")
     
     # Запускаємо паралельно: bot polling + reminder + recurring charges +
-    # streak-save + image-backfill + webhook
+    # streak-save + re-engage + image-backfill + admin-report + webhook
     await asyncio.gather(
         dp.start_polling(bot),
         reminder_loop(bot),
         recurring_charges_loop(bot),
         streak_save_loop(bot),
+        reengage_loop(bot),
         image_backfill_loop(bot),
         admin_report_loop(bot),
         server.serve(),

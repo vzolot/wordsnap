@@ -133,6 +133,11 @@ MIGRATIONS: list[tuple[str, str]] = [
     # схемі і trigger її викликає замість оригіналу.
     # Postgres не підтримує "ALTER FUNCTION IF EXISTS" — обгортаємо у DO-блок
     # з перевіркою у pg_proc.
+    # Anti-spam timestamp для re-engagement push (7+ днів без перевірки слів).
+    (
+        "users.last_reengage_push_at",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reengage_push_at TIMESTAMPTZ",
+    ),
     (
         "fn.update_updated_at_column.search_path",
         """

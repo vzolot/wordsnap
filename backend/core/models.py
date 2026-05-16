@@ -62,6 +62,8 @@ class User(Base):
     # Час останнього reminder-push (UTC). Scheduler шле повторні пуші коли
     # черга росте: до 3/день у вікні reminder_time...+12h з 5h cooldown.
     last_push_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Анти-спам для re-engagement push (один на 30 днів максимум на юзера).
+    last_reengage_push_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Referrals: унікальний код для запрошень + хто запросив + лічильник
     referral_code: Mapped[str | None] = mapped_column(String(16))
