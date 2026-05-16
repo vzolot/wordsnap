@@ -112,8 +112,13 @@ async def handle_word(message: Message):
 
     can_add, reason = await can_add_word(user, lang)
     if not can_add:
+        from datetime import datetime, timezone, timedelta
+        is_trial_now = bool(user.created_at and (datetime.now(timezone.utc) - user.created_at) < timedelta(days=7))
+        is_pro_now = user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > datetime.now(timezone.utc)
+        period = "day" if (is_pro_now or is_trial_now) else "week"
         analytics.capture(message.from_user.id, "paywall_hit", {
-            "reason": "daily_limit",
+            "reason": f"{period}_limit",
+            "period": period,
             "plan": user.plan or "free",
             "used_today": user.words_added_today or 0,
             "source": "bot_chat",

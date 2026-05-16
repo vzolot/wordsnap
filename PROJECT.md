@@ -102,12 +102,14 @@ All steps tracked in PostHog (`welcome_started`, `welcome_step_viewed{n}`, `welc
 
 ### 3.6 Pro / monetization
 
-| Plan | Price | Daily snap limit |
+| Plan | Price | Snap limit |
 |---|---|---|
 | **Trial** (first 7 days) | free | 10 / day |
-| **Free** (after trial) | $0 | 0 / day (read-only) |
+| **Free** (after trial) | $0 | **3 / rolling 7-day** (freemium tail) |
 | **Pro monthly** | $1.49 / mo | 100 / day |
 | **Pro annual** | $8.99 / yr | 100 / day |
+
+The free-tier weekly tail (introduced 2026-05-17) replaces the hard 0/day block — keeps the snap habit alive for users who didn't convert in the 7-day trial but might in week 2-4. Counted via `Word.created_at >= now - 7d` (no schema change). Reviews stay unlimited at every tier.
 
 Payment flow: WayForPay HPP via auto-submitted POST form (`/pay` HTML route). Recurring tokens stored after first success.
 

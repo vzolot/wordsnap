@@ -151,6 +151,7 @@ T: dict[str, dict[str, str]] = {
         "limit.trial": "Сьогоднішні 10 слів додано. Завтра — нові 10. /premium — щоб 100/день уже зараз.",
         "limit.free": "Сьогоднішні 10 слів додано (безкоштовний пакет). Завтра — нові. Pro — 100/день, /premium",
         "limit.expired": "⛔️ Trial закінчився.\n\n💎 <b>Pro</b> — 100 слів/день за $1.49/міс. /buy\n\n🎯 Назбирай XP — отримаєш знижку до 100% на Pro. Зараз у тебе: <b>{xp} XP</b>.",
+        "limit.free_weekly": "⛔️ Безкоштовний тижневий хвіст вичерпано: <b>{used}/{limit}</b> додавань за останні 7 днів.\n\nЧергове додавання стане доступним по мірі того як старі слова виходять з 7-денного вікна.\n\n💎 <b>Pro</b> - 100 слів/день за $1.49/міс. /buy\n\n🎯 Назбирайте XP - до 100% знижки на Pro. Зараз: <b>{xp} XP</b>.",
 
         # — review —
         "review.empty": "🌱 <b>Немає слів для повторення зараз!</b>\n\nДодай нові слова, або зачекай поки прийде час повторити вже додані.\n\n<i>Я нагадаю, коли буде час 🔔</i>",
@@ -347,6 +348,7 @@ T: dict[str, dict[str, str]] = {
         "limit.trial": "Today's 10 words are in. New 10 tomorrow. /premium — to unlock 100/day right now.",
         "limit.free": "Today's 10 words are in (free package). New 10 tomorrow. Pro = 100/day, /premium",
         "limit.expired": "⛔️ Trial is over.\n\n💎 <b>Pro</b> — 100 words/day at $1.49/mo. /buy\n\n🎯 Earn XP — get up to 100% off Pro. You have: <b>{xp} XP</b>.",
+        "limit.free_weekly": "⛔️ Your free weekly tail is used up: <b>{used}/{limit}</b> additions in the last 7 days.\n\nA new slot opens as older additions roll out of the 7-day window.\n\n💎 <b>Pro</b> - 100 words/day for $1.49/mo. /buy\n\n🎯 Earn XP - up to 100% off Pro. You have: <b>{xp} XP</b>.",
 
         "review.empty": "🌱 <b>No words to review right now!</b>\n\nAdd new words, or wait until it's time to review existing ones.\n\n<i>I'll remind you when the time comes 🔔</i>",
         "review.ready": "🎯 <b>{n} words ready to review</b>\n<i>Let's go!</i>",
@@ -540,6 +542,7 @@ T: dict[str, dict[str, str]] = {
         "limit.trial": "Las 10 palabras de hoy están listas. Mañana 10 nuevas. /premium para 100/día ahora.",
         "limit.free": "Las 10 palabras de hoy están listas (paquete gratuito). Mañana, nuevas. Pro = 100/día, /premium",
         "limit.expired": "⛔️ Trial terminado.\n\n💎 <b>Pro</b> — 100 palabras/día por $1.49/mes. /buy\n\n🎯 Gana XP — hasta 100% de descuento en Pro. Tienes: <b>{xp} XP</b>.",
+        "limit.free_weekly": "⛔️ Tu cuota semanal gratis está agotada: <b>{used}/{limit}</b> palabras en los últimos 7 días.\n\nUn nuevo espacio se abre cuando palabras anteriores salen de la ventana de 7 días.\n\n💎 <b>Pro</b> - 100 palabras/día por $1.49/mes. /buy\n\n🎯 Gana XP - hasta 100% de descuento en Pro. Tienes: <b>{xp} XP</b>.",
 
         "review.empty": "🌱 <b>¡No hay palabras para repasar ahora!</b>\n\nAñade más palabras o espera hasta que sea hora.\n\n<i>Te recordaré 🔔</i>",
         "review.ready": "🎯 <b>{n} palabras listas para repasar</b>\n<i>¡Vamos!</i>",
@@ -733,6 +736,7 @@ T: dict[str, dict[str, str]] = {
         "limit.trial": "Dzisiejsze 10 słów dodane. Jutro nowe 10. /premium — żeby mieć 100/dzień już teraz.",
         "limit.free": "Dzisiejsze 10 słów dodane (pakiet darmowy). Jutro nowe. Pro = 100/dzień, /premium",
         "limit.expired": "⛔️ Trial się skończył.\n\n💎 <b>Pro</b> — 100 słów/dzień za $1.49/mc. /buy\n\n🎯 Zbieraj XP — zniżka do 100% na Pro. Masz: <b>{xp} XP</b>.",
+        "limit.free_weekly": "⛔️ Twój darmowy tygodniowy limit wyczerpany: <b>{used}/{limit}</b> słów w ciągu ostatnich 7 dni.\n\nNowe miejsce otwiera się, gdy starsze słowa wychodzą z 7-dniowego okna.\n\n💎 <b>Pro</b> - 100 słów/dzień za $1.49/mc. /buy\n\n🎯 Zbieraj XP - do 100% zniżki na Pro. Masz: <b>{xp} XP</b>.",
 
         "review.empty": "🌱 <b>Brak słów do powtórki!</b>\n\nDodaj nowe słowa lub poczekaj na właściwy czas.\n\n<i>Przypomnę 🔔</i>",
         "review.ready": "🎯 <b>{n} słów gotowych do powtórki</b>\n<i>Jedziemy!</i>",
@@ -926,6 +930,7 @@ T: dict[str, dict[str, str]] = {
         "limit.trial": "Heute sind 10 Wörter drin. Morgen kommen 10 neue. /premium — für 100/Tag sofort.",
         "limit.free": "Heute sind 10 Wörter drin (Gratispaket). Morgen kommen neue. Pro = 100/Tag, /premium",
         "limit.expired": "⛔️ Trial ist vorbei.\n\n💎 <b>Pro</b> — 100 Wörter/Tag für $1.49/Mon. /buy\n\n🎯 Sammle XP — bis zu 100% Rabatt auf Pro. Du hast: <b>{xp} XP</b>.",
+        "limit.free_weekly": "⛔️ Dein kostenloses Wochenkontingent ist aufgebraucht: <b>{used}/{limit}</b> Wörter in den letzten 7 Tagen.\n\nEin neuer Slot öffnet sich, sobald ältere Wörter aus dem 7-Tage-Fenster fallen.\n\n💎 <b>Pro</b> - 100 Wörter/Tag für $1.49/Mon. /buy\n\n🎯 Sammle XP - bis zu 100% Rabatt auf Pro. Du hast: <b>{xp} XP</b>.",
 
         "review.empty": "🌱 <b>Keine Wörter zum Wiederholen!</b>\n\nFüge neue Wörter hinzu oder warte, bis es Zeit ist.\n\n<i>Ich erinnere dich 🔔</i>",
         "review.ready": "🎯 <b>{n} Wörter sind bereit zur Wiederholung</b>\n<i>Los geht's!</i>",

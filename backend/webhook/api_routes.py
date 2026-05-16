@@ -224,12 +224,26 @@ async def get_stats(telegram_id: int = Query(...)):
         now = datetime.now(timezone.utc)
         is_pro = user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now
         is_trial = (not is_pro) and user.created_at and (now - user.created_at) < timedelta(days=7)
+        is_free_post_trial = (not is_pro) and (not is_trial)
+
+        # Free-tier «хвіст»: 3 додавання на rolling 7 днів. Поля daily_limit /
+        # used_today перевикористовуються (frontend дивиться на
+        # is_free_post_trial щоб знати чи це тижневі цифри).
+        from core.user_service import (
+            _count_adds_last_7d as _user_count_adds_7d,
+            FREE_WEEKLY_LIMIT,
+        )
+
         if is_pro:
             daily_limit = 100
+            used_for_limit = user.words_added_today
         elif is_trial:
             daily_limit = 10
+            used_for_limit = user.words_added_today
         else:
-            daily_limit = 0  # post-trial — заблоковано, лише Pro
+            daily_limit = FREE_WEEKLY_LIMIT
+            async with SessionLocal() as s_week:
+                used_for_limit = await _user_count_adds_7d(s_week, user.id)
 
         xp = user.total_xp or 0
         tier = current_tier(xp)
@@ -264,9 +278,10 @@ async def get_stats(telegram_id: int = Query(...)):
             "timezone": user.timezone,
             "avatar_emoji": user.avatar_emoji,
             "show_on_leaderboard": user.show_on_leaderboard,
-            "used_today": user.words_added_today,
+            "used_today": used_for_limit,
             "daily_limit": daily_limit,
             "is_trial": is_trial,
+            "is_free_post_trial": is_free_post_trial,
         }
 
 
@@ -365,8 +380,13 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
 
     can, reason = await can_add_word(user, user.native_lang)
     if not can:
+        # plan="free" + не-trial → це новий weekly «хвіст» (3/7d), а не старий daily-блок.
+        is_trial_now = bool(user.created_at and (datetime.now(timezone.utc) - user.created_at) < timedelta(days=7))
+        is_pro_now = user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > datetime.now(timezone.utc)
+        period = "day" if (is_pro_now or is_trial_now) else "week"
         analytics.capture(telegram_id, "paywall_hit", {
-            "reason": "daily_limit",
+            "reason": f"{period}_limit",
+            "period": period,
             "plan": user.plan or "free",
             "used_today": user.words_added_today or 0,
             "source": "miniapp",

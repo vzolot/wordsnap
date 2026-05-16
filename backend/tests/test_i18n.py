@@ -46,6 +46,15 @@ class TestAllLangsCoverage:
         assert "{xp}" in T[lang]["limit.expired"]
 
     @pytest.mark.parametrize("lang", SUPPORTED_LANGS)
+    def test_limit_free_weekly(self, lang):
+        # Має містити placeholders {used}, {limit}, {xp} для нового
+        # free-tier weekly «хвоста» (3 додавання на 7 днів).
+        msg = T[lang]["limit.free_weekly"]
+        assert "{used}" in msg
+        assert "{limit}" in msg
+        assert "{xp}" in msg
+
+    @pytest.mark.parametrize("lang", SUPPORTED_LANGS)
     def test_tier_up_title(self, lang):
         assert "tierup.title" in T[lang]
 

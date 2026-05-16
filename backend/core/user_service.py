@@ -3,13 +3,31 @@
 """
 import logging
 from datetime import date, datetime, timezone, timedelta
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from . import analytics
-from .models import User
+from .models import User, Word
 from .db import SessionLocal
 
 logger = logging.getLogger(__name__)
+
+# Free post-trial: rolling-week «хвіст», щоб юзер не відвалився після trial
+# на нулі. 3 додавання за останні 7 днів — мінімум щоб залишити денну
+# звичку живою, але мало для повного активного користування без Pro.
+FREE_WEEKLY_LIMIT = 3
+FREE_WEEKLY_WINDOW_DAYS = 7
+
+
+async def _count_adds_last_7d(session, user_id: int) -> int:
+    """Скільки слів юзер додав у rolling 7-day window до зараз."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=FREE_WEEKLY_WINDOW_DAYS)
+    n = (await session.execute(
+        select(func.count(Word.id)).where(
+            Word.user_id == user_id,
+            Word.created_at >= cutoff,
+        )
+    )).scalar()
+    return int(n or 0)
 
 
 async def get_or_create_user(
@@ -72,7 +90,8 @@ async def can_add_word(user: User, lang: str | None = None) -> tuple[bool, str]:
     Логіка лімітів:
     - PRO активна: 100 слів/день
     - TRIAL (перші 7 днів): 10 слів/день
-    - Після trial: блокування, потрібен Pro (XP дає знижки на Pro у tier-системі).
+    - Після trial: 3 слова на rolling 7-day window («хвіст», не повний блок).
+      Коли вичерпано — потрібен Pro (XP дає знижки на Pro у tier-системі).
     """
     from .bot_i18n import t as bt
     msg_lang = lang or user.native_lang or "uk"
@@ -94,8 +113,18 @@ async def can_add_word(user: User, lang: str | None = None) -> tuple[bool, str]:
             return False, bt("limit.trial", msg_lang)
         return True, ""
 
-    # Trial скінчився — тільки Pro
-    return False, bt("limit.expired", msg_lang, xp=user.total_xp or 0)
+    # Trial скінчився → free-tier rolling-week «хвіст»
+    async with SessionLocal() as session:
+        used_week = await _count_adds_last_7d(session, user.id)
+    if used_week < FREE_WEEKLY_LIMIT:
+        return True, ""
+    return False, bt(
+        "limit.free_weekly",
+        msg_lang,
+        used=used_week,
+        limit=FREE_WEEKLY_LIMIT,
+        xp=user.total_xp or 0,
+    )
 
 
 async def get_user_status(user: User, lang: str | None = None) -> dict:
@@ -113,14 +142,23 @@ async def get_user_status(user: User, lang: str | None = None) -> dict:
             is_trial = True
             trial_days_left = (trial_end - now).days + 1
 
+    is_free_post_trial = (user.plan != "pro") and (not is_trial)
+
     if user.plan == "pro":
         daily_limit = 100
+        used = user.words_added_today
         plan_label = bt("stats.plan.pro", msg_lang)
     elif is_trial:
         daily_limit = 10
+        used = user.words_added_today
         plan_label = bt("stats.plan.trial", msg_lang, days=trial_days_left)
     else:
-        daily_limit = 0  # post-trial: блок, тільки Pro
+        # Free post-trial: limit і used виражені у тижневих одиницях, але
+        # повертаємо їх у тих самих полях `daily_limit`/`used_today` (frontend
+        # бачить is_free_post_trial=True і знає що це тижневі цифри).
+        daily_limit = FREE_WEEKLY_LIMIT
+        async with SessionLocal() as session:
+            used = await _count_adds_last_7d(session, user.id)
         plan_label = bt("stats.plan.free", msg_lang)
 
     return {
@@ -128,8 +166,9 @@ async def get_user_status(user: User, lang: str | None = None) -> dict:
         "plan_label": plan_label,
         "is_trial": is_trial,
         "trial_days_left": trial_days_left,
+        "is_free_post_trial": is_free_post_trial,
         "daily_limit": daily_limit,
-        "used_today": user.words_added_today,
+        "used_today": used,
     }
 
 
