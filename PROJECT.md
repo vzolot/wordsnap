@@ -92,7 +92,7 @@ All steps tracked in PostHog (`welcome_started`, `welcome_step_viewed{n}`, `welc
 - SM-2 algorithm (`backend/core/srs.py`)
 - `LEARNING_THRESHOLD = 21` days → `mastered`
 - Quality 1/3/5 maps to forgot/struggled/knew → 2/6/10 XP
-- Daily push picks the most-overdue learning word
+- Daily push usually picks the most-overdue `learning` word, but with **~8% chance** swaps it for a random `mastered` word as a long-distance check-up (`MASTERED_RESAMPLE_PROBABILITY` in `scheduler/reminder.py`). If the user taps "forgot" on a mastered word, SM-2 auto-demotes it back to `learning` with `interval=1` — mastered is no longer a terminal state.
 
 ### 3.5 Word of the Day push
 - Scheduler runs every 60s

@@ -14,6 +14,7 @@ Word-of-the-Day push (раз на локальний день у `user.reminder_
 """
 import asyncio
 import logging
+import random
 from datetime import datetime, timezone, timedelta
 from html import escape
 
@@ -52,11 +53,49 @@ def _user_tz(user: User) -> ZoneInfo:
         return ZoneInfo("Europe/Kiev")
 
 
-async def _pick_daily_word(user_id: int) -> Word | None:
-    """Найкраще слово для денного пушу: найбільш-overdue серед learning."""
+ACTIVE_WINDOW_HOURS = 12  # Тривалість активного push-вікна після reminder_time
+PUSH_COOLDOWN_HOURS = 5   # Мінімальний інтервал між пушами одному юзеру
+CATCHUP_THRESHOLD = 3     # Скільки due-слів треба для повторного (не першого) пушу
+
+# Шанс підмінити денне push-слово на випадкове mastered (SRS-перевірка
+# «не забув на довгій дистанції»). Без цього mastered-слова лежать мертвим
+# вантажем; з ~8% юзер раз на ~2 тижні дістає старе слово на check-up.
+# Якщо «forgot» — SM-2 повертає його у learning з reset interval, природньо.
+MASTERED_RESAMPLE_PROBABILITY = 0.08
+
+
+async def _pick_mastered_for_resample(user_id: int) -> Word | None:
+    """Випадкове mastered-слово, не нагадане за останні 20 годин."""
+    async with SessionLocal() as session:
+        cooldown = datetime.now(timezone.utc) - timedelta(hours=20)
+        result = await session.execute(
+            select(Word)
+            .where(
+                Word.user_id == user_id,
+                Word.status == "mastered",
+                (Word.last_reminder_at.is_(None)) | (Word.last_reminder_at < cooldown),
+            )
+            .order_by(func.random())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+
+async def _pick_daily_word(user_id: int) -> tuple[Word | None, bool]:
+    """Обирає слово для денного push'у.
+
+    Returns (word, is_mastered_resample). З ймовірністю
+    MASTERED_RESAMPLE_PROBABILITY дістаємо random mastered-слово замість
+    most-overdue learning. Якщо mastered-слов немає або всі recent — fallback
+    на стандартну learning-логіку. `is_mastered_resample` шле analytics.
+    """
+    if random.random() < MASTERED_RESAMPLE_PROBABILITY:
+        mastered = await _pick_mastered_for_resample(user_id)
+        if mastered:
+            return mastered, True
+
     async with SessionLocal() as session:
         now = datetime.now(timezone.utc)
-        # Fallback: якщо overdue нема — будь-яке learning, не нагадане сьогодні
         cooldown = now - timedelta(hours=20)
         result = await session.execute(
             select(Word)
@@ -69,12 +108,7 @@ async def _pick_daily_word(user_id: int) -> Word | None:
             .order_by(Word.next_review.asc())
             .limit(1)
         )
-        return result.scalar_one_or_none()
-
-
-ACTIVE_WINDOW_HOURS = 12  # Тривалість активного push-вікна після reminder_time
-PUSH_COOLDOWN_HOURS = 5   # Мінімальний інтервал між пушами одному юзеру
-CATCHUP_THRESHOLD = 3     # Скільки due-слів треба для повторного (не першого) пушу
+        return result.scalar_one_or_none(), False
 
 
 async def send_daily_push_for_user(bot: Bot, user: User, *, force: bool = False) -> str:
@@ -116,7 +150,7 @@ async def send_daily_push_for_user(bot: Bot, user: User, *, force: bool = False)
             if since < timedelta(hours=PUSH_COOLDOWN_HOURS):
                 return "cooldown"
 
-    word = await _pick_daily_word(user.id)
+    word, is_mastered_resample = await _pick_daily_word(user.id)
     if not word:
         return "no_due_word"
 
@@ -159,9 +193,11 @@ async def send_daily_push_for_user(bot: Bot, user: User, *, force: bool = False)
         "hour_local": local_now.hour,
         "timezone": user.timezone or "Europe/Kiev",
         "word_id": word.id,
+        "word_status": word.status,
         "due_total": due_total,
         "forced": force,
         "is_first_push_today": is_first_push_today,
+        "is_mastered_resample": is_mastered_resample,
     })
     await mark_word_reminded(word.id)
     if not force:
