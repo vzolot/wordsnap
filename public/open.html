@@ -92,22 +92,21 @@
 <body>
   <div class="wrap">
     <div class="logo">W</div>
-    <h1>Відкриваємо WordSnap…</h1>
-    <p class="sub" id="sub"><span class="pulse"></span>Кілька секунд - і Telegram запуститься сам</p>
-    <!-- Manual fallback. Прихований ДО того, як обидва auto-attempts
-         провалились — без цього на iOS Safari (regular, не Meta IAB)
-         юзер бачить дратівливий dialog «open Telegram?» і відразу під ним
-         ту саму кнопку, яка робить те ж саме. Кнопка з'являється тільки
-         якщо за ~3 сек сторінка не приховалась (= Telegram не відкрився). -->
-    <div id="cta-wrap" style="display: none;">
-      <a id="cta" class="btn" href="#" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M9.04 16.6l-.36 5.05c.51 0 .73-.22.99-.48l2.38-2.27 4.93 3.6c.9.5 1.55.24 1.79-.83l3.25-15.2v-.01c.28-1.34-.48-1.86-1.36-1.54L1.13 9.7C-.18 10.2-.15 10.93.9 11.25l4.85 1.51 11.27-7.1c.53-.34 1.02-.16.62.21" />
-        </svg>
-        Open in Telegram
-      </a>
-      <p class="hint">Не маєш Telegram? <a href="https://telegram.org/" style="color:#A78BFA;">Завантаж тут</a> - займе хвилину.</p>
-    </div>
+    <h1>WordSnap</h1>
+    <p class="sub">Слова з життя за кордоном. Snap - SRS поверне у пам'ять.</p>
+    <!-- Real <a href> (НЕ button + JS). Tap по справжньому посиланню на iOS
+         Safari iOS обробляє як user gesture - тоді Universal Link
+         `t.me/<bot>/app` тихо відкриває нативний Telegram БЕЗ системного
+         dialog'у. Через `window.location.href = ...` (auto-redirect) той
+         самий лінк НЕ дає silent launch - iOS просто навігує на t.me-web
+         сторінку, яка вже сама показує dialog. Тому: один тап, один лінк. -->
+    <a id="cta" class="btn" href="#" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M9.04 16.6l-.36 5.05c.51 0 .73-.22.99-.48l2.38-2.27 4.93 3.6c.9.5 1.55.24 1.79-.83l3.25-15.2v-.01c.28-1.34-.48-1.86-1.36-1.54L1.13 9.7C-.18 10.2-.15 10.93.9 11.25l4.85 1.51 11.27-7.1c.53-.34 1.02-.16.62.21" />
+      </svg>
+      Відкрити у Telegram
+    </a>
+    <p class="hint">Не маєте Telegram? <a href="https://telegram.org/" style="color:#A78BFA;">Завантажте</a> - займе хвилину.</p>
   </div>
 
   <!-- PostHog snippet (EU host). Async load — never blocks the page. -->
@@ -216,19 +215,12 @@
         } catch (e) {}
       }
 
-      // 6. Fire landing_visited ASAP — точка №1 у воронці. Beacon = переживає
-      //    закриття вкладки за <100мс, що було сліпою плямою старої реалізації.
+      // 6. Fire landing_visited ASAP — точка №1 у воронці. Beacon переживає
+      //    закриття вкладки за <100мс.
       beaconCapture('landing_visited');
 
-      // 7. CTA wire
-      const cta = document.getElementById('cta');
-      cta.href = httpsUrl;
-      cta.addEventListener('click', () => {
-        beaconCapture('tg_open_clicked', { method: 'manual_tap' });
-      });
-
-      // 8. visibilitychange → hidden після нашого редиректу = сильний сигнал
-      //    що Telegram відкрився. Beacon, бо сторінка може заморозитись.
+      // 7. visibilitychange → hidden = сильний сигнал що Telegram дійсно
+      //    відкрився (page активність втрачена).
       let fired = false;
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden' && !fired) {
@@ -237,43 +229,40 @@
         }
       });
 
-      // 9. Auto-redirect:
-      //    - 250мс: https://t.me/<bot>/app — це Universal Link. На iOS Safari
-      //      / Android Chrome він силенціозно (БЕЗ системного діалогу
-      //      «Дозволити open Telegram?») відкриває нативний Telegram-додаток,
-      //      бо домен `t.me` зареєстрований як universal link Telegram'у.
-      //    - 1800мс: tg://resolve — fallback ДЛЯ Meta IAB / IG webview, де
-      //      universal link зазвичай блокується. Тут діалог потрібен бо це
-      //      custom-scheme — і це OK, бо ми вже точно знаємо що universal
-      //      link не спрацював.
-      //    - 3000мс: показуємо manual button. До цього моменту кнопки немає —
-      //      бо було б нонсенс мати кнопку «open Telegram» поруч з system
-      //      dialog'ом «open Telegram». Якщо за 3 сек page не приховалась
-      //      (visibilitychange ніколи не вистрелив) — обидва auto-attempts
-      //      реально не вдалися, і manual fallback стає корисним.
-      //    Beacon перед навігацією — інакше event губиться разом зі сторінкою.
-      setTimeout(() => {
-        beaconCapture('tg_auto_redirect_attempted', { stage: 'universal_link' });
-        try { window.location.href = httpsUrl; } catch (e) {}
-      }, 250);
+      // 8. CTA href = universal link. У ВСІХ контекстах тап по справжньому
+      //    <a href> дає кращий результат: на iOS Safari/Chrome user gesture
+      //    → silent universal-link launch; на macOS Safari → відкриється
+      //    desktop-TG (з неминучим dialog'ом — це OS-rule, не наш баг).
+      const cta = document.getElementById('cta');
+      cta.href = httpsUrl;
+      cta.addEventListener('click', () => {
+        beaconCapture('tg_open_clicked', { method: 'manual_tap' });
+        // У Meta/FB in-app browser universal link БЛОКУЄТЬСЯ. Якщо за 1500мс
+        // page ще видима → IAB не спрацював, тригер tg:// як fallback.
+        // У звичайному Safari ця гілка не виконається — нав'юкався вже.
+        if (isIgInApp || isFbInApp) {
+          setTimeout(() => {
+            if (document.visibilityState === 'visible') {
+              beaconCapture('tg_open_clicked', { method: 'tg_scheme_iab' });
+              try { window.location.href = tgUrl; } catch (e) {}
+            }
+          }, 1500);
+        }
+      });
 
-      setTimeout(() => {
-        if (fired) return;
-        beaconCapture('tg_auto_redirect_attempted', { stage: 'tg_scheme' });
-        try { window.location.href = tgUrl; } catch (e) {}
-      }, 1800);
-
-      setTimeout(() => {
-        if (fired) return;
-        // Auto обидва провалились - показуємо manual fallback.
-        try {
-          const wrap = document.getElementById('cta-wrap');
-          if (wrap) wrap.style.display = 'block';
-          const sub = document.getElementById('sub');
-          if (sub) sub.innerHTML = 'Telegram не відкрився сам - тапніть кнопку нижче.';
-        } catch (e) {}
-        beaconCapture('tg_auto_redirect_attempted', { stage: 'fallback_revealed' });
-      }, 3000);
+      // 9. Meta/FB IAB auto-redirect: тут юзер прийшов з реклами в
+      //    Instagram/FB — universal link тут ні в якому разі не спрацює
+      //    silently, тапа очікувати марно. Стартуємо tg://-redirect
+      //    автоматично через 800мс (dialog тут єдиний шлях у TG-app, не
+      //    наш вибір). У звичайному Safari/Chrome цей блок НЕ виконується —
+      //    юзер тапне сам по реальному <a href>.
+      if (isIgInApp || isFbInApp) {
+        setTimeout(() => {
+          if (fired) return;
+          beaconCapture('tg_auto_redirect_attempted', { stage: 'iab_tg_scheme' });
+          try { window.location.href = tgUrl; } catch (e) {}
+        }, 800);
+      }
     })();
   </script>
 </body>
