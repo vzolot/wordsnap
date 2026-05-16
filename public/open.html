@@ -117,6 +117,9 @@
 
   <script>
     (function () {
+      const PH_KEY = 'phc_nUWid6hPkYMGNSKQh2t3N4jHxM2ZAEvq3ctHZneY7pLE';
+      const PH_HOST = 'https://eu.posthog.com';
+
       // 1. Parse cohort tag
       const params = new URLSearchParams(window.location.search);
       const ref = (params.get('ref') || params.get('startapp') || '').trim();
@@ -136,68 +139,110 @@
         ? `tg://resolve?domain=${BOT}&appname=${APP}&startapp=${encodeURIComponent(ref)}`
         : `tg://resolve?domain=${BOT}&appname=${APP}`;
 
-      // 3. Common analytics tags — додаємо до всіх подій, щоб у PostHog можна було
-      //    зробити повну funnel-сегментацію по кампанії і платформі.
-      const commonProps = {
+      // 3. Stable anon distinct_id across all beacon events on this page.
+      //    Reuse posthog-js's localStorage so subsequent capture() calls (if the
+      //    lib finishes loading) and our beacons stitch into the same person.
+      function uuid() {
+        try { if (crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+          (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        );
+      }
+      const PH_LS_KEY = `ph_${PH_KEY}_posthog`;
+      let distinctId = null;
+      try {
+        const raw = localStorage.getItem(PH_LS_KEY);
+        if (raw) distinctId = (JSON.parse(raw) || {}).distinct_id || null;
+      } catch (e) {}
+      if (!distinctId) {
+        distinctId = uuid();
+        try { localStorage.setItem(PH_LS_KEY, JSON.stringify({ distinct_id: distinctId })); } catch (e) {}
+      }
+
+      // 4. Super-props that piggyback onto every beacon (and posthog.register
+      //    for any later same-session events that DO go through posthog-js).
+      const ref_idx = ref ? ref.indexOf('_') : -1;
+      const acquisition_source   = ref ? (ref_idx === -1 ? ref : ref.slice(0, ref_idx)) : null;
+      const acquisition_campaign = ref && ref_idx !== -1 ? ref.slice(ref_idx + 1) : null;
+      const superProps = {
         ref: ref || null,
         ig_in_app: isIgInApp,
         fb_in_app: isFbInApp,
         ios: isIOS,
         android: isAndroid,
+        acquisition_source,
+        acquisition_campaign,
+        acquisition_raw: ref || null,
       };
-      try { posthog.register(commonProps); } catch (e) {}
+      try { posthog.register(superProps); } catch (e) {}
+      try { posthog.identify(distinctId); } catch (e) {}
 
-      // Якщо є ref — паримо source/campaign так само як це робить мініапа,
-      // щоб когорта igads/val_2605_v2 збігалася між landing і app_opened.
-      if (ref) {
-        const idx = ref.indexOf('_');
-        const acquisition_source   = idx === -1 ? ref : ref.slice(0, idx);
-        const acquisition_campaign = idx === -1 ? null : ref.slice(idx + 1);
+      // 5. beaconCapture — fire-and-forget POST that survives page unload.
+      //    Primary path so a fast-bouncer who closes the tab in <250ms still
+      //    leaves us a `landing_visited`. We deliberately do NOT also call
+      //    posthog.capture() for the same event to avoid double-counting.
+      function beaconCapture(event, extraProps) {
+        const props = Object.assign({}, superProps, extraProps || {});
+        const payload = {
+          api_key: PH_KEY,
+          event,
+          distinct_id: distinctId,
+          properties: props,
+          timestamp: new Date().toISOString(),
+        };
+        const body = JSON.stringify(payload);
         try {
-          posthog.register({
-            acquisition_source,
-            acquisition_campaign,
-            acquisition_raw: ref,
+          if (navigator.sendBeacon) {
+            const blob = new Blob([body], { type: 'application/json' });
+            if (navigator.sendBeacon(`${PH_HOST}/e/`, blob)) return;
+          }
+        } catch (e) {}
+        // Fallback: keepalive fetch (also survives unload on modern browsers)
+        try {
+          fetch(`${PH_HOST}/e/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+            keepalive: true,
+            mode: 'no-cors',
           });
         } catch (e) {}
       }
 
-      // 4. Fire landing_visited ASAP — це наша точка №1 у воронці
-      try { posthog.capture('landing_visited'); } catch (e) {}
+      // 6. Fire landing_visited ASAP — точка №1 у воронці. Beacon = переживає
+      //    закриття вкладки за <100мс, що було сліпою плямою старої реалізації.
+      beaconCapture('landing_visited');
 
-      // 5. Wire the CTA — manual tap = найнадійніше відкрити Telegram
+      // 7. CTA wire
       const cta = document.getElementById('cta');
       cta.href = httpsUrl;
       cta.addEventListener('click', () => {
-        try { posthog.capture('tg_open_clicked', { method: 'manual_tap' }); } catch (e) {}
+        beaconCapture('tg_open_clicked', { method: 'manual_tap' });
       });
 
-      // 6. visibilitychange → hidden після нашого редиректу = сильний сигнал
-      //    що Telegram відкрився (сторінка втратила focus → app switch).
-      //    Шлемо одну подію не частіше ніж раз на сторінку.
+      // 8. visibilitychange → hidden після нашого редиректу = сильний сигнал
+      //    що Telegram відкрився. Beacon, бо сторінка може заморозитись.
       let fired = false;
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden' && !fired) {
           fired = true;
-          try { posthog.capture('tg_app_likely_opened'); } catch (e) {}
+          beaconCapture('tg_app_likely_opened');
         }
       });
 
-      // 7. Auto-redirect — тепер агресивніше:
-      //    - 250мс: спроба tg:// (миттєвий launch на Safari/Chrome iOS,
-      //      Chrome Android). В IG webview може не спрацювати — це норма.
-      //    - 1500мс: повний https://t.me/ редірект для ВСІХ, включно з IG/FB
-      //      webview. Універсальні Links Telegram має перехопити і відкрити
-      //      нативний додаток. Якщо ні — юзер бачить t.me web page з кнопкою
-      //      "Open in Telegram" (стандартний fallback Telegram).
+      // 9. Auto-redirect:
+      //    - 250мс: tg:// (миттєвий launch на Safari/Chrome iOS, Chrome Android).
+      //    - 1500мс: https://t.me/ fallback для IG/FB webview. Universal Links
+      //      Telegram має перехопити; інакше юзер бачить t.me з кнопкою.
+      //    Beacon перед навігацією — інакше evnet губиться разом зі сторінкою.
       setTimeout(() => {
-        try { posthog.capture('tg_auto_redirect_attempted', { stage: 'tg_scheme' }); } catch (e) {}
+        beaconCapture('tg_auto_redirect_attempted', { stage: 'tg_scheme' });
         try { window.location.href = tgUrl; } catch (e) {}
       }, 250);
 
       setTimeout(() => {
-        if (fired) return; // вже відкрили Telegram — не перебиваємо
-        try { posthog.capture('tg_auto_redirect_attempted', { stage: 'https_fallback' }); } catch (e) {}
+        if (fired) return;
+        beaconCapture('tg_auto_redirect_attempted', { stage: 'https_fallback' });
         try { window.location.href = httpsUrl; } catch (e) {}
       }, 1500);
     })();
