@@ -325,21 +325,74 @@ async def extract_words_from_image(
     return out
 
 
+# Відомі Whisper-галюцинації для коротких/тихих аудіо — модель вкидає
+# music/intro/outro маркери замість «це тиша». Якщо transcript збігається з
+# одним з них, вважаємо аудіо нерозшифрованим.
+_WHISPER_HALLUCINATIONS = (
+    "music outro",
+    "music intro",
+    "outro music",
+    "intro music",
+    "[music]",
+    "♪",
+    "🎵",
+    "🎶",
+    "thanks for watching",
+    "thank you for watching",
+    "subscribe",
+    "like and subscribe",
+    "see you next time",
+    "[applause]",
+    "[laughter]",
+)
+
+
+def _looks_like_whisper_hallucination(text: str) -> bool:
+    t = (text or "").strip().lower()
+    if not t:
+        return True
+    if len(t) < 4:
+        return True
+    # Точне виключення — короткий текст, що цілком вкладається в один маркер
+    if len(t) < 40:
+        for m in _WHISPER_HALLUCINATIONS:
+            if m in t:
+                return True
+    return False
+
+
 async def transcribe_voice(
     audio_bytes: bytes, filename: str = "voice.ogg"
 ) -> tuple[str, str | None]:
-    """Whisper-транскрипт. Auto-detect мови. Повертає (text, lang_iso639_1)."""
+    """Whisper-транскрипт. Auto-detect мови. Повертає (text, lang_iso639_1).
+
+    Якщо Whisper повернув одну з відомих галюцинацій (Music Outro / Thanks
+    for watching і подібне — поведінка коли аудіо коротке/тихе), повертаємо
+    порожній text, щоб handler показав friendly «спробуйте ще раз».
+
+    Передаємо `prompt` — bias-нагадування що це людська мова з реальними
+    словами, не музика чи фоновий шум. Помітно скорочує hallucinate-rate
+    на коротких записах.
+    """
     try:
         resp = await _get_openai_client().audio.transcriptions.create(
             model="whisper-1",
             file=(filename, audio_bytes),
             response_format="verbose_json",
+            prompt=(
+                "Real human speech: vocabulary words, phrases, or sentences "
+                "in a foreign language being learned by the speaker. "
+                "Not music, not silence, not background noise."
+            ),
         )
     except Exception as e:
         logger.warning("whisper transcribe failed: %s", e)
         return "", None
     text = (getattr(resp, "text", "") or "").strip()
     detected = getattr(resp, "language", None)
+    if _looks_like_whisper_hallucination(text):
+        logger.info("whisper output flagged as hallucination: %r", text[:80])
+        return "", detected
     return text, detected
 
 

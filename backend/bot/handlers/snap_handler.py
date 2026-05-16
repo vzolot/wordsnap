@@ -35,10 +35,14 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-async def _resolve_user(message: Message):
-    """Зручний helper: дістає User + лангу для відповіді або None якщо setup
-    не завершений."""
-    tg_user = message.from_user
+async def _resolve_user_from(tg_user):
+    """Build/fetch wordsnap User з aiogram tg-user об'єкта.
+
+    Важливо: у callback_query треба передавати `callback.from_user`, а НЕ
+    `callback.message.from_user` — друге це сам бот (бо повідомлення
+    прислав він), і ми б шукали юзера з telegram_id бота, що завжди дає
+    target_lang=None і silently ретернить. Звідси «кнопка не реагує».
+    """
     if tg_user is None:
         return None, None
     user = await get_or_create_user(
@@ -54,7 +58,7 @@ async def _resolve_user(message: Message):
 @router.message(F.photo)
 async def handle_photo(message: Message) -> None:
     """Фото → vision-екстракт → клавіатура з кандидатами."""
-    user, lang = await _resolve_user(message)
+    user, lang = await _resolve_user_from(message.from_user)
     if user is None:
         return
 
@@ -110,7 +114,7 @@ async def handle_photo(message: Message) -> None:
 @router.message(F.voice)
 async def handle_voice(message: Message) -> None:
     """Голосова → Whisper → екстракт → клавіатура з кандидатами."""
-    user, lang = await _resolve_user(message)
+    user, lang = await _resolve_user_from(message.from_user)
     if user is None:
         return
 
@@ -159,7 +163,8 @@ async def handle_voice(message: Message) -> None:
     head = bt("snap.voice_transcript", lang, preview=preview)
 
     if not words:
-        await message.answer(head + "\n\n" + bt("snap.empty", lang))
+        # voice_no_words — окремий ключ, бо `snap.empty` згадує «фото».
+        await message.answer(head + "\n\n" + bt("snap.voice_no_words", lang))
         return
 
     await message.answer(
@@ -184,9 +189,14 @@ async def cb_snap_add(callback: CallbackQuery) -> None:
         await callback.answer()
         return
 
-    user, lang = await _resolve_user(callback.message)
-    if user is None or not user.target_lang:
+    # `callback.from_user` — це людина, що натиснула. `callback.message.from_user`
+    # був би сам бот — старий баг через який кнопка тихо нічого не робила.
+    user, lang = await _resolve_user_from(callback.from_user)
+    if user is None:
         await callback.answer()
+        return
+    if not user.target_lang:
+        await callback.answer(bt("word.setup_first", lang), show_alert=True)
         return
 
     can_add, reason = await can_add_word(user, lang)

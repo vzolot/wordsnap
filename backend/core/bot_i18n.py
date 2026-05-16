@@ -144,6 +144,7 @@ T: dict[str, dict[str, str]] = {
         # — snap from photo / voice —
         "snap.found_n": "📸 Знайшов <b>{n}</b> слів у вашому скріні. Тапніть щоб додати:",
         "snap.empty": "Не побачив у скріні слів, які варто додати. Спробуйте інше фото - бажано з чіткішим текстом чужою мовою.",
+        "snap.voice_no_words": "У вашій голосовій не було слів цільовою мовою, які варто додати. Спробуйте записати фразу або речення мовою, яку ви вчите.",
         "snap.voice_transcript": "🎙 Розшифровка: <i>{preview}</i>",
         "snap.transcribe_failed": "Не зміг розшифрувати голосову. Спробуйте ще раз або діктуйте чіткіше.",
         "snap.download_failed": "Не зміг завантажити файл з Telegram. Спробуйте ще раз.",
@@ -359,6 +360,7 @@ T: dict[str, dict[str, str]] = {
         # — snap from photo / voice —
         "snap.found_n": "📸 Found <b>{n}</b> words in your screenshot. Tap to add:",
         "snap.empty": "Didn't spot anything worth adding from this screenshot. Try a different image - ideally with clear text in your target language.",
+        "snap.voice_no_words": "No target-language words worth adding in your voice message. Try recording a phrase or sentence in the language you're learning.",
         "snap.voice_transcript": "🎙 Transcript: <i>{preview}</i>",
         "snap.transcribe_failed": "Couldn't transcribe the voice message. Try again, or speak more clearly.",
         "snap.download_failed": "Couldn't fetch the file from Telegram. Try again.",
@@ -569,6 +571,7 @@ T: dict[str, dict[str, str]] = {
         # — snap from photo / voice —
         "snap.found_n": "📸 Encontré <b>{n}</b> palabras en tu captura. Toca para agregar:",
         "snap.empty": "No vi nada que valga la pena agregar de esta captura. Prueba con otra imagen - idealmente con texto claro en tu idioma objetivo.",
+        "snap.voice_no_words": "No hay palabras en el idioma objetivo que valga la pena agregar en tu audio. Prueba grabar una frase u oración en el idioma que estás aprendiendo.",
         "snap.voice_transcript": "🎙 Transcripción: <i>{preview}</i>",
         "snap.transcribe_failed": "No pude transcribir el audio. Intenta de nuevo o habla más claro.",
         "snap.download_failed": "No pude descargar el archivo de Telegram. Intenta de nuevo.",
@@ -779,6 +782,7 @@ T: dict[str, dict[str, str]] = {
         # — snap from photo / voice —
         "snap.found_n": "📸 Znalazłem <b>{n}</b> słów na twoim zrzucie. Stuknij, żeby dodać:",
         "snap.empty": "Nic wartego dodania na tym zrzucie. Spróbuj inne zdjęcie - najlepiej z wyraźnym tekstem w twoim języku docelowym.",
+        "snap.voice_no_words": "W twojej wiadomości głosowej nie było słów w języku docelowym wartych dodania. Spróbuj nagrać frazę lub zdanie w języku, którego się uczysz.",
         "snap.voice_transcript": "🎙 Transkrypcja: <i>{preview}</i>",
         "snap.transcribe_failed": "Nie udało się przepisać wiadomości głosowej. Spróbuj jeszcze raz lub mów wyraźniej.",
         "snap.download_failed": "Nie pobrałem pliku z Telegramu. Spróbuj jeszcze raz.",
@@ -989,6 +993,7 @@ T: dict[str, dict[str, str]] = {
         # — snap from photo / voice —
         "snap.found_n": "📸 <b>{n}</b> Wörter auf deinem Screenshot gefunden. Tippe zum Hinzufügen:",
         "snap.empty": "Auf diesem Screenshot war nichts Brauchbares. Versuche ein anderes Bild - idealerweise mit klarem Text in deiner Zielsprache.",
+        "snap.voice_no_words": "In deiner Sprachnachricht waren keine Wörter in der Zielsprache, die es zu speichern lohnt. Nimm einen Satz oder eine Phrase in der Sprache auf, die du lernst.",
         "snap.voice_transcript": "🎙 Transkript: <i>{preview}</i>",
         "snap.transcribe_failed": "Konnte die Sprachnachricht nicht transkribieren. Versuche es nochmal oder sprich deutlicher.",
         "snap.download_failed": "Konnte die Datei nicht von Telegram laden. Versuche es nochmal.",
@@ -1199,6 +1204,7 @@ T: dict[str, dict[str, str]] = {
         # — snap from photo / voice —
         "snap.found_n": "📸 J'ai trouvé <b>{n}</b> mots sur votre capture. Tapez pour ajouter :",
         "snap.empty": "Rien d'intéressant à ajouter sur cette capture. Essayez une autre image - idéalement avec un texte clair dans votre langue cible.",
+        "snap.voice_no_words": "Aucun mot dans votre langue cible à ajouter dans ce message vocal. Essayez d'enregistrer une phrase ou un mot dans la langue que vous apprenez.",
         "snap.voice_transcript": "🎙 Transcription : <i>{preview}</i>",
         "snap.transcribe_failed": "Je n'ai pas pu transcrire le message vocal. Réessayez ou parlez plus clairement.",
         "snap.download_failed": "Je n'ai pas pu télécharger le fichier depuis Telegram. Réessayez.",
