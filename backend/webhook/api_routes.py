@@ -605,7 +605,13 @@ async def update_user_settings(data: SettingsRequest, telegram_id: int = Query(.
 
 @router.get("/api/referral")
 async def get_referral(telegram_id: int = Query(...)):
-    """Повертає реферальний код юзера, посилання та лічильник."""
+    """Повертає реферальний код юзера, посилання та лічильник.
+
+    Лінк формату `t.me/<bot>/app?startapp=ref_<code>` — direct mini-app entry
+    (1 тап, без проміжного чату). Mini-app сам ловить `start_param` і
+    викликає POST /api/apply_referral. Старий формат `?start=ref_<code>`
+    також працює: bot/main.py досі обробляє його при /start payload.
+    """
     from core.constants import bot_username
     from core.referral import REFERRAL_BONUS_DAYS, ensure_code
 
@@ -616,9 +622,67 @@ async def get_referral(telegram_id: int = Query(...)):
     code = await ensure_code(user)
     return {
         "code": code,
-        "link": f"https://t.me/{bot_username()}?start=ref_{code}",
+        "link": f"https://t.me/{bot_username()}/app?startapp=ref_{code}",
         "referrals_count": user.referrals_count or 0,
         "bonus_days": REFERRAL_BONUS_DAYS,
+    }
+
+
+class ApplyReferralRequest(BaseModel):
+    code: str  # без "ref_" префікса
+
+
+@router.post("/api/apply_referral")
+async def apply_referral_endpoint(
+    data: ApplyReferralRequest, telegram_id: int = Query(...),
+):
+    """Apply a referral when invitee enters via mini-app deeplink.
+
+    Mirror of the /start ref_<code> handler in bot/main.py: validates,
+    applies, notifies referrer via Telegram. Idempotent — повторні виклики
+    від того ж invitee, який вже має referrer'а, тихо повертають
+    `{"applied": False, "reason": "already_referred_or_invalid"}`.
+    """
+    from core.referral import (
+        REFERRAL_BONUS_DAYS,
+        TRIAL_DAYS,
+        apply_referral,
+    )
+
+    async with SessionLocal() as session:
+        invitee = await _get_user(session, telegram_id)
+        if not invitee:
+            raise HTTPException(status_code=404, detail="User not found")
+
+    # apply_referral сам відхилить self-referral, повторне застосування,
+    # відсутній код тощо — повертаючи None.
+    result = await apply_referral(invitee_id=invitee.id, referrer_code=data.code)
+    if not result:
+        return {"applied": False, "reason": "already_referred_or_invalid"}
+    referrer, invitee = result
+
+    # Сповістити referrer'а через Telegram (точно як bot/main.py:107-119).
+    try:
+        from bot.main import bot as tg_bot
+        from core.bot_i18n import t as bt
+        referrer_lang = referrer.native_lang or "uk"
+        await tg_bot.send_message(
+            chat_id=referrer.telegram_id,
+            text=bt(
+                "referral.referrer_notify",
+                referrer_lang,
+                name=invitee.first_name or "friend",
+                days=REFERRAL_BONUS_DAYS,
+                total=referrer.referrals_count,
+            ),
+        )
+    except Exception as exc:
+        logger.warning(f"apply_referral_endpoint notify failed: {exc}")
+
+    return {
+        "applied": True,
+        "bonus_days": REFERRAL_BONUS_DAYS,
+        "trial_total_days": TRIAL_DAYS + REFERRAL_BONUS_DAYS,
     }
 
 

@@ -5,7 +5,7 @@ import NavBar from './components/NavBar';
 import DebugBanner from './components/DebugBanner';
 import WelcomeStories, { shouldShowWelcome } from './components/WelcomeStories';
 import { LangProvider } from './contexts/LangContext';
-import { getTelegramUserId, prefetchAll } from './api/client';
+import { applyReferral, getTelegramUserId, prefetchAll } from './api/client';
 import { initAnalytics, track } from './utils/analytics';
 import { getAttribution } from './utils/attribution';
 import './App.css';
@@ -112,6 +112,25 @@ function App() {
         last_touch_source: attr.last_touch_source,
         last_touch_campaign: attr.last_touch_campaign,
       });
+
+      // Реферал через direct mini-app лінк (`startapp=ref_<code>`).
+      // Перевіряємо last-touch (поточний start_param), не first-touch — інакше
+      // applyReferral сипатиме на кожен open у юзера що колись прийшов за
+      // ref-лінком. Бекенд все одно idempotent, але без зайвої мережі чистіше.
+      if (attr.last_touch_source === 'ref' && attr.last_touch_campaign) {
+        applyReferral(attr.last_touch_campaign)
+          .then(r => {
+            if (r?.data?.applied) {
+              track('referral_signup', {
+                bonus_days: r.data.bonus_days,
+                trial_total_days: r.data.trial_total_days,
+                source: 'miniapp_direct',
+              });
+            }
+          })
+          .catch(() => { /* noop — мережа/повторний виклик */ });
+      }
+
       // Перше відкриття цієї сесії — порівнюємо з попередньою (якщо була).
       fireResumed();
       stampActive();
