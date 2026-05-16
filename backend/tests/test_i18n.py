@@ -3,7 +3,7 @@ import pytest
 
 from core.bot_i18n import T, buy_text, help_text, premium_text, t
 
-SUPPORTED_LANGS = ["uk", "en", "es", "pl", "de"]
+SUPPORTED_LANGS = ["uk", "en", "es", "pl", "de", "fr"]
 
 
 class TestTranslateFn:

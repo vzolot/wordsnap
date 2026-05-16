@@ -128,9 +128,9 @@ Payment flow: WayForPay HPP via auto-submitted POST form (`/pay` HTML route). Re
 - **Leaderboard** — top-50 by total XP, filtered by viewer's target language. Avatars (32 animal emojis, deterministic default from telegram_id).
 
 ### 3.8 i18n
-6 languages: 🇺🇦 uk · 🇬🇧 en · 🇫🇷 fr · 🇪🇸 es · 🇵🇱 pl · 🇩🇪 de
-- Mini-app: full coverage in `miniapp/src/i18n.js`. French has welcome + nav + common + snap + settings + leaderboard translated; rest falls back to `en`.
-- Bot: `backend/core/bot_i18n.py` covers uk/en/es/pl/de fully. French has no bot dict — fallback resolves to `en`.
+6 languages, all with full coverage as of 2026-05-17: 🇺🇦 uk · 🇬🇧 en · 🇫🇷 fr · 🇪🇸 es · 🇵🇱 pl · 🇩🇪 de
+- Mini-app: `miniapp/src/i18n.js` — 224 keys × 6 langs. French uses formal «vous» throughout (other langs vary by historical preference).
+- Bot: `backend/core/bot_i18n.py` — 171 keys × 6 langs. French uses formal «vous». Parametric tests (`tests/test_i18n.py`, `SUPPORTED_LANGS`) enforce that all 6 langs have the core keys with their placeholders intact.
 
 ### 3.9 Export
 Anki `.apkg` export from `/words` → Export modal. Tracked via `export_completed`.
