@@ -30,10 +30,30 @@ function WordDetailModal({ open, word, onClose, onDeleted, onUpdated, nativeLang
   const [editError, setEditError] = useState('');
   const editRef = useRef(null);
 
-  // Скидаємо edit-стан коли модалка закривається або змінюється word
+  // Скидаємо transient-стан коли модалка закривається АБО змінюється word.
+  // Без цього після Delete -> success парент закриває модалку, але стейти
+  // `deleting`/`confirming` лишаються true (handleDelete-success path їх не
+  // скидає, бо очікує що компонент розмонтується). На наступному відкритті
+  // модалка перерендерюється з deleting=true confirming=true → юзер бачить
+  // кнопку «…» (disabled) і «Скасувати», ніби delete у процесі. Кнопки
+  // мертві. Скидаємо тут разом з edit-state.
   useEffect(() => {
-    if (!open) { setEditing(false); setEditError(''); }
+    if (!open) {
+      setEditing(false);
+      setEditError('');
+      setConfirming(false);
+      setDeleting(false);
+    }
   }, [open, word?.id]);
+
+  // Дзеркало того ж скиду на зміну слова без close — рідко, але якщо парент
+  // підмінює word напряму (наприклад open ще true), теж треба чисто.
+  useEffect(() => {
+    setConfirming(false);
+    setDeleting(false);
+    setEditing(false);
+    setEditError('');
+  }, [word?.id]);
 
   useEffect(() => {
     if (editing && editRef.current) editRef.current.focus();
