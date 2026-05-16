@@ -141,6 +141,20 @@ T: dict[str, dict[str, str]] = {
         "word.error": "❌ Сталася помилка. Спробуй пізніше.",
         "word.setup_first": "⚙️ Спочатку обери мову для вивчення — надішли /start",
 
+        # — snap from photo / voice —
+        "snap.found_n": "📸 Знайшов <b>{n}</b> слів у вашому скріні. Тапніть щоб додати:",
+        "snap.empty": "Не побачив у скріні слів, які варто додати. Спробуйте інше фото - бажано з чіткішим текстом чужою мовою.",
+        "snap.voice_transcript": "🎙 Розшифровка: <i>{preview}</i>",
+        "snap.transcribe_failed": "Не зміг розшифрувати голосову. Спробуйте ще раз або діктуйте чіткіше.",
+        "snap.download_failed": "Не зміг завантажити файл з Telegram. Спробуйте ще раз.",
+        "snap.adding": "Додаю…",
+        "snap.duplicate_short": "Це слово вже у вашому словнику",
+        "snap.limit_short": "Денний/тижневий ліміт вичерпано",
+        "snap.ai_failed": "Не зміг отримати переклад для «{word}». Спробуйте ще раз або інше слово.",
+        "snap.not_real": "AI не знайшов слово «{word}» у вашій цільовій мові. Перевірте написання.",
+        "snap.save_failed": "Не зміг зберегти. Спробуйте ще раз.",
+        "snap.added_ok": "✅ <b>{word}</b> - {translation}\n\nДодано у словник. Відкрийте додаток щоб переглянути приклади.",
+
         # — word card (after add) —
         "word.examples_label": "📖 <b>Examples:</b>",
         "word.tip_label": "💡 <b>Memory tip:</b>",
@@ -342,6 +356,20 @@ T: dict[str, dict[str, str]] = {
         "word.error": "❌ An error occurred. Try later.",
         "word.setup_first": "⚙️ First choose a language to learn — send /start",
 
+        # — snap from photo / voice —
+        "snap.found_n": "📸 Found <b>{n}</b> words in your screenshot. Tap to add:",
+        "snap.empty": "Didn't spot anything worth adding from this screenshot. Try a different image - ideally with clear text in your target language.",
+        "snap.voice_transcript": "🎙 Transcript: <i>{preview}</i>",
+        "snap.transcribe_failed": "Couldn't transcribe the voice message. Try again, or speak more clearly.",
+        "snap.download_failed": "Couldn't fetch the file from Telegram. Try again.",
+        "snap.adding": "Adding…",
+        "snap.duplicate_short": "This word is already in your dictionary",
+        "snap.limit_short": "Daily/weekly limit reached",
+        "snap.ai_failed": "Couldn't get a translation for «{word}». Try again or pick a different word.",
+        "snap.not_real": "AI couldn't find «{word}» in your target language. Check the spelling.",
+        "snap.save_failed": "Couldn't save. Try again.",
+        "snap.added_ok": "✅ <b>{word}</b> - {translation}\n\nAdded to your dictionary. Open the app to see examples.",
+
         "word.examples_label": "📖 <b>Examples:</b>",
         "word.tip_label": "💡 <b>Memory tip:</b>",
         "word.remind_in_1d": "🔔 <i>I'll remind you about this word in 1 day</i>",
@@ -537,6 +565,20 @@ T: dict[str, dict[str, str]] = {
         "word.save_failed": "❌ No se pudo guardar la palabra. Inténtalo de nuevo.",
         "word.error": "❌ Ha ocurrido un error. Inténtalo más tarde.",
         "word.setup_first": "⚙️ Primero elige un idioma para aprender — envía /start",
+
+        # — snap from photo / voice —
+        "snap.found_n": "📸 Encontré <b>{n}</b> palabras en tu captura. Toca para agregar:",
+        "snap.empty": "No vi nada que valga la pena agregar de esta captura. Prueba con otra imagen - idealmente con texto claro en tu idioma objetivo.",
+        "snap.voice_transcript": "🎙 Transcripción: <i>{preview}</i>",
+        "snap.transcribe_failed": "No pude transcribir el audio. Intenta de nuevo o habla más claro.",
+        "snap.download_failed": "No pude descargar el archivo de Telegram. Intenta de nuevo.",
+        "snap.adding": "Agregando…",
+        "snap.duplicate_short": "Esta palabra ya está en tu diccionario",
+        "snap.limit_short": "Límite diario/semanal alcanzado",
+        "snap.ai_failed": "No pude obtener traducción para «{word}». Intenta de nuevo o elige otra palabra.",
+        "snap.not_real": "AI no encontró «{word}» en tu idioma objetivo. Revisa la ortografía.",
+        "snap.save_failed": "No pude guardar. Intenta de nuevo.",
+        "snap.added_ok": "✅ <b>{word}</b> - {translation}\n\nAgregada a tu diccionario. Abre la app para ver ejemplos.",
 
         "word.examples_label": "📖 <b>Ejemplos:</b>",
         "word.tip_label": "💡 <b>Truco:</b>",
@@ -734,6 +776,20 @@ T: dict[str, dict[str, str]] = {
         "word.error": "❌ Wystąpił błąd. Spróbuj później.",
         "word.setup_first": "⚙️ Najpierw wybierz język nauki — wyślij /start",
 
+        # — snap from photo / voice —
+        "snap.found_n": "📸 Znalazłem <b>{n}</b> słów na twoim zrzucie. Stuknij, żeby dodać:",
+        "snap.empty": "Nic wartego dodania na tym zrzucie. Spróbuj inne zdjęcie - najlepiej z wyraźnym tekstem w twoim języku docelowym.",
+        "snap.voice_transcript": "🎙 Transkrypcja: <i>{preview}</i>",
+        "snap.transcribe_failed": "Nie udało się przepisać wiadomości głosowej. Spróbuj jeszcze raz lub mów wyraźniej.",
+        "snap.download_failed": "Nie pobrałem pliku z Telegramu. Spróbuj jeszcze raz.",
+        "snap.adding": "Dodaję…",
+        "snap.duplicate_short": "To słowo już jest w twoim słowniku",
+        "snap.limit_short": "Limit dzienny/tygodniowy wyczerpany",
+        "snap.ai_failed": "Nie udało się pobrać tłumaczenia dla «{word}». Spróbuj jeszcze raz lub wybierz inne słowo.",
+        "snap.not_real": "AI nie znalazł «{word}» w twoim języku docelowym. Sprawdź pisownię.",
+        "snap.save_failed": "Nie udało się zapisać. Spróbuj jeszcze raz.",
+        "snap.added_ok": "✅ <b>{word}</b> - {translation}\n\nDodane do słownika. Otwórz aplikację, żeby zobaczyć przykłady.",
+
         "word.examples_label": "📖 <b>Przykłady:</b>",
         "word.tip_label": "💡 <b>Wskazówka:</b>",
         "word.remind_in_1d": "🔔 <i>Przypomnę o tym słowie za 1 dzień</i>",
@@ -930,6 +986,20 @@ T: dict[str, dict[str, str]] = {
         "word.error": "❌ Ein Fehler ist aufgetreten. Versuche es später.",
         "word.setup_first": "⚙️ Wähle zuerst eine Lernsprache — sende /start",
 
+        # — snap from photo / voice —
+        "snap.found_n": "📸 <b>{n}</b> Wörter auf deinem Screenshot gefunden. Tippe zum Hinzufügen:",
+        "snap.empty": "Auf diesem Screenshot war nichts Brauchbares. Versuche ein anderes Bild - idealerweise mit klarem Text in deiner Zielsprache.",
+        "snap.voice_transcript": "🎙 Transkript: <i>{preview}</i>",
+        "snap.transcribe_failed": "Konnte die Sprachnachricht nicht transkribieren. Versuche es nochmal oder sprich deutlicher.",
+        "snap.download_failed": "Konnte die Datei nicht von Telegram laden. Versuche es nochmal.",
+        "snap.adding": "Füge hinzu…",
+        "snap.duplicate_short": "Dieses Wort ist schon in deinem Wörterbuch",
+        "snap.limit_short": "Tages-/Wochenlimit erreicht",
+        "snap.ai_failed": "Konnte keine Übersetzung für «{word}» finden. Versuche es nochmal oder wähle ein anderes Wort.",
+        "snap.not_real": "AI hat «{word}» in deiner Zielsprache nicht gefunden. Prüfe die Schreibweise.",
+        "snap.save_failed": "Konnte nicht speichern. Versuche es nochmal.",
+        "snap.added_ok": "✅ <b>{word}</b> - {translation}\n\nIns Wörterbuch hinzugefügt. Öffne die App, um Beispiele zu sehen.",
+
         "word.examples_label": "📖 <b>Beispiele:</b>",
         "word.tip_label": "💡 <b>Merkhilfe:</b>",
         "word.remind_in_1d": "🔔 <i>Ich erinnere dich in 1 Tag an dieses Wort</i>",
@@ -1125,6 +1195,20 @@ T: dict[str, dict[str, str]] = {
         "word.save_failed": "❌ Échec de l'enregistrement du mot. Réessayez.",
         "word.error": "❌ Une erreur s'est produite. Réessayez plus tard.",
         "word.setup_first": "⚙️ Choisissez d'abord une langue à apprendre — envoyez /start",
+
+        # — snap from photo / voice —
+        "snap.found_n": "📸 J'ai trouvé <b>{n}</b> mots sur votre capture. Tapez pour ajouter :",
+        "snap.empty": "Rien d'intéressant à ajouter sur cette capture. Essayez une autre image - idéalement avec un texte clair dans votre langue cible.",
+        "snap.voice_transcript": "🎙 Transcription : <i>{preview}</i>",
+        "snap.transcribe_failed": "Je n'ai pas pu transcrire le message vocal. Réessayez ou parlez plus clairement.",
+        "snap.download_failed": "Je n'ai pas pu télécharger le fichier depuis Telegram. Réessayez.",
+        "snap.adding": "J'ajoute…",
+        "snap.duplicate_short": "Ce mot est déjà dans votre dictionnaire",
+        "snap.limit_short": "Limite journalière/hebdomadaire atteinte",
+        "snap.ai_failed": "Je n'ai pas pu obtenir de traduction pour «{word}». Réessayez ou choisissez un autre mot.",
+        "snap.not_real": "AI n'a pas trouvé «{word}» dans votre langue cible. Vérifiez l'orthographe.",
+        "snap.save_failed": "Je n'ai pas pu enregistrer. Réessayez.",
+        "snap.added_ok": "✅ <b>{word}</b> - {translation}\n\nAjouté à votre dictionnaire. Ouvrez l'app pour voir les exemples.",
 
         "word.examples_label": "📖 <b>Exemples :</b>",
         "word.tip_label": "💡 <b>Astuce mémoire :</b>",

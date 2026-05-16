@@ -26,6 +26,7 @@ from bot.handlers.word_handler import router as word_router
 from bot.handlers.review_handler import router as review_router
 from bot.handlers.setup_handler import router as setup_router, native_lang_keyboard, ask_native_lang_text
 from bot.handlers.songs_handler import router as songs_router
+from bot.handlers.snap_handler import router as snap_router
 from bot.handlers.admin_handler import router as admin_router
 from core.bot_i18n import help_text, premium_text, buy_text, t as bt
 from core.constants import MINI_APP_URL
@@ -356,6 +357,7 @@ dp.include_router(admin_router)
 dp.include_router(setup_router)
 dp.include_router(songs_router)
 dp.include_router(review_router)
+dp.include_router(snap_router)
 dp.include_router(word_router)
 
 

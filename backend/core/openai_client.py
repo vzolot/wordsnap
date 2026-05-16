@@ -226,3 +226,166 @@ async def get_word_data(word: str, target_lang: str, native_lang: str = "uk") ->
 
     _aio.create_task(_cache_store(word, target_lang, native_lang, data))
     return data
+
+
+# ── Snap from screenshot / voice ─────────────────────────────────────────
+#
+# Дві нові точки входу для додавання слів: фото переписки і голосова. Логіка
+# та сама: витягаємо КАНДИДАТІВ (слова/короткі фрази у `target_lang`) → у
+# хендлері показуємо їх кнопками → юзер тапає → нормальний `get_word_data` +
+# save_word pipeline (з кешем, лімітом, картинкою). Тобто це лише ETL над
+# вхідним джерелом — продуктовий funnel не дублюється.
+
+_EXTRACT_SYSTEM = (
+    "You help language learners add real-life vocabulary. The user is "
+    "learning a specific target language and just shared content (a chat "
+    "screenshot or a voice transcript) where this language appears. Your "
+    "job: extract up to 8 standalone words or short fixed phrases (1-3 "
+    "words) in that target language that a learner would actually want "
+    "to add to flashcards. Hard rules:\n"
+    "  - Only words that appear in the target language (skip the learner's "
+    "native language even if it's present).\n"
+    "  - Skip proper names, place names, numbers, dates, URLs, emoji, "
+    "Telegram-UI clutter (timestamps, reply-to badges, ✓ marks).\n"
+    "  - Skip extremely common particles/articles unless they appear as a "
+    "tricky form ('haben gehabt', 'było by').\n"
+    "  - Prefer 'tricky for a foreigner': false friends, idioms, region "
+    "vocabulary, register-specific words. Avoid overlap with the user's "
+    "native language obvious cognates.\n"
+    "  - Return BASE form when reasonable (infinitive verbs, nominative "
+    "nouns), unless the inflected form itself is the learning point.\n"
+    "  - Output JSON only: {\"words\": [\"word1\", \"word2\", ...]}. If the "
+    "source has no extractable vocab in the target language, return "
+    "{\"words\": []}."
+)
+
+
+async def extract_words_from_image(
+    image_b64: str,
+    target_lang: str,
+    native_lang: str = "uk",
+    image_mime: str = "image/jpeg",
+) -> list[str]:
+    """Vision-екстракт: дивиться на скрін, повертає до 8 слів у target_lang.
+
+    `image_b64` — base64-кодоване зображення без data-URL префіксу.
+    Повертає список нормалізованих рядків (нижній регістр, тримером).
+    """
+    try:
+        response = await _get_openai_client().chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": _EXTRACT_SYSTEM},
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                f"Target language: {target_lang}. "
+                                f"Native language: {native_lang}. "
+                                f"Extract from this screenshot."
+                            ),
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{image_mime};base64,{image_b64}",
+                                "detail": "low",
+                            },
+                        },
+                    ],
+                },
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=300,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = json.loads(content)
+    except Exception as e:
+        logger.warning("vision extract failed: %s", e)
+        return []
+
+    raw = data.get("words") or []
+    out: list[str] = []
+    seen: set[str] = set()
+    for w in raw:
+        if not isinstance(w, str):
+            continue
+        w = w.strip().strip("«».,!?;:\"'`").lower()
+        if not (2 <= len(w) <= 60):
+            continue
+        if w in seen:
+            continue
+        seen.add(w)
+        out.append(w)
+        if len(out) >= 8:
+            break
+    return out
+
+
+async def transcribe_voice(
+    audio_bytes: bytes, filename: str = "voice.ogg"
+) -> tuple[str, str | None]:
+    """Whisper-транскрипт. Auto-detect мови. Повертає (text, lang_iso639_1)."""
+    try:
+        resp = await _get_openai_client().audio.transcriptions.create(
+            model="whisper-1",
+            file=(filename, audio_bytes),
+            response_format="verbose_json",
+        )
+    except Exception as e:
+        logger.warning("whisper transcribe failed: %s", e)
+        return "", None
+    text = (getattr(resp, "text", "") or "").strip()
+    detected = getattr(resp, "language", None)
+    return text, detected
+
+
+async def extract_words_from_transcript(
+    transcript: str, target_lang: str, native_lang: str = "uk"
+) -> list[str]:
+    """Той самий екстракт, але з voice-транскрипту (без зображення)."""
+    if not transcript or not transcript.strip():
+        return []
+    try:
+        response = await _get_openai_client().chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": _EXTRACT_SYSTEM},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Target language: {target_lang}. "
+                        f"Native language: {native_lang}. "
+                        f"Voice transcript:\n\n{transcript[:3000]}"
+                    ),
+                },
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=300,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = json.loads(content)
+    except Exception as e:
+        logger.warning("transcript extract failed: %s", e)
+        return []
+
+    raw = data.get("words") or []
+    out: list[str] = []
+    seen: set[str] = set()
+    for w in raw:
+        if not isinstance(w, str):
+            continue
+        w = w.strip().strip("«».,!?;:\"'`").lower()
+        if not (2 <= len(w) <= 60):
+            continue
+        if w in seen:
+            continue
+        seen.add(w)
+        out.append(w)
+        if len(out) >= 8:
+            break
+    return out

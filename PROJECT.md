@@ -58,6 +58,8 @@ Three review modes feed the same SM-2 scheduler:
 ### 3.1 Telegram bot (entry surface)
 - `/start` — onboarding flow (lang → region → demo word card).
 - Free-text message in chat → adds the word (same path as mini-app).
+- **Photo / screenshot** → gpt-4o-mini vision extracts up to 8 target-language words → inline buttons «➕ word» add them one-tap each.
+- **Voice message** → Whisper (auto-detect) transcribes → same extractor on the transcript → same inline-button add UX. Quick transcript preview shown so the user can sanity-check.
 - `/buy` — opens Pro purchase link.
 - Inline buttons on word reminders ("show translation" / "knew/forgot").
 - Streak-save push (one per local day at 22:00) when streak ≥ 3 and zero reviews today.
