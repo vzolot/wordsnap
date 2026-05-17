@@ -137,13 +137,20 @@
       const isIOS = /iPhone|iPad|iPod/i.test(ua);
       const isAndroid = /Android/i.test(ua);
 
-      // 2. Build URLs
+      // 2. Build URLs — приземляємо у БОТ-ЧАТ (не напряму у mini-app).
+      // Чому: universal link на mini-app у Meta IAB губить `start_param`
+      // (підтверджено: 56 landings → 41 OS-handoff → лише 2 SPA з атрибуцією
+      // за `val_2605_v2`). А `t.me/<bot>?start=<ref>` універсально розпізнаний
+      // Telegram'ом - /start payload надійно доходить до бекенду, де ми
+      // зберігаємо атрибуцію у БД і запускаємо survey. SPA потім стартує
+      // через web_app кнопку з повним `start_param`. Bot-chat як buffer +
+      // atribution holder = більше тапів, але повна воронка.
       const httpsUrl = ref
-        ? `https://t.me/${BOT}/${APP}?startapp=${encodeURIComponent(ref)}`
-        : `https://t.me/${BOT}/${APP}`;
+        ? `https://t.me/${BOT}?start=${encodeURIComponent(ref)}`
+        : `https://t.me/${BOT}`;
       const tgUrl = ref
-        ? `tg://resolve?domain=${BOT}&appname=${APP}&startapp=${encodeURIComponent(ref)}`
-        : `tg://resolve?domain=${BOT}&appname=${APP}`;
+        ? `tg://resolve?domain=${BOT}&start=${encodeURIComponent(ref)}`
+        : `tg://resolve?domain=${BOT}`;
 
       // 3. Stable anon distinct_id across all beacon events on this page.
       //    Reuse posthog-js's localStorage so subsequent capture() calls (if the

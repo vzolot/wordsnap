@@ -65,6 +65,13 @@ class User(Base):
     # Анти-спам для re-engagement push (один на 30 днів максимум на юзера).
     last_reengage_push_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Мотивація з ad-cohort опитника: living/work/studying/family/travel/self.
+    # NULL = organic (не питали). Сегментує themes-personalization і analytics.
+    motivation: Mapped[str | None] = mapped_column(String(20))
+    # Acquisition payload зі /start (igads_*, ref_*, etc.). Зберігаємо на
+    # bot-side щоб не залежати від WebApp SDK перенесення start_param.
+    acquisition_payload: Mapped[str | None] = mapped_column(String(64))
+
     # Referrals: унікальний код для запрошень + хто запросив + лічильник
     referral_code: Mapped[str | None] = mapped_column(String(16))
     referred_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"))

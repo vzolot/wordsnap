@@ -138,6 +138,18 @@ MIGRATIONS: list[tuple[str, str]] = [
         "users.last_reengage_push_at",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_reengage_push_at TIMESTAMPTZ",
     ),
+    # Motivation з ad-cohort survey: «living/work/studying/family/travel/self».
+    # Сегментує themes-recommendations і analytics. NULL = не питали (organic).
+    (
+        "users.motivation",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS motivation VARCHAR(20)",
+    ),
+    # Acquisition payload зі /start (igads_*, ref_*, ig_*, ...). Зберігаємо
+    # на bot-side щоб не залежати від WebApp SDK перенесення start_param.
+    (
+        "users.acquisition_payload",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS acquisition_payload VARCHAR(64)",
+    ),
     (
         "fn.update_updated_at_column.search_path",
         """

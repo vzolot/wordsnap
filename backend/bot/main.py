@@ -27,6 +27,7 @@ from bot.handlers.review_handler import router as review_router
 from bot.handlers.setup_handler import router as setup_router, native_lang_keyboard, ask_native_lang_text
 from bot.handlers.songs_handler import router as songs_router
 from bot.handlers.snap_handler import router as snap_router
+from bot.handlers.survey_handler import router as survey_router
 from bot.handlers.admin_handler import router as admin_router
 from core.bot_i18n import help_text, premium_text, buy_text, t as bt
 from core.constants import MINI_APP_URL
@@ -82,6 +83,15 @@ async def cmd_start(message: Message):
         last_name=tg_user.last_name,
         language_code=tg_user.language_code,
     )
+
+    # Ad-cohort flow: payload `igads_<campaign>` (або `ig_<campaign>` як alias)
+    # від Meta-реклами. Шлемо survey: target_lang + motivation + Launch button.
+    # Атрибуція зберігається у БД (`acquisition_payload`), щоб не залежати
+    # від WebApp SDK перенесення `start_param` через Meta IAB → t.me.
+    if payload and (payload.startswith("igads_") or payload.startswith("ig_")):
+        from bot.handlers.survey_handler import start_survey
+        await start_survey(message, user, payload)
+        return
 
     # Реферал застосовуємо лише новим юзерам без target_lang
     # (онбординг ще не завершено) і без вже встановленого referrer'а.
@@ -358,6 +368,7 @@ dp.include_router(setup_router)
 dp.include_router(songs_router)
 dp.include_router(review_router)
 dp.include_router(snap_router)
+dp.include_router(survey_router)
 dp.include_router(word_router)
 
 
