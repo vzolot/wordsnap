@@ -965,3 +965,63 @@ async def create_buy_link(
         "period": period,
         "amount": amount,
     }
+
+
+class SaveSurveyRequest(BaseModel):
+    payload: str  # composite `/start` payload (igads_<camp>_<lang>_<mot>)
+
+
+@router.post("/api/onboarding/save_survey")
+async def save_survey_endpoint(
+    data: SaveSurveyRequest, telegram_id: int = Query(...),
+):
+    """Persist on-landing survey results when ad-cohort entered the mini-app
+    directly (without going through bot /start). Parses composite payload via
+    the same `parse_ad_payload` helper as the bot survey_handler, applies
+    target_lang/motivation/acquisition_payload to the user. Idempotent.
+    """
+    from bot.handlers.survey_handler import parse_ad_payload
+    from sqlalchemy import update as sa_update
+
+    parsed = parse_ad_payload(data.payload)
+    payload_lang = parsed["lang"]
+    payload_mot = parsed["motivation"]
+
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        updates: dict = {"acquisition_payload": data.payload}
+        applied: dict = {}
+        if payload_lang and not user.target_lang:
+            updates["target_lang"] = payload_lang
+            applied["target_lang"] = payload_lang
+        if payload_mot and not user.motivation:
+            updates["motivation"] = payload_mot
+            applied["motivation"] = payload_mot
+
+        await session.execute(
+            sa_update(User).where(User.id == user.id).values(**updates)
+        )
+        await session.commit()
+
+    analytics.capture(telegram_id, "onboarding_survey_saved", {
+        "payload": data.payload,
+        "campaign": parsed["campaign"],
+        "lang_from_payload": payload_lang,
+        "motivation_from_payload": payload_mot,
+        "applied": applied,
+        "source": "miniapp_direct",
+    })
+    if payload_lang:
+        analytics.identify(telegram_id, {"target_lang": payload_lang})
+    if payload_mot:
+        analytics.identify(telegram_id, {"motivation": payload_mot})
+
+    return {
+        "applied": applied,
+        "campaign": parsed["campaign"],
+        "target_lang": payload_lang,
+        "motivation": payload_mot,
+    }

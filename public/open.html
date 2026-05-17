@@ -413,17 +413,26 @@
       }
 
       // ── 12. Build composite payload + wire CTA ──
-      // Landing form: `<ref>_<lang>_<motivation>`. Bot parser detects trailing
-      // lang/motivation by membership in known enums - кампанія сама може
-      // містити підкреслення (val_2605_v2), парсер це обробляє.
+      // Landing form: `<ref>_<lang>_<motivation>`. SPA-side parser (через
+      // saveSurvey endpoint) ловить trailing lang/motivation за membership
+      // у відомих enum'ах - кампанія сама може містити підкреслення
+      // (val_2605_v2), парсер це обробляє.
+      //
+      // Цільовий URL - **mini-app direct universal link** (`/<bot>/app`),
+      // не bot-chat (`?start=...`). Через mini-app пряма ціль:
+      //   - Safari/Chrome: universal link → mini-app silent (1 dialog max
+      //     на macOS), SPA читає start_param і шле saveSurvey бекенду
+      //   - Meta IAB iOS: fallback на t.me-web сторінку, юзер тапає
+      //     «OPEN APP», далі ідентично
+      // Без проміжного бот-чату - на 2 тапи менше.
       function wireOpenCTA() {
         let payload = ref || '';
         if (pickedLang && pickedMot && isAdRef) {
           payload = `${ref}_${pickedLang}_${pickedMot}`;
         }
         const url = payload
-          ? `https://t.me/${BOT}?start=${encodeURIComponent(payload)}`
-          : `https://t.me/${BOT}`;
+          ? `https://t.me/${BOT}/app?startapp=${encodeURIComponent(payload)}`
+          : `https://t.me/${BOT}/app`;
         const cta = document.getElementById('cta');
         cta.href = url;
         cta.addEventListener('click', () => {

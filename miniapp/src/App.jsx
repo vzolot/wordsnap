@@ -5,7 +5,7 @@ import NavBar from './components/NavBar';
 import DebugBanner from './components/DebugBanner';
 import WelcomeStories, { shouldShowWelcome } from './components/WelcomeStories';
 import { LangProvider } from './contexts/LangContext';
-import { applyReferral, getTelegramUserId, prefetchAll } from './api/client';
+import { applyReferral, getTelegramUserId, prefetchAll, saveSurvey } from './api/client';
 import { initAnalytics, track } from './utils/analytics';
 import { getAttribution } from './utils/attribution';
 import './App.css';
@@ -129,6 +129,32 @@ function App() {
             }
           })
           .catch(() => { /* noop — мережа/повторний виклик */ });
+      }
+
+      // Ad-cohort з landing survey: composite payload (`igads_<camp>_<lang>_<mot>`)
+      // прилетає через `startapp`. Шлемо бекенду щоб зберегти target_lang і
+      // motivation в БД до того як SPA вирішує показувати welcome-stories.
+      if (
+        (attr.last_touch_source === 'igads' || attr.last_touch_source === 'ig')
+        && attr.last_touch_raw
+      ) {
+        const adPayload = attr.last_touch_raw;
+        saveSurvey(adPayload)
+          .then(r => {
+            const applied = r?.data?.applied || {};
+            track('onboarding_survey_saved_mini', {
+              target_lang: r?.data?.target_lang,
+              motivation: r?.data?.motivation,
+              applied_fields: Object.keys(applied),
+            });
+            // Якщо target_lang встановлений на бекенді — welcome-stories
+            // більше не потрібні (юзер уже відповів на «яку мову»).
+            if (applied.target_lang) {
+              try { localStorage.setItem('wordsnap.welcome_seen', '1'); } catch {}
+              setShowWelcome(false);
+            }
+          })
+          .catch(() => { /* noop */ });
       }
 
       // Перше відкриття цієї сесії — порівнюємо з попередньою (якщо була).

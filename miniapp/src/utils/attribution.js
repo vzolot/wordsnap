@@ -52,8 +52,9 @@ export function getAttribution() {
     acquisition_campaign: stored.campaign,
     acquisition_raw: stored.raw,
     acquisition_first_seen_at: stored.first_seen_at,
-    // Last-touch — поточний візит, для debug
+    // Last-touch — поточний візит, для debug і для save_survey
     last_touch_source: current.source,
     last_touch_campaign: current.campaign,
+    last_touch_raw: current.raw,
   };
 }

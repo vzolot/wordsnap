@@ -55,6 +55,12 @@ export const getReferral = () => api.get('/api/referral');
 // Apply a referral on mini-app entry (когда юзер прийшов за `?startapp=ref_<code>`
 // прямим лінком замість через чат-бот). Backend сам відхиляє дубль/self-referral.
 export const applyReferral = (code) => api.post('/api/apply_referral', { code });
+
+// Persist landing-side ad-cohort survey results when юзер прийшов з реклами
+// напряму у mini-app (минаючи бот-чат). Backend парсить composite payload і
+// зберігає target_lang/motivation/acquisition_payload. Idempotent.
+export const saveSurvey = (payload) =>
+  api.post('/api/onboarding/save_survey', { payload });
 export const getLeaderboard = () => api.get('/api/leaderboard');
 export const updateSettings = (patch) => api.patch('/api/user/settings', patch);
 
