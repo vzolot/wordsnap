@@ -45,6 +45,7 @@ SUPPORTED_LANGS: tuple[tuple[str, str, str], ...] = (
     ("de", "🇩🇪", "Deutsch"),
     ("uk", "🇺🇦", "Українська"),
 )
+_LANG_CODES = frozenset(c for c, _, _ in SUPPORTED_LANGS)
 
 # Motivation enum — мусить бути узгоджено з validator/themes-personalization.
 MOTIVATIONS: tuple[tuple[str, str, str], ...] = (
@@ -55,6 +56,36 @@ MOTIVATIONS: tuple[tuple[str, str, str], ...] = (
     ("travel", "✈️", "motivation.travel"),
     ("self", "🧠", "motivation.self"),
 )
+_MOT_CODES = frozenset(c for c, _, _ in MOTIVATIONS)
+
+
+def parse_ad_payload(payload: str) -> dict[str, Optional[str]]:
+    """Парс `/start igads_<camp>[_<lang>_<mot>]` payload.
+
+    Лендинг тепер шле composite payload з результатами survey суфіксом
+    (`igads_val_2605_v2_en_work`). Якщо суфікса нема (старі ads-юзери або
+    organic /start igads_X) — повертаємо {lang: None, mot: None} і
+    хендлер падає на in-bot survey.
+
+    Telegram /start payload allows [A-Za-z0-9_-]{,64} — використовуємо
+    нижнє підкреслення. Кампанія може містити підкреслення сама
+    («val_2605_v2»), тому суфіксні поля детектимо по належності до
+    відомих enum'ів `_LANG_CODES` / `_MOT_CODES`.
+    """
+    parts = payload.split("_")
+    if len(parts) < 2:
+        return {"campaign": payload, "lang": None, "motivation": None}
+    if len(parts) >= 4 and parts[-2] in _LANG_CODES and parts[-1] in _MOT_CODES:
+        return {
+            "campaign": "_".join(parts[1:-2]),
+            "lang": parts[-2],
+            "motivation": parts[-1],
+        }
+    return {
+        "campaign": "_".join(parts[1:]),
+        "lang": None,
+        "motivation": None,
+    }
 
 
 def _q1_keyboard() -> InlineKeyboardMarkup:
@@ -109,29 +140,52 @@ async def start_survey(
     user: User,
     payload: str,
 ) -> None:
-    """Точка входу: викликається з /start handler для igads_/ig_-ad payloads."""
-    lang = user.native_lang or "uk"
+    """Точка входу: викликається з /start handler для igads_/ig_-ad payloads.
 
+    Якщо payload містить survey-суфікс (`_<lang>_<motivation>`, заповнюється
+    на лендингу перед редіректом у бот) — зберігаємо все одразу і шлемо
+    тільки Launch button, без in-bot Q&A. Інакше fallback на 2-питальний
+    in-bot survey (backward compat).
+    """
+    lang = user.native_lang or "uk"
+    parsed = parse_ad_payload(payload)
+    payload_lang = parsed["lang"]
+    payload_mot = parsed["motivation"]
+
+    # Persist payload + (опційно) survey-результати з лендинг-етапу.
+    updates: dict[str, str] = {"acquisition_payload": payload}
+    if payload_lang and not user.target_lang:
+        updates["target_lang"] = payload_lang
+        user.target_lang = payload_lang
+    if payload_mot and not user.motivation:
+        updates["motivation"] = payload_mot
+        user.motivation = payload_mot
     async with SessionLocal() as session:
-        await session.execute(
-            sa_update(User).where(User.id == user.id).values(
-                acquisition_payload=payload
-            )
-        )
+        await session.execute(sa_update(User).where(User.id == user.id).values(**updates))
         await session.commit()
 
     analytics.capture(user.telegram_id, "ad_survey_started", {
         "payload": payload,
+        "campaign": parsed["campaign"],
+        "lang_from_payload": payload_lang,
+        "motivation_from_payload": payload_mot,
+        "skip_in_bot_survey": bool(payload_lang and payload_mot),
     })
+    if payload_lang:
+        analytics.identify(user.telegram_id, {"target_lang": payload_lang})
+    if payload_mot:
+        analytics.identify(user.telegram_id, {"motivation": payload_mot})
 
-    # Якщо юзер уже проходив survey (motivation set) - skip питання, дай Launch.
-    if user.motivation and user.target_lang:
+    # Якщо у нас уже є lang + motivation (з лендингу або з попередніх візитів) —
+    # одразу Launch, без зайвих кроків.
+    if user.target_lang and user.motivation:
         await message.answer(
             bt("survey.welcome_back", lang),
             reply_markup=_launch_keyboard(lang, payload),
         )
         return
 
+    # Fallback: in-bot Q&A для legacy payloads / organic ad-clicks.
     await message.answer(
         bt("survey.q1_intro", lang),
         reply_markup=_q1_keyboard(),
