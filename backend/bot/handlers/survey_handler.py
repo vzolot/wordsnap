@@ -29,7 +29,7 @@ from sqlalchemy import select, update as sa_update
 
 from core import analytics
 from core.bot_i18n import t as bt
-from core.constants import bot_username
+from core.constants import MINI_APP_URL
 from core.db import SessionLocal
 from core.models import User
 
@@ -81,10 +81,20 @@ def _q2_keyboard(lang: str) -> InlineKeyboardMarkup:
 
 
 def _launch_keyboard(lang: str, start_param: Optional[str]) -> InlineKeyboardMarkup:
-    """Web-app кнопка «Launch WordSnap». Передаємо start_param щоб у Mini App
-    кохорти атрибуції лишились консистентні з тим, що зберегли у бекенді."""
-    bot = bot_username()
-    url = f"https://t.me/{bot}/app"
+    """Web-app кнопка «Launch WordSnap».
+
+    КРИТИЧНО: для `web_app` button URL ОБОВ'ЯЗКОВО має бути hosted URL
+    мінi-апи (https://miniapp-omega-three.vercel.app), НЕ `t.me/<bot>/app`.
+    Telegram API мовчки відхиляє відправку кнопки якщо URL це t.me-лінк —
+    звідси баг «нічого не відбувається» після Q2.
+
+    `start_param` як query-string у URL — резерв, але формально Telegram
+    web_app не пропихає startapp у `tg.initDataUnsafe.start_param` через
+    web_app button (тільки через direct deep-link). Тому атрибуція тепер
+    тече через БД: SPA читає `user.acquisition_payload` з /api/stats і
+    піднімає її як PostHog super-prop.
+    """
+    url = MINI_APP_URL
     if start_param:
         url += f"?startapp={start_param}"
     btn = InlineKeyboardButton(
