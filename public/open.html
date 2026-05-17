@@ -250,17 +250,24 @@
         }
       });
 
-      // 9. Meta/FB IAB auto-redirect: тут юзер прийшов з реклами в
-      //    Instagram/FB — universal link тут ні в якому разі не спрацює
-      //    silently, тапа очікувати марно. Стартуємо tg://-redirect
-      //    автоматично через 800мс (dialog тут єдиний шлях у TG-app, не
-      //    наш вибір). У звичайному Safari/Chrome цей блок НЕ виконується —
-      //    юзер тапне сам по реальному <a href>.
+      // 9. Meta/FB IAB auto-redirect: юзер прийшов з реклами в Instagram/FB.
+      //    КРИТИЧНО: шлемо на `httpsUrl` (universal link), НЕ на `tgUrl`
+      //    (custom scheme). Причина — на iOS Telegram `tg://resolve?domain=
+      //    BOT&appname=app&startapp=X` ВТРАЧАЄ `startapp` параметр: mini-app
+      //    відкривається, але `tg.initDataUnsafe.start_param` приходить як
+      //    undefined → атрибуція ламається → юзер тагається 'organic'
+      //    замість 'igads/val_2605_v2'. Підтверджено даними: 25 OS-handoff'ів
+      //    і лише ~2 в cohort з 6 годин (95% губимо).
+      //
+      //    Universal link на t.me у IAB не дає silent open — буде t.me-web
+      //    сторінка з кнопкою «OPEN APP», +1 тап. Але `startapp=X` Telegram-
+      //    router зберігає, бо саме він обробляє свої universal links.
+      //    Trade-off: +1 тап ціна; -95% втрата атрибуції закриваємо.
       if (isIgInApp || isFbInApp) {
         setTimeout(() => {
           if (fired) return;
-          beaconCapture('tg_auto_redirect_attempted', { stage: 'iab_tg_scheme' });
-          try { window.location.href = tgUrl; } catch (e) {}
+          beaconCapture('tg_auto_redirect_attempted', { stage: 'iab_universal_link' });
+          try { window.location.href = httpsUrl; } catch (e) {}
         }, 800);
       }
     })();
