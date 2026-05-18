@@ -42,7 +42,8 @@ from core.models import User  # noqa: E402
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 logger = logging.getLogger("broadcast_snap")
 
-BROADCAST_ID = "snap_feature_2026_05_17"
+BROADCAST_ID_ACTIVE = "snap_feature_2026_05_17"
+BROADCAST_ID_CATCHUP = "snap_feature_catchup_2026_05_18"
 RATE_LIMIT_DELAY_SEC = 0.05   # ~20 msg/sec, safe headroom під Telegram 30/sec
 MAX_USERS_PER_RUN = 10000     # safety cap
 
@@ -107,37 +108,45 @@ COPY: dict[str, str] = {
 }
 
 
-async def _eligible_users() -> list[User]:
-    """Юзери що бодай раз пройшли review - значить дійсно використовували
-    апку, не онбординг-стелс."""
+async def _eligible_users(mode: str = "active") -> list[User]:
+    """active   — користувалися продуктом (review >0). Default з першого launch.
+    catchup  — лишилися «застряглі» (review=0): не зробили жодного review,
+               але є у БД (зайшли через /start). Шлемо feature-апдейт як
+               м'який re-engagement.
+    all      — усі (захист на випадок треба зробити масштабну сесію)."""
     async with SessionLocal() as session:
-        rows = (await session.execute(
-            select(User).where(User.total_reviews > 0)
-        )).scalars().all()
+        if mode == "active":
+            q = select(User).where(User.total_reviews > 0)
+        elif mode == "catchup":
+            q = select(User).where(User.total_reviews == 0)
+        elif mode == "all":
+            q = select(User)
+        else:
+            raise ValueError(f"unknown mode: {mode}")
+        rows = (await session.execute(q)).scalars().all()
         return list(rows)
 
 
-async def _send_one(bot: Bot, user: User) -> str:
+async def _send_one(bot: Bot, user: User, broadcast_id: str) -> str:
     lang = user.native_lang or "uk"
     text = COPY.get(lang) or COPY["en"]
     try:
         await bot.send_message(chat_id=user.telegram_id, text=text)
         analytics.capture(user.telegram_id, "broadcast_received", {
-            "broadcast_id": BROADCAST_ID,
+            "broadcast_id": broadcast_id,
             "native_lang": lang,
         })
         return "sent"
     except TelegramForbiddenError:
         return "blocked"
     except TelegramRetryAfter as e:
-        # Telegram cooled-down — підождемо і ретрайнемо один раз
         wait = int(e.retry_after) + 1
         logger.warning("RetryAfter %ds for %s", wait, user.telegram_id)
         await asyncio.sleep(wait)
         try:
             await bot.send_message(chat_id=user.telegram_id, text=text)
             analytics.capture(user.telegram_id, "broadcast_received", {
-                "broadcast_id": BROADCAST_ID,
+                "broadcast_id": broadcast_id,
                 "native_lang": lang,
                 "retry_after_s": wait,
             })
@@ -161,7 +170,12 @@ async def main() -> None:
     parser.add_argument("--dry-run", action="store_true", help="count only, do not send")
     parser.add_argument("--test", type=int, metavar="TG_ID", help="send only to this telegram_id (override DB filter)")
     parser.add_argument("--send", action="store_true", help="actually broadcast to all eligible users")
+    parser.add_argument(
+        "--mode", choices=("active", "catchup", "all"), default="active",
+        help="active=reviews>0 (default), catchup=reviews=0 (re-engage), all=everyone",
+    )
     args = parser.parse_args()
+    broadcast_id = BROADCAST_ID_CATCHUP if args.mode == "catchup" else BROADCAST_ID_ACTIVE
 
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token:
@@ -185,12 +199,12 @@ async def main() -> None:
             print(f"User {args.test} not in DB, sending with native_lang=uk")
         else:
             print(f"User {args.test}: native_lang={user.native_lang}, plan={user.plan}")
-        status = await _send_one(bot, user)
+        status = await _send_one(bot, user, broadcast_id)
         print(f"Test send: {status}")
         await bot.session.close()
         return
 
-    users = await _eligible_users()
+    users = await _eligible_users(mode=args.mode)
     counts = Counter([(u.native_lang or "uk") for u in users])
     print(f"Eligible users: {len(users)}")
     for lang, n in sorted(counts.items()):
@@ -213,7 +227,7 @@ async def main() -> None:
     print(f"\nStarting broadcast: {total} users, ~{int(total * (RATE_LIMIT_DELAY_SEC + 0.05))}s ETA")
 
     for i, u in enumerate(users, 1):
-        status = await _send_one(bot, u)
+        status = await _send_one(bot, u, broadcast_id)
         stats[status] += 1
         if i % 25 == 0 or i == total:
             elapsed = (datetime.now(timezone.utc) - started).total_seconds()
