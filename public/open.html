@@ -119,6 +119,15 @@
       color: var(--text-3); font-size: 12px; line-height: 1.5;
     }
     .hint a { color: #A78BFA; }
+    .skip {
+      margin-top: 14px;
+      background: none; border: none; padding: 8px 14px;
+      color: var(--text-3); font-size: 13px;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      text-decoration: underline; text-underline-offset: 3px;
+      font-family: inherit;
+    }
+    .skip:active { color: var(--text-2); }
     .screen { display: none; }
     .screen.active { display: block; animation: fadeIn 0.25s ease; }
     @keyframes fadeIn {
@@ -137,6 +146,7 @@
       <h1 id="q1-title">Which language are you learning?</h1>
       <p class="sub" id="q1-sub">I'll prefill your dictionary based on this.</p>
       <div class="grid" id="q1-grid"></div>
+      <button type="button" class="skip" id="skip-q1">Skip — open WordSnap now</button>
     </div>
 
     <!-- ── Q2: motivation ── -->
@@ -145,6 +155,7 @@
       <h1 id="q2-title">And why this language?</h1>
       <p class="sub" id="q2-sub">Helps me pick word packs you'll actually use.</p>
       <div class="grid" id="q2-grid"></div>
+      <button type="button" class="skip" id="skip-q2">Skip — open WordSnap now</button>
     </div>
 
     <!-- ── Open: final CTA ── -->
@@ -210,6 +221,7 @@
           open_sub: "Tap below to open WordSnap in Telegram. Your first words are inside.",
           cta: "Open in Telegram",
           hint: 'No Telegram? <a href="https://telegram.org/" rel="noopener">Get it</a> - takes a minute.',
+          skip: "Skip — open WordSnap now",
           m: { living: "Living / moved here", work: "Work / career", studying: "Studying", family: "Family", travel: "Travel", self: "For myself" },
         },
         uk: {
@@ -221,6 +233,7 @@
           open_sub: "Тапніть нижче - WordSnap відкриється у Telegram. Перші слова вже всередині.",
           cta: "Відкрити у Telegram",
           hint: 'Не маєте Telegram? <a href="https://telegram.org/" rel="noopener">Завантажте</a> - займе хвилину.',
+          skip: "Пропустити — відкрити WordSnap",
           m: { living: "Живу / переїхав", work: "Робота / кар'єра", studying: "Навчання", family: "Сім'я", travel: "Подорожі", self: "Для себе" },
         },
         fr: {
@@ -232,6 +245,7 @@
           open_sub: "Tapez ci-dessous - WordSnap s'ouvre dans Telegram. Vos premiers mots sont à l'intérieur.",
           cta: "Ouvrir dans Telegram",
           hint: 'Pas de Telegram ? <a href="https://telegram.org/" rel="noopener">Installer</a> - une minute.',
+          skip: "Passer — ouvrir WordSnap",
           m: { living: "J'habite ici", work: "Travail", studying: "Études", family: "Famille", travel: "Voyages", self: "Pour moi" },
         },
         es: {
@@ -243,6 +257,7 @@
           open_sub: "Toca abajo - WordSnap se abre en Telegram. Tus primeras palabras ya están dentro.",
           cta: "Abrir en Telegram",
           hint: '¿Sin Telegram? <a href="https://telegram.org/" rel="noopener">Descárgalo</a> - un minuto.',
+          skip: "Omitir — abrir WordSnap",
           m: { living: "Vivo aquí", work: "Trabajo", studying: "Estudios", family: "Familia", travel: "Viajes", self: "Para mí" },
         },
         pl: {
@@ -254,6 +269,7 @@
           open_sub: "Kliknij poniżej - WordSnap otworzy się w Telegramie. Pierwsze słowa już w środku.",
           cta: "Otwórz w Telegramie",
           hint: 'Nie masz Telegrama? <a href="https://telegram.org/" rel="noopener">Pobierz</a> - minuta.',
+          skip: "Pomiń — otwórz WordSnap",
           m: { living: "Mieszkam / przeprowadziłem się", work: "Praca", studying: "Studia", family: "Rodzina", travel: "Podróże", self: "Dla siebie" },
         },
         de: {
@@ -265,6 +281,7 @@
           open_sub: "Tipp unten - WordSnap öffnet sich in Telegram. Deine ersten Wörter sind drin.",
           cta: "In Telegram öffnen",
           hint: 'Kein Telegram? <a href="https://telegram.org/" rel="noopener">Lade es</a> - dauert eine Minute.',
+          skip: "Überspringen — WordSnap öffnen",
           m: { living: "Lebe hier", work: "Arbeit", studying: "Studium", family: "Familie", travel: "Reisen", self: "Für mich" },
         },
       };
@@ -401,9 +418,25 @@
         document.getElementById('open-sub').textContent   = T.open_sub;
         document.getElementById('cta-text').textContent   = T.cta;
         document.getElementById('open-hint').innerHTML    = T.hint;
+        document.getElementById('skip-q1').textContent    = T.skip;
+        document.getElementById('skip-q2').textContent    = T.skip;
         document.documentElement.lang = UI;
       }
       applyCopy();
+
+      // ── 10a. Skip buttons — на Q1 і Q2. Skip минає survey, лишає
+      //    атрибуцію тільки через `ref` (без lang/mot composite). Backend
+      //    cleansing payload так само через parse_ad_payload — лишається
+      //    campaign без survey-полів.
+      function skipSurvey(atStep) {
+        beaconCapture('landing_survey_skipped', { at_step: atStep });
+        // НЕ ставимо pickedLang / pickedMot → wireOpenCTA побудує URL
+        // тільки з оригінальним `ref` (без _lang_mot суфіксу).
+        wireOpenCTA();
+        showScreen('open');
+      }
+      document.getElementById('skip-q1').addEventListener('click', () => skipSurvey('q1'));
+      document.getElementById('skip-q2').addEventListener('click', () => skipSurvey('q2'));
 
       // ── 11. Show one screen at a time ──
       function showScreen(id) {

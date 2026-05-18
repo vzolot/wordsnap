@@ -134,27 +134,38 @@ function App() {
       // Ad-cohort з landing survey: composite payload (`igads_<camp>_<lang>_<mot>`)
       // прилетає через `startapp`. Шлемо бекенду щоб зберегти target_lang і
       // motivation в БД до того як SPA вирішує показувати welcome-stories.
-      if (
-        (attr.last_touch_source === 'igads' || attr.last_touch_source === 'ig')
-        && attr.last_touch_raw
-      ) {
+      const isAdSource = attr.last_touch_source === 'igads' || attr.last_touch_source === 'ig';
+      if (isAdSource && attr.last_touch_raw) {
         const adPayload = attr.last_touch_raw;
+        // Debug-маркер: фіксує що ми взагалі ДІЙШЛИ до виклику. Якщо у
+        // PostHog є `app_opened` з ad-source але немає
+        // `save_survey_attempted` - це значить новий SPA-бандл не дійшов
+        // до юзера (Vercel/Service Worker кеш) і treba force-refresh.
+        track('save_survey_attempted', {
+          payload_len: adPayload.length,
+          source: attr.last_touch_source,
+        });
         saveSurvey(adPayload)
           .then(r => {
             const applied = r?.data?.applied || {};
-            track('onboarding_survey_saved_mini', {
+            track('save_survey_succeeded', {
               target_lang: r?.data?.target_lang,
               motivation: r?.data?.motivation,
               applied_fields: Object.keys(applied),
             });
-            // Якщо target_lang встановлений на бекенді — welcome-stories
-            // більше не потрібні (юзер уже відповів на «яку мову»).
             if (applied.target_lang) {
               try { localStorage.setItem('wordsnap.welcome_seen', '1'); } catch {}
               setShowWelcome(false);
             }
           })
-          .catch(() => { /* noop */ });
+          .catch(err => {
+            track('save_survey_failed', {
+              status: err?.response?.status || null,
+              message: String(err?.message || err).slice(0, 200),
+            });
+          });
+      } else if (isAdSource) {
+        track('save_survey_skipped_no_raw', { source: attr.last_touch_source });
       }
 
       // Перше відкриття цієї сесії — порівнюємо з попередньою (якщо була).
