@@ -248,11 +248,20 @@ Both repos share one Supabase project (`personal_*` table prefix on the founder 
       - `bot/handlers/survey_handler.py::parse_ad_payload` — Variant B (lang-only) added.
       - `bot/main.py` — `reddit_` joined `igads_` / `ig_` in the ad-prefix tuple.
       - `miniapp/src/App.jsx` — `isAdSource` recognizes `reddit` source.
+    - **2026-05-18 — Reddit Pixel live:** Reddit Ads account created (id stamped on Events Manager page), Pixel ID `a2_j10ebppv6lnu` plugged into `public/preview.html`. PageVisit fires on every load; CTA tap fires `Lead` event. Reddit Events Manager → Event testing shows live event volume.
+    - **Engagement automation (semi-auto, ready to fire as soon as ads go live):** Mirror of the Threads engagement pattern lives in the **`wordsnap-personal-bot`** repo (not threads-bot, because Reddit replies need first-person founder voice). Components:
+      - `src/reddit_api.py` — PRAW wrapper (read comments, post replies). User-token auth via Reddit script app.
+      - `src/reddit_listener.py` — asyncio polling loop, 60s interval, fetches new comments from configured submission IDs, generates draft via Claude, persists to Supabase as `awaiting`, fires Telegram preview to owner.
+      - `src/prompts/reddit_comment_generator.md` — 5 patterns (`clarify`, `complement`, `word_in_context`, `soft_funnel`, `empathy`). Hard style rules: no marketing words, peer-talk tone, founder voice. Empty text="" signal to skip aggressive/trolling comments.
+      - `src/engagement_bot.py` — extended with `pr:` callback prefix. ✅ → **auto-publishes via Reddit API** (different from Threads where API doesn't allow reply_to_id, so it's copy-paste). 🔁 → marks as regen, listener re-picks on next tick. ❌ → reject.
+      - `personal_reddit_replies` Supabase table (mirror of `personal_replies`) with `comment_id` unique-constraint for dedup.
+      - Lives in same Railway worker as the Threads engagement bot — single process, single Telegram token (`@personal_engage_wsbot`), parallel asyncio tasks for the two listeners.
     - **What's pending (needs user action):**
-      - Create Reddit Ads account at https://ads.reddit.com — pick Business profile, billing card.
-      - Generate Reddit Pixel via Ads dashboard → paste `REDDIT_PIXEL_ID` into `public/preview.html` (one-line edit).
-      - Build 3 creative posts manually in Reddit Ads UI for v1 (subreddit-targeted), use landing URLs above. Comments OPEN.
-      - Future automation (`src/reddit_ads_api.py` + CLI in `scripts/ads_pipeline.py`, Supabase `reddit_campaigns` table) — defer until first manual campaign proves the channel; mirroring existing `meta_ads_api.py` pattern is straightforward when API access is ready.
+      - Run `supabase/migrations/2026_05_18_reddit_replies.sql` once in the wordsnap-personal-bot Supabase SQL Editor.
+      - Build 3 creative posts manually in Reddit Ads UI for v1 (subreddit-targeted), use landing URLs above. Comments **OPEN**.
+      - Create Reddit script app at https://reddit.com/prefs/apps → grab `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` / set `REDDIT_USERNAME` + `REDDIT_PASSWORD` (the reddit user that owns the ad — replies go from this account) in Railway env for wordsnap-personal-bot.
+      - After campaigns go live, copy each ad-post's submission_id from URL → paste comma-separated into `REDDIT_WATCH_SUBMISSIONS` env on Railway. Listener picks up automatically.
+      - Future ad-creation automation (`src/reddit_ads_api.py` + CLI in `scripts/ads_pipeline.py`, Supabase `reddit_campaigns` table) — defer until first manual campaign proves the channel; mirroring existing `meta_ads_api.py` pattern is straightforward when API access is ready.
   - *Broadcasts (in-bot push to existing users) — `backend/scripts/broadcast_snap_feature.py`:*
     - One-shot announcement script with `--mode {active,catchup,all}`, throttled at ~20 msg/sec, FloodWait-safe (one retry on TelegramRetryAfter), per-language copy in 6 langs, every send fires `broadcast_received` with `broadcast_id` for cohort segmentation. MAX_USERS_PER_RUN=10000 safety cap, `--dry-run` and `--test <tg_id>` flags.
     - **2026-05-17 active run:** `--mode active` (`total_reviews > 0`, 13 users, 11 uk · 1 fr · 1 en) → 13/13 delivered. Announced the new snap-from-screenshot + voice flow. **Result 36h later:** 4 of 12 non-founder recipients opened the SPA at least once, **0 of 12 added a word / made a review / tried the new feature**. Plain announcement copy didn't motivate behavior change for already-active users (they come back via daily push anyway).
