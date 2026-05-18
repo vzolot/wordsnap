@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#7C3AED" />
+  <title>WordSnap — Preview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --violet: #7C3AED;
+      --pink: #EC4899;
+      --bg: #0B0610;
+      --card: rgba(255,255,255,0.06);
+      --text: #ffffff;
+      --text-2: rgba(255,255,255,0.7);
+      --text-3: rgba(255,255,255,0.5);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 20px 40px;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(124,58,237,0.35) 0%, transparent 55%),
+        radial-gradient(circle at 80% 80%, rgba(236,72,153,0.30) 0%, transparent 50%);
+    }
+    .wrap { width: 100%; max-width: 440px; text-align: center; }
+    .logo {
+      width: 64px; height: 64px;
+      margin: 0 auto 18px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 30px; color: #fff;
+      box-shadow: 0 10px 30px rgba(124,58,237,0.45);
+      letter-spacing: -1px;
+    }
+    h1 {
+      font-size: 26px; font-weight: 800; margin: 0 0 10px;
+      letter-spacing: -0.4px; line-height: 1.25;
+    }
+    .sub {
+      color: var(--text-2); font-size: 15px;
+      margin: 0 0 8px; line-height: 1.5;
+    }
+    .lang-tag {
+      display: inline-block; font-size: 12px;
+      color: var(--text-3); margin-bottom: 16px;
+      letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .features {
+      display: grid; gap: 10px;
+      margin: 18px 0 22px;
+      text-align: left;
+    }
+    .feat {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 12px 14px;
+      background: var(--card);
+      border-radius: 12px;
+    }
+    .feat .ico { font-size: 22px; line-height: 1; flex: 0 0 auto; }
+    .feat .body { flex: 1; }
+    .feat .ftitle { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+    .feat .fsub   { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 10px;
+      width: 100%; max-width: 320px;
+      padding: 16px 22px;
+      background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+      color: #fff;
+      font-weight: 700; font-size: 16px;
+      text-decoration: none;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.45);
+      transition: transform 0.12s, box-shadow 0.2s;
+      margin: 6px auto 0;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn svg { width: 22px; height: 22px; }
+    .hint {
+      margin-top: 14px;
+      color: var(--text-3); font-size: 12px; line-height: 1.5;
+    }
+    .hint a { color: #A78BFA; }
+    .pricing {
+      margin-top: 18px; color: var(--text-3);
+      font-size: 12px; line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">W</div>
+    <span class="lang-tag" id="lang-tag"></span>
+    <h1 id="title">WordSnap — vocabulary from real life</h1>
+    <p class="sub" id="subtitle">Snap a word you actually hear or read - spaced repetition handles the rest.</p>
+
+    <div class="features">
+      <div class="feat">
+        <span class="ico">📸</span>
+        <div class="body">
+          <div class="ftitle" id="f1-t">Snap from a screenshot</div>
+          <div class="fsub" id="f1-s">Send a chat screenshot - AI extracts foreign words worth adding.</div>
+        </div>
+      </div>
+      <div class="feat">
+        <span class="ico">🎙</span>
+        <div class="body">
+          <div class="ftitle" id="f2-t">Or record a voice note</div>
+          <div class="fsub" id="f2-s">Whisper transcribes, words land in your dictionary in one tap.</div>
+        </div>
+      </div>
+      <div class="feat">
+        <span class="ico">🧠</span>
+        <div class="body">
+          <div class="ftitle" id="f3-t">SM-2 spaced repetition</div>
+          <div class="fsub" id="f3-s">No cramming. Reviews scheduled when your brain is about to forget.</div>
+        </div>
+      </div>
+    </div>
+
+    <a id="cta" class="btn" href="#" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M9.04 16.6l-.36 5.05c.51 0 .73-.22.99-.48l2.38-2.27 4.93 3.6c.9.5 1.55.24 1.79-.83l3.25-15.2v-.01c.28-1.34-.48-1.86-1.36-1.54L1.13 9.7C-.18 10.2-.15 10.93.9 11.25l4.85 1.51 11.27-7.1c.53-.34 1.02-.16.62.21" />
+      </svg>
+      <span id="cta-text">Open in Telegram</span>
+    </a>
+    <p class="hint" id="hint">No Telegram? <a href="https://telegram.org/" rel="noopener">Get it</a> - takes a minute.</p>
+    <p class="pricing" id="pricing">6 languages · $1.49/mo · 7-day free trial</p>
+  </div>
+
+  <!-- ── Reddit Pixel ───────────────────────────────────────────────────
+       Reddit's conversion pixel — fires PageVisit, plus a custom event
+       when the user clicks the Telegram CTA. Replace `REDDIT_PIXEL_ID`
+       with the real pixel id once Reddit Ads account is set up.
+       Docs: https://business.reddithelp.com/s/article/install-the-reddit-pixel
+  -->
+  <script>
+    !function(w,d){if(!w.rdt){var p=w.rdt=function(){p.sendEvent?p.sendEvent.apply(p,arguments):p.callQueue.push(arguments)};p.callQueue=[];var t=d.createElement("script");t.src="https://www.redditstatic.com/ads/pixel.js";t.async=!0;var s=d.getElementsByTagName("script")[0];s.parentNode.insertBefore(t,s)}}(window,document);
+    // REDDIT_PIXEL_ID — заповнити після setup Reddit Ads. Якщо null - rdt no-op.
+    var REDDIT_PIXEL_ID = null;
+    if (REDDIT_PIXEL_ID) {
+      rdt('init', REDDIT_PIXEL_ID);
+      rdt('track', 'PageVisit');
+    }
+  </script>
+
+  <!-- ── PostHog (EU host) ───────────────────────────────────────────── -->
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    posthog.init('phc_nUWid6hPkYMGNSKQh2t3N4jHxM2ZAEvq3ctHZneY7pLE', {
+      api_host: 'https://eu.posthog.com',
+      capture_pageview: false,
+      autocapture: false,
+      persistence: 'localStorage',
+      disable_session_recording: true
+    });
+  </script>
+
+  <script>
+    (function () {
+      const PH_KEY = 'phc_nUWid6hPkYMGNSKQh2t3N4jHxM2ZAEvq3ctHZneY7pLE';
+      const PH_HOST = 'https://eu.posthog.com';
+      const BOT = 'WordSnapBot';
+
+      // ── 1. Parse query params ──
+      const params = new URLSearchParams(window.location.search);
+      const langParam = (params.get('lang') || '').toLowerCase().slice(0, 2);
+      const utmSource = (params.get('utm_source') || '').trim();
+      const utmCampaign = (params.get('utm_campaign') || '').trim();
+      const utmMedium = (params.get('utm_medium') || '').trim();
+      const utmContent = (params.get('utm_content') || '').trim();
+
+      const SUPPORTED = ['en', 'fr', 'es', 'pl', 'de', 'uk'];
+      const targetLang = SUPPORTED.includes(langParam) ? langParam : 'en';
+
+      // UI-копія беремо по target lang (Reddit аудиторія читає мовою яку
+      // вчить, бо `lang` у URL вже вибрано Meta-side за креативом).
+      const UI = targetLang;
+
+      // ── 2. Localized copy ──
+      const FLAGS = { en: '🇬🇧', fr: '🇫🇷', es: '🇪🇸', pl: '🇵🇱', de: '🇩🇪', uk: '🇺🇦' };
+      const COPY = {
+        en: {
+          tag: '🇬🇧 English',
+          title: 'WordSnap — vocabulary from real life',
+          sub: "Snap a word you actually hear or read - spaced repetition handles the rest.",
+          f1t: "Snap from a screenshot", f1s: "Send a chat screenshot - AI extracts foreign words worth adding.",
+          f2t: "Or record a voice note", f2s: "Whisper transcribes, words land in your dictionary in one tap.",
+          f3t: "SM-2 spaced repetition", f3s: "No cramming. Reviews scheduled when your brain is about to forget.",
+          cta: "Open in Telegram",
+          hint: 'No Telegram? <a href="https://telegram.org/" rel="noopener">Get it</a> - takes a minute.',
+          pricing: '6 languages · $1.49/mo · 7-day free trial',
+        },
+        pl: {
+          tag: '🇵🇱 Polski',
+          title: 'WordSnap — słowa z prawdziwego życia',
+          sub: "Snapuj słowo, które naprawdę słyszysz - powtórki rozłożone w czasie zrobią resztę.",
+          f1t: "Snap ze zrzutu ekranu", f1s: "Wyślij zrzut czatu - AI wyciągnie słowa warte dodania.",
+          f2t: "Albo nagraj głosówkę", f2s: "Whisper transkrybuje, słowa trafiają do słownika jednym dotknięciem.",
+          f3t: "SM-2 spaced repetition", f3s: "Bez zakuwania. Powtórki w momencie, gdy mózg zaczyna zapominać.",
+          cta: "Otwórz w Telegramie",
+          hint: 'Nie masz Telegrama? <a href="https://telegram.org/" rel="noopener">Pobierz</a> - minuta.',
+          pricing: '6 języków · $1.49/mc · 7-dniowy darmowy okres',
+        },
+        de: {
+          tag: '🇩🇪 Deutsch',
+          title: 'WordSnap — Wortschatz aus dem echten Leben',
+          sub: "Snap ein Wort, das du wirklich hörst - Spaced Repetition macht den Rest.",
+          f1t: "Vom Screenshot snappen", f1s: "Schick einen Chat-Screenshot - KI extrahiert Wörter zum Lernen.",
+          f2t: "Oder Sprachnachricht", f2s: "Whisper transkribiert, Wörter landen mit einem Tap im Wörterbuch.",
+          f3t: "SM-2 Spaced Repetition", f3s: "Kein Pauken. Wiederholungen genau dann, wenn das Gehirn vergisst.",
+          cta: "In Telegram öffnen",
+          hint: 'Kein Telegram? <a href="https://telegram.org/" rel="noopener">Lade es</a> - dauert eine Minute.',
+          pricing: '6 Sprachen · $1.49/Mon · 7 Tage kostenlos',
+        },
+        fr: {
+          tag: '🇫🇷 Français',
+          title: 'WordSnap — vocabulaire de la vraie vie',
+          sub: "Snap un mot que vous entendez vraiment - la répétition espacée fait le reste.",
+          f1t: "Snap depuis une capture", f1s: "Envoyez une capture de chat - l'IA extrait les mots à apprendre.",
+          f2t: "Ou un message vocal", f2s: "Whisper transcrit, les mots arrivent dans votre dictionnaire.",
+          f3t: "SM-2 répétition espacée", f3s: "Pas de bachotage. Révisions au moment où votre cerveau oublie.",
+          cta: "Ouvrir dans Telegram",
+          hint: 'Pas de Telegram ? <a href="https://telegram.org/" rel="noopener">Installer</a> - une minute.',
+          pricing: '6 langues · $1.49/mois · 7 jours d\'essai gratuit',
+        },
+        es: {
+          tag: '🇪🇸 Español',
+          title: 'WordSnap — vocabulario de la vida real',
+          sub: "Snap una palabra que realmente escuchas - la repetición espaciada hace el resto.",
+          f1t: "Snap desde una captura", f1s: "Envía una captura de chat - la IA extrae las palabras útiles.",
+          f2t: "O un mensaje de voz", f2s: "Whisper transcribe, las palabras llegan a tu diccionario.",
+          f3t: "SM-2 repetición espaciada", f3s: "Sin memorizar. Repasos justo cuando el cerebro va a olvidar.",
+          cta: "Abrir en Telegram",
+          hint: '¿Sin Telegram? <a href="https://telegram.org/" rel="noopener">Descárgalo</a> - un minuto.',
+          pricing: '6 idiomas · $1.49/mes · 7 días gratis',
+        },
+        uk: {
+          tag: '🇺🇦 Українська',
+          title: 'WordSnap — слова з реального життя',
+          sub: "Снепніть слово, яке справді почули - інтервальні повторення зроблять решту.",
+          f1t: "Снеп зі скріна", f1s: "Надішліть скрін переписки - AI витягне іноземні слова варті вивчення.",
+          f2t: "Або голосове", f2s: "Whisper транскрибує, слова потрапляють у словник одним тапом.",
+          f3t: "SM-2 інтервальні повторення", f3s: "Без зубріння. Повторення саме коли мозок ось-ось забуде.",
+          cta: "Відкрити у Telegram",
+          hint: 'Не маєте Telegram? <a href="https://telegram.org/" rel="noopener">Завантажте</a> - хвилина.',
+          pricing: '6 мов · $1.49/міс · 7 днів безкоштовно',
+        },
+      };
+      const T = COPY[UI] || COPY.en;
+
+      // ── 3. Apply copy ──
+      document.documentElement.lang = UI;
+      document.getElementById('lang-tag').textContent = T.tag;
+      document.getElementById('title').textContent = T.title;
+      document.getElementById('subtitle').textContent = T.sub;
+      document.getElementById('f1-t').textContent = T.f1t;
+      document.getElementById('f1-s').textContent = T.f1s;
+      document.getElementById('f2-t').textContent = T.f2t;
+      document.getElementById('f2-s').textContent = T.f2s;
+      document.getElementById('f3-t').textContent = T.f3t;
+      document.getElementById('f3-s').textContent = T.f3s;
+      document.getElementById('cta-text').textContent = T.cta;
+      document.getElementById('hint').innerHTML = T.hint;
+      document.getElementById('pricing').textContent = T.pricing;
+
+      // ── 4. Attribution ──
+      // For Reddit traffic: utm_source=reddit, utm_campaign=val_<lang>_v1.
+      // Composite ref-payload sent to TG: `<utm_source>_<utm_campaign>_<lang>`
+      // e.g. `reddit_val_pl_v1_pl`. Parser у parse_ad_payload бере останні
+      // два сегменти як `lang_mot` - тут motivation відсутній, тому суфікс
+      // мусить бути просто `_<lang>` без mot. Для уніфікації з igads-flow
+      // - синтезуємо «mot=reddit_lander» (буде у мотиваційному enum'і).
+      // Поки що: пройдемо тільки з lang (mot буде з survey всередині SPA).
+      const source = utmSource || 'reddit';
+      const campaign = utmCampaign || `val_${targetLang}_v1`;
+      const refPayload = `${source}_${campaign}_${targetLang}`;
+
+      // ── 5. Stable anon distinct_id (для beacon-events) ──
+      function uuid() {
+        try { if (crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+          (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        );
+      }
+      const PH_LS_KEY = `ph_${PH_KEY}_posthog`;
+      let distinctId = null;
+      try {
+        const raw = localStorage.getItem(PH_LS_KEY);
+        if (raw) distinctId = (JSON.parse(raw) || {}).distinct_id || null;
+      } catch (e) {}
+      if (!distinctId) {
+        distinctId = uuid();
+        try { localStorage.setItem(PH_LS_KEY, JSON.stringify({ distinct_id: distinctId })); } catch (e) {}
+      }
+
+      const superProps = {
+        acquisition_source: source,
+        acquisition_campaign: campaign,
+        acquisition_raw: refPayload,
+        target_lang_from_ad: targetLang,
+        utm_source: utmSource || null,
+        utm_campaign: utmCampaign || null,
+        utm_medium: utmMedium || null,
+        utm_content: utmContent || null,
+        landing_variant: 'preview',
+      };
+      try { posthog.register(superProps); } catch (e) {}
+      try { posthog.identify(distinctId); } catch (e) {}
+
+      function beaconCapture(event, extraProps) {
+        const props = Object.assign({}, superProps, extraProps || {});
+        const payload = JSON.stringify({
+          api_key: PH_KEY, event, distinct_id: distinctId,
+          properties: props, timestamp: new Date().toISOString(),
+        });
+        try {
+          if (navigator.sendBeacon) {
+            const blob = new Blob([payload], { type: 'application/json' });
+            if (navigator.sendBeacon(`${PH_HOST}/e/`, blob)) return;
+          }
+        } catch (e) {}
+        try {
+          fetch(`${PH_HOST}/e/`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: payload, keepalive: true, mode: 'no-cors',
+          });
+        } catch (e) {}
+      }
+      beaconCapture('preview_landing_visited');
+      if (REDDIT_PIXEL_ID) {
+        try { rdt('track', 'ViewContent'); } catch (e) {}
+      }
+
+      // ── 6. Wire CTA → direct mini-app universal link ──
+      const cta = document.getElementById('cta');
+      cta.href = `https://t.me/${BOT}/app?startapp=${encodeURIComponent(refPayload)}`;
+      cta.addEventListener('click', () => {
+        beaconCapture('tg_open_clicked', {
+          method: 'preview_cta',
+          target_lang: targetLang,
+        });
+        if (REDDIT_PIXEL_ID) {
+          try { rdt('track', 'Lead'); } catch (e) {}
+        }
+      }, { once: true });
+
+      // ── 7. visibilitychange → tg_app_likely_opened ──
+      let fired = false;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden' && !fired) {
+          fired = true;
+          beaconCapture('tg_app_likely_opened');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

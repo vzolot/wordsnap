@@ -226,6 +226,33 @@ Both repos share one Supabase project (`personal_*` table prefix on the founder 
       - v1: 187 clicks @ $0.16, CTR 2.33%, $30.42. v2: 81 clicks @ $0.32, CTR 1.23%, $25.82.
       - **Bottom-funnel (both): 78 landing → 61 OS-handoff → 2 SPA → 0 activated → 0 paid.**
     - **Meta infra:** Business portfolio `984506147595109`, ad account `act_26992688363704873` (USD), FB Page `1042894552250387`, IG actor `17841408392302831`, system user `wsadsbot`, Meta app `1289392066593154` (Live, with the "Create & manage ads with Marketing API" use case). Privacy Policy at `https://wordsnap-mu.vercel.app/privacy.html` (= `/privacy` on the mini-app; `public/privacy.html` + `miniapp/public/privacy.html`) — registered in the Meta app, was a prerequisite for publishing it Live.
+
+  - *Paid — Reddit Ads (planned 2026-05-18, infra ready, account setup pending):*
+    - **Why Reddit alongside Meta:** Meta v1+v2 spent $56 with 0 activations. Hypothesis — Meta IG audience is wrong fit (visual lifestyle scroll) for a vocab-learning utility. Reddit communities (`r/poland`, `r/germany`, `r/languagelearning`, `r/IWantOut` etc.) are higher-intent — people there already self-identify as language learners / immigrants. Different funnel test.
+    - **Campaign 1: `WordSnap · Reddit · Validation v1`** — $30 total budget over 3 days ($10/day), Conversion objective (optimize on `app_opened`, not clicks), Mobile only (iOS+Android), geo PL/DE/USA/Canada.
+    - **Subreddit whitelist, 3 phases:**
+      - Diaspora: r/poland, r/Polska, r/germany, r/de, r/AskAGerman, r/ukraina, r/Ukraine_UA
+      - Languages: r/languagelearning, r/learnpolish, r/German, r/Spanish, r/French
+      - Immigration: r/IWantOut, r/expats, r/digitalnomad
+    - **Ad format: Conversation Ad** (looks like organic Reddit post, native title/body, 2x CTR over display). 3 creatives:
+      - Creative A → r/poland, r/Polska — UA-first-person about Kraków life
+      - Creative B → r/germany, r/de — EN-first-person about Berlin
+      - Creative C → r/languagelearning — EN-first-person about vocab-from-life vs textbook
+    - **Lander:** `https://wordsnap-mu.vercel.app/preview?lang=<pl|de|en>&utm_source=reddit&utm_campaign=val_<lang>_v1`. **Separate from `/open` (Meta IG flow).** `/preview` is single-screen — lang pre-set from URL (no Q1 on landing), shows 3 feature highlights + Open-in-Telegram CTA + pricing tag. Reddit Pixel installed (placeholder for `REDDIT_PIXEL_ID` until ads.reddit.com account is set up). PostHog beacon events: `preview_landing_visited`, `tg_open_clicked { method: preview_cta }`, `tg_app_likely_opened`.
+    - **Payload format:** `reddit_val_<lang>_v1_<lang>` (e.g. `reddit_val_pl_v1_pl`). Parser `parse_ad_payload` updated to handle 3 variants: full composite with lang+mot (Meta survey flow), lang-only (Reddit flow — motivation TBD via in-app survey later), or bare campaign.
+    - **Bot side:** `/start` ad-prefix detection extended to include `reddit_`. SPA `App.jsx` `saveSurvey` call also fires for `acquisition_source === 'reddit'`. Same `/api/onboarding/save_survey` endpoint persists target_lang to user (motivation stays null for Reddit cohort).
+    - **Reddit-specific copy rules:** title must be question/insight (NOT CTA), body first-person personal story, no marketing words («amazing», «best», «perfect»), comments OPEN on the ad (engagement boosts delivery). Founder responds to comments from the same Reddit account that owns the ad every 6h.
+    - **Validation gates:** kill if CPC > $0.50 OR landing→app_opened < 25% after $20 spent. Scale if CPC < $0.25 AND D1 activation > 20%. Comparable to Meta gates but Reddit costs more per click — net-positive funnel is different.
+    - **What's done in code (2026-05-18):**
+      - `public/preview.html` — single-page Reddit-friendly lander with 6-lang copy table, Reddit Pixel snippet (no-op until pixel id set), full PostHog instrumentation, composite payload assembly, direct mini-app universal-link CTA.
+      - `bot/handlers/survey_handler.py::parse_ad_payload` — Variant B (lang-only) added.
+      - `bot/main.py` — `reddit_` joined `igads_` / `ig_` in the ad-prefix tuple.
+      - `miniapp/src/App.jsx` — `isAdSource` recognizes `reddit` source.
+    - **What's pending (needs user action):**
+      - Create Reddit Ads account at https://ads.reddit.com — pick Business profile, billing card.
+      - Generate Reddit Pixel via Ads dashboard → paste `REDDIT_PIXEL_ID` into `public/preview.html` (one-line edit).
+      - Build 3 creative posts manually in Reddit Ads UI for v1 (subreddit-targeted), use landing URLs above. Comments OPEN.
+      - Future automation (`src/reddit_ads_api.py` + CLI in `scripts/ads_pipeline.py`, Supabase `reddit_campaigns` table) — defer until first manual campaign proves the channel; mirroring existing `meta_ads_api.py` pattern is straightforward when API access is ready.
   - *Broadcasts (in-bot push to existing users) — `backend/scripts/broadcast_snap_feature.py`:*
     - One-shot announcement script with `--mode {active,catchup,all}`, throttled at ~20 msg/sec, FloodWait-safe (one retry on TelegramRetryAfter), per-language copy in 6 langs, every send fires `broadcast_received` with `broadcast_id` for cohort segmentation. MAX_USERS_PER_RUN=10000 safety cap, `--dry-run` and `--test <tg_id>` flags.
     - **2026-05-17 active run:** `--mode active` (`total_reviews > 0`, 13 users, 11 uk · 1 fr · 1 en) → 13/13 delivered. Announced the new snap-from-screenshot + voice flow. **Result 36h later:** 4 of 12 non-founder recipients opened the SPA at least once, **0 of 12 added a word / made a review / tried the new feature**. Plain announcement copy didn't motivate behavior change for already-active users (they come back via daily push anyway).

@@ -134,7 +134,7 @@ function App() {
       // Ad-cohort з landing survey: composite payload (`igads_<camp>_<lang>_<mot>`)
       // прилетає через `startapp`. Шлемо бекенду щоб зберегти target_lang і
       // motivation в БД до того як SPA вирішує показувати welcome-stories.
-      const isAdSource = attr.last_touch_source === 'igads' || attr.last_touch_source === 'ig';
+      const isAdSource = ['igads', 'ig', 'reddit'].includes(attr.last_touch_source);
       if (isAdSource && attr.last_touch_raw) {
         const adPayload = attr.last_touch_raw;
         // Debug-маркер: фіксує що ми взагалі ДІЙШЛИ до виклику. Якщо у

@@ -84,11 +84,14 @@ async def cmd_start(message: Message):
         language_code=tg_user.language_code,
     )
 
-    # Ad-cohort flow: payload `igads_<campaign>` (або `ig_<campaign>` як alias)
-    # від Meta-реклами. Шлемо survey: target_lang + motivation + Launch button.
-    # Атрибуція зберігається у БД (`acquisition_payload`), щоб не залежати
-    # від WebApp SDK перенесення `start_param` через Meta IAB → t.me.
-    if payload and (payload.startswith("igads_") or payload.startswith("ig_")):
+    # Ad-cohort flow: payload `<source>_<campaign>[_<lang>[_<mot>]]` від
+    # paid ads. Сурси: `igads_`/`ig_` (Meta), `reddit_` (Reddit Ads),
+    # потенційно нові. Шлемо в survey-handler — він сам розрулить чи
+    # повний composite (lang+mot з survey) пройшов через payload, чи
+    # треба показати in-bot Q&A. Атрибуція зберігається у БД через
+    # `users.acquisition_payload` незалежно від платформи.
+    AD_PREFIXES = ("igads_", "ig_", "reddit_")
+    if payload and any(payload.startswith(p) for p in AD_PREFIXES):
         from bot.handlers.survey_handler import start_survey
         await start_survey(message, user, payload)
         return

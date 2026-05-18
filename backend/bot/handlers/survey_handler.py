@@ -60,27 +60,38 @@ _MOT_CODES = frozenset(c for c, _, _ in MOTIVATIONS)
 
 
 def parse_ad_payload(payload: str) -> dict[str, Optional[str]]:
-    """Парс `/start igads_<camp>[_<lang>_<mot>]` payload.
+    """Парс `/start <source>_<camp>[_<lang>[_<mot>]]` payload.
 
-    Лендинг тепер шле composite payload з результатами survey суфіксом
-    (`igads_val_2605_v2_en_work`). Якщо суфікса нема (старі ads-юзери або
-    organic /start igads_X) — повертаємо {lang: None, mot: None} і
-    хендлер падає на in-bot survey.
+    Підтримує три формати, source-agnostic (igads_, ig_, reddit_, ...):
+      - `igads_val_2605_v2_en_work` → lang + mot з survey (Meta IG flow)
+      - `reddit_val_pl_v1_pl`       → тільки lang (Reddit flow, lander
+                                       пер-мовний, motivation запитаємо
+                                       у in-app survey пізніше)
+      - `igads_val_2605_v2`         → тільки кампанія (legacy / organic)
 
-    Telegram /start payload allows [A-Za-z0-9_-]{,64} — використовуємо
-    нижнє підкреслення. Кампанія може містити підкреслення сама
-    («val_2605_v2»), тому суфіксні поля детектимо по належності до
-    відомих enum'ів `_LANG_CODES` / `_MOT_CODES`.
+    Telegram `/start` payload allows [A-Za-z0-9_-]{,64} - використовуємо
+    нижнє підкреслення. Кампанія сама може містити підкреслення
+    («val_2605_v2», «val_pl_v1»), тому трейлінг lang/mot детектимо за
+    належністю до відомих enum'ів `_LANG_CODES` / `_MOT_CODES`.
     """
     parts = payload.split("_")
     if len(parts) < 2:
         return {"campaign": payload, "lang": None, "motivation": None}
+    # Variant A: останні 2 - (lang, mot)
     if len(parts) >= 4 and parts[-2] in _LANG_CODES and parts[-1] in _MOT_CODES:
         return {
             "campaign": "_".join(parts[1:-2]),
             "lang": parts[-2],
             "motivation": parts[-1],
         }
+    # Variant B: тільки останній - lang (Reddit-flow без motivation)
+    if len(parts) >= 3 and parts[-1] in _LANG_CODES:
+        return {
+            "campaign": "_".join(parts[1:-1]),
+            "lang": parts[-1],
+            "motivation": None,
+        }
+    # Variant C: чиста кампанія
     return {
         "campaign": "_".join(parts[1:]),
         "lang": None,
