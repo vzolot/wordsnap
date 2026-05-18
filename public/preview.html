@@ -147,12 +147,10 @@
   -->
   <script>
     !function(w,d){if(!w.rdt){var p=w.rdt=function(){p.sendEvent?p.sendEvent.apply(p,arguments):p.callQueue.push(arguments)};p.callQueue=[];var t=d.createElement("script");t.src="https://www.redditstatic.com/ads/pixel.js";t.async=!0;var s=d.getElementsByTagName("script")[0];s.parentNode.insertBefore(t,s)}}(window,document);
-    // REDDIT_PIXEL_ID — заповнити після setup Reddit Ads. Якщо null - rdt no-op.
-    var REDDIT_PIXEL_ID = null;
-    if (REDDIT_PIXEL_ID) {
-      rdt('init', REDDIT_PIXEL_ID);
-      rdt('track', 'PageVisit');
-    }
+    // Reddit Pixel — заведений 2026-05-18 (WordSnap Ad Account).
+    var REDDIT_PIXEL_ID = 'a2_j10ebppv6lnu';
+    rdt('init', REDDIT_PIXEL_ID);
+    rdt('track', 'PageVisit');
   </script>
 
   <!-- ── PostHog (EU host) ───────────────────────────────────────────── -->
