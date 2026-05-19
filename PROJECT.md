@@ -261,22 +261,25 @@ Both repos share one Supabase project (`personal_*` table prefix on the founder 
         - **Flow (30-second demo):** 1 Polish word (`paragon` → receipt + example sentence + 🧾 icon) → tap-to-reveal meaning → 1-question quiz with 3 options + feedback copy (different for right/wrong) → dual CTA: «Continue learning in Telegram» (universal link, but now WARM after 30s engagement) OR email capture. Localized for 6 langs (`en/fr/es/pl/de/uk`). Lander is 100% client-side, no Telegram WebApp SDK dependency, attribution lives entirely in the browser session.
         - **Events:** `demo_loaded`, `demo_word_revealed`, `demo_quiz_answered{correct}`, `demo_to_telegram_clicked`, `demo_email_submit_attempted`, `demo_email_captured`, `demo_email_capture_failed`. Composite `startapp` payload `<source>_<campaign>_demo` (e.g. `ig_v3_pl_demo`) so SPA-side can identify demo-warmed users.
         - **Backend:** new `leads` table (model `core/models.py::Lead`, auto-migration in `core/auto_migrate.py`), `POST /api/lead/capture` endpoint in `webhook/api_routes.py` (idempotent via `UNIQUE(email, source)`, anonymous — no auth required). SendGrid drip-sequence intentionally **deferred** — will build once capture rate justifies it (>50/wk).
-        - **Meta v3 campaign URL convention** (user-side, in Ads Manager):
-          - PL audience → `https://wordsnap-mu.vercel.app/demo?lang=pl&utm_source=ig&utm_campaign=v3_pl`
-          - DE audience → `https://wordsnap-mu.vercel.app/demo?lang=de&utm_source=ig&utm_campaign=v3_de`
-          - EN audience → `https://wordsnap-mu.vercel.app/demo?lang=en&utm_source=ig&utm_campaign=v3_en`
-          - $7/day × 3 days = $21 budget. v2 remains running as parallel control group.
+        - **Meta v3 campaign — created via Marketing API on 2026-05-19, sitting PAUSED awaiting user activation in Ads Manager.** v2 was paused at campaign level at the same time, so paid spend is currently $0.
+          - Campaign id `120247810680700057`, adset `120247810681130057`, ads `120247810681990057` (ig#13) + `120247810682640057` (reel#13).
+          - Both creatives reuse the v2 `image_hash` (ig#13) / `video_id` (reel#13) — same UA-voice copy (awizo / kombinować) — only the destination URL changes.
+          - Destination URL (single, since adset still targets UA-speakers in PL/CZ/DE): `https://wordsnap-mu.vercel.app/demo?utm_source=ig&utm_campaign=v3`. Demo lander auto-detects UI lang from `navigator.language`, so PL/CZ/DE users get Ukrainian UI (which is correct — audience is UA diaspora), and the demo word is always Polish `paragon`.
+          - Targeting identical to v2: PL/CZ/DE, 22-45, interests = Language education + Duolingo, Instagram only (stream / story / explore / reels / search).
+          - Budget: $7/day × 3 days = $21 lifetime. `start_time` ~now, `end_time` +3 days, so Meta auto-stops after window.
+          - Activation steps for user: Ads Manager → v3 campaign → toggle ON. Both campaign-level and adset-level need to be ACTIVE before delivery starts.
         - **Validation gates v3:** kill if `demo_loaded → demo_to_telegram_clicked < 10%` after $15 spent; scale if >25% AND `app_opened{campaign=v3_*}` reaches ≥50% of CTA-click count (proves warm-handoff works). Email-fallback signal: 0 captures over $15 spent = no demand for non-Telegram path, drop SendGrid plan; >0 captures = build drip in next sprint.
         - **`/open` lander** stays deployed but becomes legacy for v2 traffic only. New campaigns point at `/demo`.
     - **Survey funnel results (5-day v2 window 15-19.05, before kill):**
       - `landing_visited` **160** → `landing_survey_lang_picked` **5** (3.1% Q1 conversion) → `landing_survey_motivation_picked` **4** → `landing_survey_skipped` **3** → `tg_open_clicked` **12** (7.5% landing→CTA) → `tg_app_likely_opened` **124** (77% bounce-ish, also fires on legitimate Telegram handoff) → `app_opened` **0 new users** (existing testers re-opening don't count). DB confirms: 0 new rows in `users` with `acquisition_payload LIKE 'igads_%'` since v2 launch.
       - Survey-on-lander **definitively killed** as an experiment. Skip rate stayed near zero even with explicit Skip button (3 skips across 5 days = barely visible). Users either bounce immediately or never tap the gate.
     - **Validation gates (still pending meaningful sample):** kill if CPC > $1 / mini-app opens < 20% of link clicks / D1 activation < 15%. Scale to Phase 1 ($25-30+/day, geo splits, retargeting) if CPC < $0.40 & D1 activation ≥ 25%.
-    - **Current cumulative ad numbers (Meta side, both campaigns, as of 2026-05-19):**
-      - **Spend $66.66, 312 clicks (avg CPC $0.21, avg CTR 1.48%).**
-      - v1 `WordSnap · Traffic · Validation` [PAUSED]: 187 link clicks @ $0.16, CTR 2.33%, $30.42.
-      - v2 `WordSnap · Traffic · Validation v2` [ACTIVE, 5 days]: 139 clicks @ $0.27, CTR 1.19%, $36.88. Best creative `ig#13` (awizo посилка) carries 88% of v2 impressions at $0.24 CPC; `reel#13` underperforming at $0.43 CPC and starved of impressions by Meta algorithm.
-      - **Bottom-funnel (v2 specifically): 160 landings → 12 CTA taps → 0 attributed new users in DB.** Funnel breaks between lander and Telegram handoff — universal-link auto-redirect (05-19) is the next experiment to fix this.
+    - **Current cumulative ad numbers (Meta side, as of end-of-day 2026-05-19):**
+      - **Spend $66.92, 314 clicks (avg CPC $0.21, avg CTR 1.48%).**
+      - v1 `WordSnap · Traffic · Validation` [PAUSED 05-15]: 187 link clicks @ $0.16, CTR 2.33%, $30.42.
+      - v2 `WordSnap · Traffic · Validation v2` [PAUSED 05-19 via API after demo-lander deploy]: 5 days live, 139 clicks @ $0.27, CTR 1.19%, $36.88. Best creative `ig#13` (awizo посилка) carries 88% of v2 impressions at $0.24 CPC; `reel#13` underperforming at $0.43 CPC and starved of impressions by Meta algorithm.
+      - v3 `WordSnap · Traffic · Validation v3` [PAUSED, created 05-19 awaiting activation]: 0 spend yet. Identical creatives to v2 (image+video reused), only destination changed from `/open` to `/demo`.
+      - **Bottom-funnel (v2 specifically): 160 landings → 12 CTA taps → 0 attributed new users in DB.** Funnel broke at Telegram handoff (`startapp` drop in Meta IAB). v3 demo lander hypothesis: break this dependency by warming user in-browser before any Telegram jump.
     - **Meta infra:** Business portfolio `984506147595109`, ad account `act_26992688363704873` (USD), FB Page `1042894552250387`, IG actor `17841408392302831`, system user `wsadsbot`, Meta app `1289392066593154` (Live, with the "Create & manage ads with Marketing API" use case). Privacy Policy at `https://wordsnap-mu.vercel.app/privacy.html` (= `/privacy` on the mini-app; `public/privacy.html` + `miniapp/public/privacy.html`) — registered in the Meta app, was a prerequisite for publishing it Live.
 
   - *Paid — Reddit Ads (planned 2026-05-18, infra ready, account setup pending):*
