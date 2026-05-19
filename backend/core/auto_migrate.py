@@ -202,6 +202,36 @@ MIGRATIONS: list[tuple[str, str]] = [
     ("rls.affiliates", "ALTER TABLE affiliates ENABLE ROW LEVEL SECURITY"),
     ("rls.affiliate_revenue", "ALTER TABLE affiliate_revenue ENABLE ROW LEVEL SECURITY"),
     (
+        "leads table",
+        """
+        CREATE TABLE IF NOT EXISTS leads (
+            id               BIGSERIAL PRIMARY KEY,
+            email            VARCHAR(320) NOT NULL,
+            source           VARCHAR(60),
+            campaign         VARCHAR(120),
+            ui_lang          VARCHAR(8),
+            target_lang      VARCHAR(8),
+            distinct_id      VARCHAR(80),
+            ip               VARCHAR(64),
+            user_agent       TEXT,
+            telegram_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+            converted_at     TIMESTAMPTZ,
+            unsubscribed_at  TIMESTAMPTZ,
+            created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE (email, source)
+        )
+        """,
+    ),
+    (
+        "leads.created_idx",
+        "CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at DESC)",
+    ),
+    (
+        "leads.source_camp_idx",
+        "CREATE INDEX IF NOT EXISTS idx_leads_source_campaign ON leads(source, campaign)",
+    ),
+    ("rls.leads", "ALTER TABLE leads ENABLE ROW LEVEL SECURITY"),
+    (
         "fn.update_updated_at_column.search_path",
         """
         DO $$

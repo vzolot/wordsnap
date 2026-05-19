@@ -241,3 +241,32 @@ class AffiliateRevenue(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class Lead(Base):
+    """Email-leads з демо-лендера (`/demo`). Email-fallback потік для юзерів
+    без Telegram. Конвертимо в `users` коли той самий email пізніше
+    пройде через бота — `converted_at` ставимо тоді."""
+    __tablename__ = "leads"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    source: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    campaign: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    ui_lang: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    target_lang: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    distinct_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
+    telegram_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    converted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    unsubscribed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

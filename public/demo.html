@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#7C3AED" />
+  <title>WordSnap — try one Polish word</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --violet: #7C3AED;
+      --pink: #EC4899;
+      --bg: #0B0610;
+      --card: rgba(255,255,255,0.06);
+      --card-hover: rgba(255,255,255,0.12);
+      --good: #10B981;
+      --bad: #EF4444;
+      --text: #ffffff;
+      --text-2: rgba(255,255,255,0.7);
+      --text-3: rgba(255,255,255,0.45);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      padding: 24px 18px 48px;
+      background-image:
+        radial-gradient(circle at 20% 18%, rgba(124,58,237,0.32) 0%, transparent 55%),
+        radial-gradient(circle at 80% 82%, rgba(236,72,153,0.28) 0%, transparent 50%);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .wrap {
+      width: 100%;
+      max-width: 440px;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+      margin: 0 0 18px;
+    }
+    .logo {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 22px;
+      box-shadow: 0 6px 20px rgba(124,58,237,0.45);
+    }
+    .brand-name { font-weight: 700; letter-spacing: -0.2px; font-size: 16px; }
+    .h1 {
+      font-size: 22px; font-weight: 800; margin: 4px 0 6px;
+      letter-spacing: -0.4px; line-height: 1.25;
+    }
+    .sub {
+      color: var(--text-2); font-size: 14px;
+      margin: 0 0 22px; line-height: 1.5;
+    }
+    .step {
+      color: var(--text-3); font-size: 11px;
+      font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0 0 8px;
+    }
+
+    /* word card */
+    .card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 24px 22px;
+      margin-bottom: 16px;
+    }
+    .word-row {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 14px;
+    }
+    .word-icon {
+      width: 56px; height: 56px; flex-shrink: 0;
+      border-radius: 14px;
+      background: rgba(124,58,237,0.18);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+    }
+    .word-pl {
+      font-size: 26px; font-weight: 800; letter-spacing: -0.4px;
+    }
+    .word-pos {
+      color: var(--text-3); font-size: 12px;
+      font-weight: 600; letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .reveal-btn {
+      width: 100%;
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.05);
+      border: 1px dashed rgba(255,255,255,0.18);
+      border-radius: 12px;
+      color: var(--text-2);
+      font-weight: 600; font-size: 14px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+    .reveal-btn:active { background: rgba(255,255,255,0.10); }
+    .meaning {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .meaning.shown { display: block; }
+    .translation {
+      font-size: 22px; font-weight: 700; color: #fff;
+      margin: 0 0 8px;
+    }
+    .example {
+      color: var(--text-2); font-size: 14px;
+      line-height: 1.55;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+      margin: 8px 0 0;
+    }
+    .example em {
+      color: var(--text); font-style: normal; font-weight: 600;
+    }
+
+    /* quiz */
+    .opt {
+      display: block; width: 100%;
+      padding: 14px 16px;
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      text-align: left;
+      font-family: inherit;
+      margin-bottom: 8px;
+    }
+    .opt:active { transform: scale(0.98); background: var(--card-hover); }
+    .opt.correct {
+      background: rgba(16,185,129,0.18);
+      border-color: rgba(16,185,129,0.6);
+      color: #fff;
+    }
+    .opt.wrong {
+      background: rgba(239,68,68,0.15);
+      border-color: rgba(239,68,68,0.55);
+    }
+    .opt:disabled { cursor: default; opacity: 0.92; }
+
+    .feedback {
+      display: none;
+      margin-top: 14px;
+      padding: 14px 16px;
+      background: rgba(16,185,129,0.10);
+      border: 1px solid rgba(16,185,129,0.35);
+      border-radius: 12px;
+      font-size: 14px; line-height: 1.55;
+      animation: fadeIn 0.25s ease;
+    }
+    .feedback.shown { display: block; }
+    .feedback strong { color: #34D399; font-weight: 700; }
+
+    /* CTAs */
+    .btn-primary {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 17px 22px;
+      background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+      color: #fff;
+      font-weight: 700; font-size: 16px;
+      text-decoration: none;
+      border-radius: 14px;
+      border: none;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.45);
+      transition: transform 0.12s;
+      margin: 22px 0 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      font-family: inherit;
+    }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary svg { width: 22px; height: 22px; }
+
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      color: var(--text-3); font-size: 11px;
+      font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin: 28px 0 18px;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px;
+      background: rgba(255,255,255,0.10);
+    }
+
+    /* email */
+    .email-block {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      padding: 18px 16px;
+    }
+    .email-h {
+      font-size: 14px; font-weight: 700; margin: 0 0 4px;
+    }
+    .email-sub {
+      color: var(--text-2); font-size: 13px; line-height: 1.5;
+      margin: 0 0 14px;
+    }
+    .email-row {
+      display: flex; gap: 8px;
+    }
+    .email-row input[type=email] {
+      flex: 1;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .email-row input[type=email]:focus {
+      border-color: rgba(124,58,237,0.6);
+    }
+    .email-row button {
+      padding: 12px 16px;
+      background: rgba(124,58,237,0.85);
+      color: #fff; font-weight: 700; font-size: 14px;
+      border: none; border-radius: 10px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      font-family: inherit;
+    }
+    .email-row button:active { transform: scale(0.97); }
+    .email-row button:disabled {
+      opacity: 0.5; cursor: not-allowed;
+    }
+    .email-msg {
+      margin-top: 10px;
+      font-size: 13px; color: var(--text-2);
+      min-height: 18px;
+    }
+    .email-msg.ok { color: #34D399; }
+    .email-msg.err { color: #F87171; }
+
+    .footer-note {
+      text-align: center;
+      color: var(--text-3); font-size: 11px;
+      margin-top: 24px; line-height: 1.5;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo">W</div>
+      <div class="brand-name">WordSnap</div>
+    </div>
+
+    <h1 class="h1" id="hero-h">Try one Polish word — see how it works</h1>
+    <p class="sub" id="hero-sub">30 seconds. No signup. Spot a word from real life, lock it in for 21 days.</p>
+
+    <!-- Word card -->
+    <div class="card">
+      <div class="step" id="step-1">Step 1 — The word</div>
+      <div class="word-row">
+        <div class="word-icon" aria-hidden="true">🧾</div>
+        <div>
+          <div class="word-pl">paragon</div>
+          <div class="word-pos" id="word-pos">Polish · noun</div>
+        </div>
+      </div>
+      <button class="reveal-btn" id="reveal-btn">Tap to reveal meaning</button>
+      <div class="meaning" id="meaning">
+        <div class="translation" id="translation">receipt</div>
+        <p class="example" id="example"><em>Proszę o paragon.</em> — Receipt, please.</p>
+      </div>
+    </div>
+
+    <!-- Quiz card -->
+    <div class="card" id="quiz-card" style="display:none">
+      <div class="step" id="step-2">Step 2 — Quick check</div>
+      <p class="sub" id="quiz-q" style="margin-bottom:14px">What does <strong>paragon</strong> mean?</p>
+      <button class="opt" data-correct="1" id="opt-1">A receipt from a shop</button>
+      <button class="opt" data-correct="0" id="opt-2">A type of pasta</button>
+      <button class="opt" data-correct="0" id="opt-3">A traffic ticket</button>
+      <div class="feedback" id="feedback">
+        <strong id="fb-strong">Nice.</strong>
+        <span id="fb-text"> That's the WordSnap loop — spot a word in life, quiz it, repeat for 21 days until it sticks.</span>
+      </div>
+    </div>
+
+    <!-- Telegram CTA -->
+    <div id="cta-block" style="display:none">
+      <a id="tg-cta" class="btn-primary" href="#" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M9.04 16.6l-.36 5.05c.51 0 .73-.22.99-.48l2.38-2.27 4.93 3.6c.9.5 1.55.24 1.79-.83l3.25-15.2v-.01c.28-1.34-.48-1.86-1.36-1.54L1.13 9.7C-.18 10.2-.15 10.93.9 11.25l4.85 1.51 11.27-7.1c.53-.34 1.02-.16.62.21" />
+        </svg>
+        <span id="cta-text">Continue learning in Telegram</span>
+      </a>
+
+      <div class="divider" id="div-or">or</div>
+
+      <div class="email-block">
+        <p class="email-h" id="em-h">No Telegram?</p>
+        <p class="email-sub" id="em-sub">Drop your email — we'll send 50 Polish words from real life, 1 per day.</p>
+        <form class="email-row" id="em-form" novalidate>
+          <input type="email" name="email" placeholder="you@example.com" required autocomplete="email" id="em-input" />
+          <button type="submit" id="em-btn">Send</button>
+        </form>
+        <div class="email-msg" id="em-msg" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <p class="footer-note" id="foot">WordSnap · Polish, German, Spanish, French, English & Ukrainian</p>
+  </div>
+
+  <!-- PostHog (EU host). Async load. -->
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    posthog.init('phc_nUWid6hPkYMGNSKQh2t3N4jHxM2ZAEvq3ctHZneY7pLE', {
+      api_host: 'https://eu.posthog.com',
+      capture_pageview: false,
+      autocapture: false,
+      persistence: 'localStorage',
+      disable_session_recording: true
+    });
+  </script>
+
+  <script>
+    (function () {
+      const PH_KEY = 'phc_nUWid6hPkYMGNSKQh2t3N4jHxM2ZAEvq3ctHZneY7pLE';
+      const PH_HOST = 'https://eu.posthog.com';
+      const API_URL = 'https://worker-production-abd5.up.railway.app';
+      const BOT = 'WordSnapBot';
+
+      // ── attribution ──
+      const qs = new URLSearchParams(window.location.search);
+      const source = (qs.get('utm_source') || qs.get('source') || 'unknown').toLowerCase().slice(0, 40);
+      const campaign = (qs.get('utm_campaign') || qs.get('campaign') || '').slice(0, 80);
+      const langParam = (qs.get('lang') || '').toLowerCase().slice(0, 4);
+
+      // Composite startapp для Telegram handoff: `<source>_<campaign>_demo`.
+      // SPA-side parser ловить _demo як суфікс і не плутає з lang/motivation.
+      const startapp = source && campaign
+        ? `${source}_${campaign}_demo`
+        : (source ? `${source}_demo` : 'demo');
+
+      // ── UI lang ──
+      const SUPPORTED = ['en','fr','es','pl','de','uk'];
+      function detectLang() {
+        if (langParam && SUPPORTED.indexOf(langParam) >= 0) return langParam;
+        const raw = (navigator.language || 'en').toLowerCase().slice(0, 2);
+        return SUPPORTED.indexOf(raw) >= 0 ? raw : 'en';
+      }
+      const UI = detectLang();
+
+      const COPY = {
+        en: {
+          hero_h: 'Try one Polish word — see how it works',
+          hero_sub: '30 seconds. No signup. Spot a word from real life, lock it in for 21 days.',
+          step1: 'Step 1 — The word',
+          word_pos: 'Polish · noun',
+          reveal: 'Tap to reveal meaning',
+          translation: 'receipt',
+          example: '<em>Proszę o paragon.</em> — Receipt, please.',
+          step2: 'Step 2 — Quick check',
+          quiz_q: 'What does <strong>paragon</strong> mean?',
+          opt1: 'A receipt from a shop',
+          opt2: 'A type of pasta',
+          opt3: 'A traffic ticket',
+          fb_ok: "Nice.",
+          fb_ok_t: " That's the WordSnap loop — spot a word in life, quiz it, repeat for 21 days until it sticks.",
+          fb_no: "Not quite.",
+          fb_no_t: " Paragon = receipt. It's the slip you get at any Polish checkout. That kind of word is exactly what WordSnap drills.",
+          cta: 'Continue learning in Telegram',
+          div: 'or',
+          em_h: 'No Telegram?',
+          em_sub: "Drop your email — we'll send 50 Polish words from real life, 1 per day.",
+          em_btn: 'Send',
+          em_ok: "Got it. First word lands tomorrow.",
+          em_err: "Something broke. Try again?",
+          em_invalid: "That doesn't look like an email.",
+          foot: 'WordSnap · Polish, German, Spanish, French, English & Ukrainian',
+        },
+        uk: {
+          hero_h: 'Спробуй одне польське слово — побач як це працює',
+          hero_sub: '30 секунд. Без реєстрації. Зловив слово з життя — закріплюєш за 21 день.',
+          step1: 'Крок 1 — Слово',
+          word_pos: 'польська · іменник',
+          reveal: 'Тапни щоб побачити переклад',
+          translation: 'чек',
+          example: '<em>Proszę o paragon.</em> — Дайте, будь ласка, чек.',
+          step2: 'Крок 2 — Перевірка',
+          quiz_q: 'Що означає <strong>paragon</strong>?',
+          opt1: 'Чек з магазину',
+          opt2: 'Вид пасти',
+          opt3: 'Штраф за паркування',
+          fb_ok: "Точно.",
+          fb_ok_t: " Це і є логіка WordSnap — зловив слово з життя, перевірив, повторив 21 день, і воно ваше.",
+          fb_no: "Не зовсім.",
+          fb_no_t: " Paragon = чек. Той, який тобі дають на касі. Саме такі слова WordSnap і допомагає закріпити.",
+          cta: 'Продовжити в Telegram',
+          div: 'або',
+          em_h: 'Немає Telegram?',
+          em_sub: 'Залиш email — надішлемо 50 польських слів з життя, по одному на день.',
+          em_btn: 'Надіслати',
+          em_ok: "Готово. Перше слово прилетить завтра.",
+          em_err: "Щось зламалось. Спробуй ще раз?",
+          em_invalid: "Це не схоже на email.",
+          foot: 'WordSnap · польська, німецька, іспанська, французька, англійська, українська',
+        },
+        pl: {
+          hero_h: 'Wypróbuj jedno polskie słowo — zobacz jak to działa',
+          hero_sub: '30 sekund. Bez rejestracji. Słowo z życia codziennego, zapamiętane na 21 dni.',
+          step1: 'Krok 1 — Słowo',
+          word_pos: 'polski · rzeczownik',
+          reveal: 'Stuknij, aby zobaczyć znaczenie',
+          translation: 'paragon (rachunek z kasy)',
+          example: '<em>Proszę o paragon.</em> — Poproszę paragon.',
+          step2: 'Krok 2 — Szybki sprawdzian',
+          quiz_q: 'Co oznacza <strong>paragon</strong>?',
+          opt1: 'Rachunek ze sklepu',
+          opt2: 'Rodzaj makaronu',
+          opt3: 'Mandat drogowy',
+          fb_ok: "Brawo.",
+          fb_ok_t: " To właśnie WordSnap — łapiesz słowo z życia, sprawdzasz, powtarzasz przez 21 dni i zostaje.",
+          fb_no: "Nie do końca.",
+          fb_no_t: " Paragon = rachunek ze sklepu. Codzienne słowo — i właśnie takie WordSnap utrwala.",
+          cta: 'Kontynuuj w Telegramie',
+          div: 'lub',
+          em_h: 'Nie masz Telegrama?',
+          em_sub: 'Zostaw email — wyślemy 50 polskich słów z życia, jedno dziennie.',
+          em_btn: 'Wyślij',
+          em_ok: "Gotowe. Pierwsze słowo jutro.",
+          em_err: "Coś poszło źle. Spróbuj ponownie?",
+          em_invalid: "To nie wygląda na email.",
+          foot: 'WordSnap · polski, niemiecki, hiszpański, francuski, angielski, ukraiński',
+        },
+        de: {
+          hero_h: 'Probier ein polnisches Wort — sieh, wie es funktioniert',
+          hero_sub: '30 Sekunden. Keine Anmeldung. Ein Wort aus dem Alltag, in 21 Tagen verankert.',
+          step1: 'Schritt 1 — Das Wort',
+          word_pos: 'Polnisch · Substantiv',
+          reveal: 'Tippen, um die Bedeutung zu sehen',
+          translation: 'Kassenbon, Quittung',
+          example: '<em>Proszę o paragon.</em> — Den Kassenbon bitte.',
+          step2: 'Schritt 2 — Kurzer Check',
+          quiz_q: 'Was bedeutet <strong>paragon</strong>?',
+          opt1: 'Ein Kassenbon aus dem Laden',
+          opt2: 'Eine Nudelsorte',
+          opt3: 'Ein Strafzettel',
+          fb_ok: "Genau.",
+          fb_ok_t: " Das ist WordSnap — Wort aus dem Alltag schnappen, kurz testen, 21 Tage wiederholen.",
+          fb_no: "Knapp daneben.",
+          fb_no_t: " Paragon = Kassenbon. Genau die Alltagswörter, die WordSnap dir festigt.",
+          cta: 'In Telegram weitermachen',
+          div: 'oder',
+          em_h: 'Kein Telegram?',
+          em_sub: 'Lass deine E-Mail — wir schicken 50 polnische Alltagswörter, eins pro Tag.',
+          em_btn: 'Senden',
+          em_ok: "Erledigt. Das erste Wort kommt morgen.",
+          em_err: "Etwas ist schiefgelaufen. Nochmal?",
+          em_invalid: "Das sieht nicht nach einer E-Mail aus.",
+          foot: 'WordSnap · Polnisch, Deutsch, Spanisch, Französisch, Englisch, Ukrainisch',
+        },
+        es: {
+          hero_h: 'Prueba una palabra polaca — mira cómo funciona',
+          hero_sub: '30 segundos. Sin registro. Atrapa una palabra del día a día, fíjala en 21 días.',
+          step1: 'Paso 1 — La palabra',
+          word_pos: 'polaco · sustantivo',
+          reveal: 'Pulsa para ver el significado',
+          translation: 'recibo, ticket de caja',
+          example: '<em>Proszę o paragon.</em> — El ticket, por favor.',
+          step2: 'Paso 2 — Comprobación rápida',
+          quiz_q: '¿Qué significa <strong>paragon</strong>?',
+          opt1: 'Un recibo de la tienda',
+          opt2: 'Un tipo de pasta',
+          opt3: 'Una multa de tráfico',
+          fb_ok: "Exacto.",
+          fb_ok_t: " Eso es WordSnap — atrapas una palabra real, la pruebas, la repites 21 días y se queda.",
+          fb_no: "Casi.",
+          fb_no_t: " Paragon = recibo. La hoja que te dan al pagar. Ese es el tipo de palabra que WordSnap fija.",
+          cta: 'Continuar en Telegram',
+          div: 'o',
+          em_h: '¿Sin Telegram?',
+          em_sub: 'Deja tu email — te enviamos 50 palabras polacas reales, una al día.',
+          em_btn: 'Enviar',
+          em_ok: "Hecho. La primera llega mañana.",
+          em_err: "Algo falló. ¿Lo intentas de nuevo?",
+          em_invalid: "Eso no parece un email.",
+          foot: 'WordSnap · polaco, alemán, español, francés, inglés y ucraniano',
+        },
+        fr: {
+          hero_h: 'Essayez un mot polonais — voyez comment ça marche',
+          hero_sub: '30 secondes. Pas d\'inscription. Un mot du quotidien, ancré en 21 jours.',
+          step1: 'Étape 1 — Le mot',
+          word_pos: 'polonais · nom',
+          reveal: 'Appuyer pour voir le sens',
+          translation: 'reçu, ticket de caisse',
+          example: '<em>Proszę o paragon.</em> — Le ticket, s\'il vous plaît.',
+          step2: 'Étape 2 — Petit test',
+          quiz_q: 'Que veut dire <strong>paragon</strong> ?',
+          opt1: 'Un ticket de caisse',
+          opt2: 'Un type de pâtes',
+          opt3: 'Une contravention',
+          fb_ok: "Bravo.",
+          fb_ok_t: " C\'est ça WordSnap — vous attrapez un mot réel, vous le testez, 21 jours de répétition et c\'est ancré.",
+          fb_no: "Pas tout à fait.",
+          fb_no_t: " Paragon = ticket de caisse. Le bout de papier qu\'on vous donne en caisse. C\'est exactement ce que WordSnap ancre.",
+          cta: 'Continuer dans Telegram',
+          div: 'ou',
+          em_h: 'Pas de Telegram ?',
+          em_sub: 'Laissez votre email — on vous envoie 50 mots polonais du quotidien, un par jour.',
+          em_btn: 'Envoyer',
+          em_ok: "C\'est noté. Premier mot demain.",
+          em_err: "Quelque chose a planté. On réessaie ?",
+          em_invalid: "Ça ne ressemble pas à un email.",
+          foot: 'WordSnap · polonais, allemand, espagnol, français, anglais, ukrainien',
+        },
+      };
+      const T = COPY[UI] || COPY.en;
+
+      // ── apply localized copy ──
+      document.documentElement.lang = UI;
+      document.getElementById('hero-h').textContent = T.hero_h;
+      document.getElementById('hero-sub').textContent = T.hero_sub;
+      document.getElementById('step-1').textContent = T.step1;
+      document.getElementById('word-pos').textContent = T.word_pos;
+      document.getElementById('reveal-btn').textContent = T.reveal;
+      document.getElementById('translation').textContent = T.translation;
+      document.getElementById('example').innerHTML = T.example;
+      document.getElementById('step-2').textContent = T.step2;
+      document.getElementById('quiz-q').innerHTML = T.quiz_q;
+      document.getElementById('opt-1').textContent = T.opt1;
+      document.getElementById('opt-2').textContent = T.opt2;
+      document.getElementById('opt-3').textContent = T.opt3;
+      document.getElementById('cta-text').textContent = T.cta;
+      document.getElementById('div-or').textContent = T.div;
+      document.getElementById('em-h').textContent = T.em_h;
+      document.getElementById('em-sub').textContent = T.em_sub;
+      document.getElementById('em-btn').textContent = T.em_btn;
+      document.getElementById('foot').textContent = T.foot;
+      // CTA button on telegram block (hidden until quiz answered)
+
+      // ── PostHog identity ──
+      const PH_LS_KEY = `ph_${PH_KEY}_posthog`;
+      function uuid() {
+        try { if (crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+          (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        );
+      }
+      let distinctId = null;
+      try {
+        const raw = localStorage.getItem(PH_LS_KEY);
+        if (raw) distinctId = (JSON.parse(raw) || {}).distinct_id || null;
+      } catch (e) {}
+      if (!distinctId) {
+        distinctId = uuid();
+        try { localStorage.setItem(PH_LS_KEY, JSON.stringify({ distinct_id: distinctId })); } catch (e) {}
+      }
+      const superProps = {
+        ref: startapp,
+        acquisition_source: source,
+        acquisition_campaign: campaign || null,
+        ui_lang: UI,
+        lander: 'demo',
+      };
+      try { posthog.register(superProps); } catch (e) {}
+      try { posthog.identify(distinctId); } catch (e) {}
+
+      function send(event, extra) {
+        const props = Object.assign({}, superProps, extra || {});
+        try {
+          if (navigator.sendBeacon) {
+            const body = JSON.stringify({
+              api_key: PH_KEY,
+              event,
+              distinct_id: distinctId,
+              properties: props,
+              timestamp: new Date().toISOString(),
+            });
+            const blob = new Blob([body], { type: 'application/json' });
+            if (navigator.sendBeacon(`${PH_HOST}/e/`, blob)) return;
+          }
+        } catch (e) {}
+        try { posthog.capture(event, props); } catch (e) {}
+      }
+
+      send('demo_loaded');
+
+      // ── reveal flow ──
+      const revealBtn = document.getElementById('reveal-btn');
+      const meaning = document.getElementById('meaning');
+      const quizCard = document.getElementById('quiz-card');
+      revealBtn.addEventListener('click', () => {
+        meaning.classList.add('shown');
+        revealBtn.style.display = 'none';
+        send('demo_word_revealed');
+        // Reveal quiz після короткої паузи
+        setTimeout(() => {
+          quizCard.style.display = 'block';
+          quizCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 250);
+      });
+
+      // ── quiz ──
+      const opts = document.querySelectorAll('.opt');
+      const feedback = document.getElementById('feedback');
+      const fbStrong = document.getElementById('fb-strong');
+      const fbText = document.getElementById('fb-text');
+      const ctaBlock = document.getElementById('cta-block');
+      let answered = false;
+
+      opts.forEach(opt => {
+        opt.addEventListener('click', () => {
+          if (answered) return;
+          answered = true;
+          const correct = opt.getAttribute('data-correct') === '1';
+          opts.forEach(o => {
+            o.disabled = true;
+            if (o.getAttribute('data-correct') === '1') o.classList.add('correct');
+            else if (o === opt) o.classList.add('wrong');
+          });
+          if (correct) {
+            fbStrong.textContent = T.fb_ok;
+            fbText.textContent = T.fb_ok_t;
+          } else {
+            fbStrong.textContent = T.fb_no;
+            fbText.textContent = T.fb_no_t;
+          }
+          feedback.classList.add('shown');
+          send('demo_quiz_answered', { correct, picked: opt.id });
+          setTimeout(() => {
+            ctaBlock.style.display = 'block';
+            ctaBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 400);
+          wireTgCta();
+        });
+      });
+
+      // ── Telegram CTA ──
+      function wireTgCta() {
+        const url = `https://t.me/${BOT}/app?startapp=${encodeURIComponent(startapp)}`;
+        const a = document.getElementById('tg-cta');
+        a.href = url;
+        a.addEventListener('click', () => {
+          send('demo_to_telegram_clicked', { startapp });
+        }, { once: true });
+      }
+
+      // ── email capture ──
+      const form = document.getElementById('em-form');
+      const input = document.getElementById('em-input');
+      const btn = document.getElementById('em-btn');
+      const msg = document.getElementById('em-msg');
+      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = (input.value || '').trim();
+        msg.textContent = '';
+        msg.className = 'email-msg';
+        if (!EMAIL_RE.test(email)) {
+          msg.textContent = T.em_invalid;
+          msg.className = 'email-msg err';
+          return;
+        }
+        btn.disabled = true;
+        send('demo_email_submit_attempted');
+        try {
+          const res = await fetch(`${API_URL}/api/lead/capture`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              source: source || 'demo',
+              campaign: campaign || null,
+              ui_lang: UI,
+              target_lang: 'pl',
+              distinct_id: distinctId,
+            }),
+          });
+          if (!res.ok) throw new Error(`status ${res.status}`);
+          msg.textContent = T.em_ok;
+          msg.className = 'email-msg ok';
+          input.disabled = true;
+          send('demo_email_captured');
+        } catch (err) {
+          msg.textContent = T.em_err;
+          msg.className = 'email-msg err';
+          btn.disabled = false;
+          send('demo_email_capture_failed', { err: String(err).slice(0, 120) });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

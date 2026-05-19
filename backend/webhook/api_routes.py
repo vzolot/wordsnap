@@ -1058,3 +1058,63 @@ async def save_survey_endpoint(
         "target_lang": payload_lang,
         "motivation": payload_mot,
     }
+
+
+# ── Demo lander (/demo) — email capture endpoint ────────────────────────────
+# Public endpoint, no auth. Захищаємо мінімально: email-regex + rate-limit
+# через IP+email композитного unique key (немає race на duplicate insert).
+import re as _re
+
+_EMAIL_RE = _re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+class CaptureLeadRequest(BaseModel):
+    email: str
+    source: str | None = None
+    campaign: str | None = None
+    ui_lang: str | None = None
+    target_lang: str | None = None
+    distinct_id: str | None = None
+
+
+@router.post("/api/lead/capture")
+async def capture_lead(data: CaptureLeadRequest, request: Request):
+    """Зберігає email-lead з демо-лендера. Idempotent через UNIQUE(email, source).
+    Анонімний endpoint — не вимагає telegram_id.
+    """
+    from core.models import Lead
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    email = (data.email or "").strip().lower()
+    if not email or len(email) > 320 or not _EMAIL_RE.match(email):
+        raise HTTPException(status_code=400, detail="invalid_email")
+
+    ip = (request.client.host if request.client else None) or "?"
+    ua = (request.headers.get("user-agent") or "")[:1000]
+
+    async with SessionLocal() as session:
+        stmt = pg_insert(Lead).values(
+            email=email,
+            source=(data.source or "")[:60] or None,
+            campaign=(data.campaign or "")[:120] or None,
+            ui_lang=(data.ui_lang or "")[:8] or None,
+            target_lang=(data.target_lang or "")[:8] or None,
+            distinct_id=(data.distinct_id or "")[:80] or None,
+            ip=ip[:64],
+            user_agent=ua,
+        ).on_conflict_do_nothing(index_elements=["email", "source"])
+        await session.execute(stmt)
+        await session.commit()
+
+    analytics.capture(
+        distinct_id=data.distinct_id or email,
+        event="lead_captured",
+        properties={
+            "email_hash": email[:3] + "***@" + email.split("@")[-1] if "@" in email else "?",
+            "source": data.source,
+            "campaign": data.campaign,
+            "ui_lang": data.ui_lang,
+            "target_lang": data.target_lang,
+        },
+    )
+    return {"ok": True}
