@@ -486,12 +486,28 @@
         }
       });
 
-      // ── 14. Entry: ad-cohort → survey, organic → straight to Open ──
+      // ── 14. Entry: всі вже бачать одразу Open-екран з CTA. Survey-on-lander
+      //    був провалений експеримент: 160 ad-landings за 5 днів → 5 Q1 → 4 Q2
+      //    (3% conv). Зараз ad-cohort іде прямо на CTA без проміжного opt-in.
+      //    Survey-код (Q1/Q2 grids, skip handler) лишається в файлі як no-op —
+      //    видалимо у наступну ітерацію якщо не повернемось до нього.
+      wireOpenCTA();
+      showScreen('open');
+
+      // ── 15. Auto-redirect для ad-cohort через 700мс на universal-link.
+      //    Дає beacon-у час полетіти, а юзеру — побачити що його забирають
+      //    у Telegram (а не закрити з відчуттям «нічого не сталось»). CTA
+      //    лишається видимим як fallback якщо universal-link дзеркало
+      //    Meta IAB заглухне.
       if (isAdRef) {
-        showScreen('q1');
-      } else {
-        wireOpenCTA();
-        showScreen('open');
+        beaconCapture('tg_auto_redirect_attempted', { method: 'universal_link' });
+        setTimeout(() => {
+          try {
+            const cta = document.getElementById('cta');
+            const url = cta && cta.href ? cta.href : `https://t.me/${BOT}/app`;
+            window.location.replace(url);
+          } catch (e) {}
+        }, 700);
       }
     })();
   </script>
