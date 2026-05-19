@@ -427,6 +427,8 @@ async def setup_bot_commands():
             BotCommand(command="stats_admin_ads", description="📣 Реклама — сьогодні"),
             BotCommand(command="stats_admin_ads_day", description="📣 Реклама — вчора"),
             BotCommand(command="stats_admin_ads_month", description="📣 Реклама — 30 днів"),
+            BotCommand(command="admin_aff", description="🪙 Платні реферали — стата"),
+            BotCommand(command="admin_aff_create", description="🪙 Створити affiliate-посилання"),
             BotCommand(command="test_remind", description="🧪 Force-надіслати denний пуш (debug)"),
         ]
         try:
