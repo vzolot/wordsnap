@@ -71,6 +71,11 @@ class User(Base):
     # Acquisition payload зі /start (igads_*, ref_*, etc.). Зберігаємо на
     # bot-side щоб не залежати від WebApp SDK перенесення start_param.
     acquisition_payload: Mapped[str | None] = mapped_column(String(64))
+    # Influencer/affiliate slug якщо юзер прийшов через aff_<slug> deeplink.
+    # Дає інфлюенсеру revenue-share від платежів цього юзера протягом
+    # affiliate.duration_days з affiliate_at. First-touch — не перетирається.
+    affiliate_slug: Mapped[str | None] = mapped_column(String(40))
+    affiliate_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Referrals: унікальний код для запрошень + хто запросив + лічильник
     referral_code: Mapped[str | None] = mapped_column(String(16))
@@ -188,6 +193,51 @@ class PaymentHistory(Base):
     is_recurring: Mapped[bool] = mapped_column(Boolean, default=False)
     rec_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+class Affiliate(Base):
+    """Програма для інфлюенсерів — кожен має slug, який зашитий у deeplink
+    `aff_<slug>`. При платежі юзера, який прийшов через slug, протягом
+    `duration_days` від `users.affiliate_at` — фіксуємо `rev_share_pct`
+    у `affiliate_revenue`. Дефолти: 20% × 6 міс (180 днів)."""
+    __tablename__ = "affiliates"
+
+    slug: Mapped[str] = mapped_column(String(40), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    rev_share_pct: Mapped[float] = mapped_column(Numeric(5, 2), default=20.0)
+    duration_days: Mapped[int] = mapped_column(Integer, default=180)
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class AffiliateRevenue(Base):
+    """Кожна успішна оплата (`payment_history`) від юзера з активним
+    affiliate_slug → row тут зі сумою share. Це source-of-truth для виплат
+    і для адмін-статистики."""
+    __tablename__ = "affiliate_revenue"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    affiliate_slug: Mapped[str] = mapped_column(
+        String(40), ForeignKey("affiliates.slug", ondelete="CASCADE")
+    )
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
+    payment_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("payment_history.id", ondelete="SET NULL"), nullable=True
+    )
+    payment_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    payment_currency: Mapped[str] = mapped_column(String(10), default="USD")
+    rev_share_pct: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    share_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    payment_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

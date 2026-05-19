@@ -217,6 +217,7 @@ T: dict[str, dict[str, str]] = {
         "reengage.body": "Ось уже {days} днів ви не заглядали у словник. Це нормально - життя. Але слова без огляду тихо забуваються.\n\nОстаннє, на якому ви спіткнулись: <b>{word}</b> - «{translation}».\n\nОдин клік на огляд - і слово знову у вашій голові.",
         "referral.invitee_welcome": "🎁 Тебе запросив друг. Тримай <b>{days} днів Pro</b> у подарунок.",
         "referral.referrer_notify": "🎉 <b>{name}</b> приєднався за твоїм посиланням!\n\nОбом нараховано <b>+{days} днів Pro</b>. Запрошених разом: {total}.",
+        "affiliate.welcome": "👋 Привіт! Ви прийшли за порадою <b>{name}</b>. Ласкаво просимо у WordSnap.",
 
         "rewards.beginner": "Новачок",
         "rewards.apprentice": "Підмайстер",
@@ -443,6 +444,7 @@ T: dict[str, dict[str, str]] = {
         "streak_save.body": "You're on a {streak}-day streak — and zero reviews today.\n\n2 hours left to keep it. One word takes 30 seconds.",
         "referral.invitee_welcome": "🎁 A friend invited you. Enjoy <b>{days} days of Pro</b> on the house.",
         "referral.referrer_notify": "🎉 <b>{name}</b> joined via your link!\n\nBoth of you got <b>+{days} days Pro</b>. Invited so far: {total}.",
+        "affiliate.welcome": "👋 Hi! You came in via <b>{name}</b>'s recommendation. Welcome to WordSnap.",
 
         "rewards.beginner": "Beginner",
         "rewards.apprentice": "Apprentice",
@@ -669,6 +671,7 @@ T: dict[str, dict[str, str]] = {
         "streak_save.body": "Llevas {streak} días seguidos — y hoy cero repasos.\n\nQuedan 2 horas. Una palabra son 30 segundos.",
         "referral.invitee_welcome": "🎁 Un amigo te invitó. Disfruta <b>{days} días de Pro</b> gratis.",
         "referral.referrer_notify": "🎉 <b>{name}</b> se unió con tu enlace!\n\nAmbos reciben <b>+{days} días Pro</b>. Invitados hasta ahora: {total}.",
+        "affiliate.welcome": "👋 ¡Hola! Llegaste por recomendación de <b>{name}</b>. Bienvenido a WordSnap.",
 
         "rewards.beginner": "Principiante",
         "rewards.apprentice": "Aprendiz",
@@ -895,6 +898,7 @@ T: dict[str, dict[str, str]] = {
         "streak_save.body": "Masz {streak} dni z rzędu — a dziś zero powtórzeń.\n\nZostały 2 godziny. Jedno słowo to 30 sekund.",
         "referral.invitee_welcome": "🎁 Znajomy cię zaprosił. Masz <b>{days} dni Pro</b> w prezencie.",
         "referral.referrer_notify": "🎉 <b>{name}</b> dołączył przez twój link!\n\nObaj otrzymujecie <b>+{days} dni Pro</b>. Zaproszeni: {total}.",
+        "affiliate.welcome": "👋 Cześć! Przyszedłeś z polecenia <b>{name}</b>. Witamy w WordSnap.",
 
         "rewards.beginner": "Początkujący",
         "rewards.apprentice": "Czeladnik",
@@ -1121,6 +1125,7 @@ T: dict[str, dict[str, str]] = {
         "streak_save.body": "Du hast eine {streak}-Tage-Serie — und heute null Wiederholungen.\n\n2 Stunden bleiben. Ein Wort dauert 30 Sekunden.",
         "referral.invitee_welcome": "🎁 Ein Freund hat dich eingeladen. Hier sind <b>{days} Tage Pro</b> geschenkt.",
         "referral.referrer_notify": "🎉 <b>{name}</b> hat sich über deinen Link angemeldet!\n\nIhr beide bekommt <b>+{days} Tage Pro</b>. Bisher eingeladen: {total}.",
+        "affiliate.welcome": "👋 Hey! Du kommst auf Empfehlung von <b>{name}</b>. Willkommen bei WordSnap.",
 
         "rewards.beginner": "Anfänger",
         "rewards.apprentice": "Lehrling",
@@ -1347,6 +1352,7 @@ T: dict[str, dict[str, str]] = {
         "streak_save.body": "Vous êtes sur une série de {streak} jours — et zéro révision aujourd'hui.\n\nIl vous reste 2 heures pour la sauver. Un mot prend 30 secondes.",
         "referral.invitee_welcome": "🎁 Un ami vous a invité. Profitez de <b>{days} jours de Pro</b> offerts.",
         "referral.referrer_notify": "🎉 <b>{name}</b> a rejoint via votre lien !\n\nVous recevez tous les deux <b>+{days} jours de Pro</b>. Invités jusqu'ici : {total}.",
+        "affiliate.welcome": "👋 Bonjour ! Vous arrivez sur la recommandation de <b>{name}</b>. Bienvenue sur WordSnap.",
 
         "rewards.beginner": "Débutant",
         "rewards.apprentice": "Apprenti",

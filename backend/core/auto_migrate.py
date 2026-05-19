@@ -150,6 +150,57 @@ MIGRATIONS: list[tuple[str, str]] = [
         "users.acquisition_payload",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS acquisition_payload VARCHAR(64)",
     ),
+    # Influencer/affiliate program — окремий канал від user-to-user
+    # referrals. Слаг закодований у `aff_<slug>` deeplink payload.
+    # Юзер «прийшов через Rue» → affiliate_slug='rue', affiliate_at=now.
+    # Кожен payment у window [affiliate_at, affiliate_at + duration_days]
+    # генерує revenue-share row у affiliate_revenue.
+    (
+        "users.affiliate_slug",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS affiliate_slug VARCHAR(40)",
+    ),
+    (
+        "users.affiliate_at",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS affiliate_at TIMESTAMPTZ",
+    ),
+    (
+        "affiliates table",
+        """
+        CREATE TABLE IF NOT EXISTS affiliates (
+            slug             VARCHAR(40) PRIMARY KEY,
+            name             VARCHAR(120) NOT NULL,
+            rev_share_pct    NUMERIC(5,2) NOT NULL DEFAULT 20.00,
+            duration_days    INTEGER NOT NULL DEFAULT 180,
+            notes            TEXT,
+            created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+    ),
+    (
+        "affiliate_revenue table",
+        """
+        CREATE TABLE IF NOT EXISTS affiliate_revenue (
+            id               BIGSERIAL PRIMARY KEY,
+            affiliate_slug   VARCHAR(40) NOT NULL REFERENCES affiliates(slug) ON DELETE CASCADE,
+            user_id          BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            payment_id       BIGINT REFERENCES payment_history(id) ON DELETE SET NULL,
+            payment_amount   NUMERIC(10,2) NOT NULL,
+            payment_currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+            rev_share_pct    NUMERIC(5,2) NOT NULL,
+            share_amount     NUMERIC(10,2) NOT NULL,
+            payment_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+    ),
+    (
+        "affiliate_revenue.slug_payment_idx",
+        "CREATE INDEX IF NOT EXISTS idx_aff_rev_slug_paymentat "
+        "ON affiliate_revenue(affiliate_slug, payment_at DESC)",
+    ),
+    ("rls.affiliates", "ALTER TABLE affiliates ENABLE ROW LEVEL SECURITY"),
+    ("rls.affiliate_revenue", "ALTER TABLE affiliate_revenue ENABLE ROW LEVEL SECURITY"),
     (
         "fn.update_updated_at_column.search_path",
         """

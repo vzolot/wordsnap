@@ -119,7 +119,7 @@ async def _charge_user(user: User, bot) -> None:
 
 
 async def _log_recurring_payment(user: User, result: dict) -> None:
-    """Записує recurring payment в історію"""
+    """Записує recurring payment в історію + affiliate revenue-share."""
     try:
         async with SessionLocal() as session:
             payment = PaymentHistory(
@@ -137,6 +137,21 @@ async def _log_recurring_payment(user: User, result: dict) -> None:
             )
             session.add(payment)
             await session.commit()
+            await session.refresh(payment)
+            # Affiliate share для recurring-charges теж — інфлюенсер отримує
+            # 20% з кожного повторного списання (поки юзер у window'і
+            # `affiliate_at + duration_days`).
+            if result.get("success"):
+                try:
+                    from core.affiliates import record_payment_share
+                    await record_payment_share(
+                        user_id=user.id,
+                        payment_id=payment.id,
+                        payment_amount=1.49,
+                        payment_currency="USD",
+                    )
+                except Exception as e:
+                    logger.warning(f"recurring: affiliate share failed: {e}")
     except Exception as e:
         logger.error(f"Failed to log recurring payment: {e}")
 

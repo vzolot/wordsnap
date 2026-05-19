@@ -84,6 +84,31 @@ async def cmd_start(message: Message):
         language_code=tg_user.language_code,
     )
 
+    # Affiliate/influencer flow: payload `aff_<slug>`. First-touch
+    # зберігаємо у `users.affiliate_slug` + `affiliate_at`. Подальші
+    # платежі цього юзера автоматично генерують revenue-share row
+    # у `affiliate_revenue` через `record_payment_share()`.
+    if payload and payload.startswith("aff_"):
+        from core.affiliates import (
+            apply_affiliate_to_user,
+            get_affiliate,
+            parse_affiliate_payload,
+        )
+        slug = parse_affiliate_payload(payload)
+        if slug:
+            applied = await apply_affiliate_to_user(user.id, slug)
+            if applied:
+                aff = await get_affiliate(slug)
+                influencer_name = aff.name if aff else slug
+                lang = user.native_lang or "uk"
+                try:
+                    await message.answer(
+                        bt("affiliate.welcome", lang, name=influencer_name)
+                    )
+                except Exception as e:
+                    logger.warning(f"affiliate welcome msg failed: {e}")
+        # Дальше — нормальний flow (онбординг якщо новий юзер).
+
     # Ad-cohort flow: payload `<source>_<campaign>[_<lang>[_<mot>]]` від
     # paid ads. Сурси: `igads_`/`ig_` (Meta), `reddit_` (Reddit Ads),
     # потенційно нові. Шлемо в survey-handler — він сам розрулить чи

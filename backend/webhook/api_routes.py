@@ -894,7 +894,7 @@ async def wayforpay_callback(request: Request):
                         )
                     )).scalar_one_or_none()
                     if not existing:
-                        session.add(PaymentHistory(
+                        payment_row = PaymentHistory(
                             user_id=user.id,
                             order_reference=order_ref,
                             amount=amount,
@@ -906,8 +906,27 @@ async def wayforpay_callback(request: Request):
                             is_recurring=is_recurring,
                             rec_token=str(rec_token) if rec_token else None,
                             raw_payload=data,
-                        ))
+                        )
+                        session.add(payment_row)
                         await session.commit()
+                        await session.refresh(payment_row)
+                        # Affiliate revenue-share: якщо у юзера активний
+                        # affiliate_slug і успішний платіж - фіксуємо share.
+                        # Невдалі платежі ігноруємо (не платимо інфлюенсеру
+                        # за failed transaction'и).
+                        if success:
+                            try:
+                                from core.affiliates import record_payment_share
+                                await record_payment_share(
+                                    user_id=user.id,
+                                    payment_id=payment_row.id,
+                                    payment_amount=float(amount),
+                                    payment_currency=str(data.get("currency", "USD")),
+                                )
+                            except Exception as e:
+                                logger.warning(
+                                    f"WayForPay: affiliate share record failed: {e}"
+                                )
         except Exception as e:
             logger.error(f"WayForPay: failed to save payment history: {e}", exc_info=True)
 
@@ -981,7 +1000,12 @@ async def save_survey_endpoint(
     target_lang/motivation/acquisition_payload to the user. Idempotent.
     """
     from bot.handlers.survey_handler import parse_ad_payload
+    from core.affiliates import apply_affiliate_to_user, parse_affiliate_payload
     from sqlalchemy import update as sa_update
+
+    # Affiliate flow: payload `aff_<slug>` приймаємо тут теж - якщо юзер
+    # відкрив mini-app напряму через universal link (а не /start у боті).
+    aff_slug = parse_affiliate_payload(data.payload)
 
     parsed = parse_ad_payload(data.payload)
     payload_lang = parsed["lang"]
@@ -1006,11 +1030,20 @@ async def save_survey_endpoint(
         )
         await session.commit()
 
+    # Affiliate first-touch (через mini-app direct universal link).
+    affiliate_applied = False
+    if aff_slug:
+        affiliate_applied = await apply_affiliate_to_user(user.id, aff_slug)
+        if affiliate_applied:
+            applied["affiliate_slug"] = aff_slug
+
     analytics.capture(telegram_id, "onboarding_survey_saved", {
         "payload": data.payload,
         "campaign": parsed["campaign"],
         "lang_from_payload": payload_lang,
         "motivation_from_payload": payload_mot,
+        "affiliate_slug": aff_slug,
+        "affiliate_applied": affiliate_applied,
         "applied": applied,
         "source": "miniapp_direct",
     })
