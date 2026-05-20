@@ -886,7 +886,12 @@ async def wayforpay_callback(request: Request):
 
     success = transaction_status == "Approved" and reason_code == "1100"
 
-    # Записуємо в історію (одразу, навіть для невдалих платежів)
+    # Записуємо в історію (одразу, навіть для невдалих платежів).
+    # is_new_payment гейтить активацію Pro нижче — WayForPay може ретраїти
+    # той самий callback, і без цього прапора Pro продовжувався б двічі за
+    # одне списання. Кожне регулярне списання приходить з унікальним
+    # orderReference, тому новий рядок == нове реальне списання.
+    is_new_payment = False
     if telegram_id is not None:
         try:
             async with SessionLocal() as session:
@@ -899,6 +904,7 @@ async def wayforpay_callback(request: Request):
                         )
                     )).scalar_one_or_none()
                     if not existing:
+                        is_new_payment = True
                         payment_row = PaymentHistory(
                             user_id=user.id,
                             order_reference=order_ref,
@@ -935,8 +941,11 @@ async def wayforpay_callback(request: Request):
         except Exception as e:
             logger.error(f"WayForPay: failed to save payment history: {e}", exc_info=True)
 
-    # Активуємо Pro лише при успіху
-    if success and telegram_id is not None and not is_recurring:
+    # Активуємо/продовжуємо Pro лише на новий успішний платіж. Покриває і
+    # перший платіж, і WayForPay-managed регулярні списання (вони теж летять
+    # на цей serviceUrl з унікальним orderReference, is_recurring=False).
+    # is_new_payment гарантує ідемпотентність проти повторних callback'ів.
+    if success and telegram_id is not None and is_new_payment:
         duration_days = 365 if period == "annual" else 30
         try:
             await activate_pro_subscription(

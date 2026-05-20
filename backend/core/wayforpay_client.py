@@ -149,7 +149,26 @@ def create_payment_link(
         "language": "UA",
         "returnUrl": RETURN_URL,
     }
-    
+
+    # --- Регулярні платежі (WayForPay-managed subscription) ---
+    # WayForPay сам списує щомісяця/щороку і шле callback на serviceUrl за
+    # кожне списання. Ці поля НЕ входять у purchase-signature (підпис покриває
+    # лише account;domain;orderRef;date;amount;currency;names;counts;prices),
+    # тому додавання їх не ламає підпис. Перше списання — зараз, наступне —
+    # через period. dateEnd не ставимо → підписка бесстрокова поки юзер не
+    # скасує (REMOVE токена через remove_recurring_token).
+    from datetime import datetime as _dt, timedelta as _td
+    if period == "annual":
+        regular_mode = "yearly"
+        next_charge = _dt.now() + _td(days=365)
+    else:
+        regular_mode = "monthly"
+        next_charge = _dt.now() + _td(days=30)
+    params["regularMode"] = regular_mode
+    params["regularOn"] = "1"
+    params["regularAmount"] = amount
+    params["dateNext"] = next_charge.strftime("%d.%m.%Y")
+
     if WEBHOOK_URL:
         params["serviceUrl"] = WEBHOOK_URL
 
