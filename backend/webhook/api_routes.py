@@ -801,8 +801,13 @@ async def pay_redirect(telegram_id: int = Query(...), period: str = Query("month
 
 
 @router.post("/api/wayforpay/callback")
+@router.post("/wayforpay/callback")
 async def wayforpay_callback(request: Request):
     """Webhook від WayForPay після платежу. Активує Pro якщо платіж successful.
+
+    Зареєстрований на двох шляхах: канонічний `/api/wayforpay/callback` і
+    legacy `/wayforpay/callback` (значення WAYFORPAY_WEBHOOK_URL у проді вказує
+    на другий — без alias'у callback падав у 404 і Pro не активувався).
 
     Формат відповіді що очікує WayForPay:
         {
@@ -976,7 +981,12 @@ async def create_buy_link(
     amount = 8.99 if period == "annual" else 1.49
 
     # Будуємо URL поточного хоста: схема + хост + /pay?…
-    base = f"{request.url.scheme}://{request.url.netloc}"
+    # За Railway-проксі request.url.scheme = http (TLS термінується на проксі),
+    # тому форсимо https — інакше деякі in-app браузери ламають redirect.
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    if scheme == "http":
+        scheme = "https"
+    base = f"{scheme}://{request.url.netloc}"
     payment_url = f"{base}/pay?telegram_id={telegram_id}&period={period}"
 
     return {
