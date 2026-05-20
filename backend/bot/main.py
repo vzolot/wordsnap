@@ -45,7 +45,7 @@ from core.user_service import (
     get_user_status,
     cancel_subscription,
 )
-from core.wayforpay_client import create_payment_link
+from core.wayforpay_client import create_payment_link, pay_page_url
 
 logging.basicConfig(
     level=logging.INFO,
@@ -312,21 +312,17 @@ async def cmd_buy(message: Message):
     lang = user.native_lang or "uk"
 
     try:
-        payment = create_payment_link(
-            user_telegram_id=user.telegram_id,
-            amount=1.49,
-            currency="USD",
-        )
+        # Кнопка веде на наш /pay endpoint (рендерить auto-submit POST форму),
+        # а НЕ на прямий WayForPay GET-лінк — той дає "Bad Request, requires
+        # only POST data". /pay сам викликає create_payment_link при відкритті.
+        url = pay_page_url(user.telegram_id, "monthly")
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=bt("buy.btn", lang), url=payment["payment_url"])]
+            [InlineKeyboardButton(text=bt("buy.btn", lang), url=url)]
         ])
         await message.answer(buy_text(lang), reply_markup=keyboard)
-        logger.info(f"Sent payment link to user {user.telegram_id}, order {payment['order_reference']}")
-    except ValueError as e:
-        logger.error(f"WayForPay config error: {e}")
-        await message.answer(bt("buy.unavailable", lang))
+        logger.info(f"Sent /pay link to user {user.telegram_id}")
     except Exception as e:
-        logger.error(f"Error creating payment: {e}", exc_info=True)
+        logger.error(f"Error creating payment button: {e}", exc_info=True)
         await message.answer(bt("buy.error", lang))
 
 

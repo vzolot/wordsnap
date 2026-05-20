@@ -12,7 +12,7 @@ import hashlib
 import logging
 import httpx
 from typing import TypedDict
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,6 +28,21 @@ WEBHOOK_URL = os.getenv("WAYFORPAY_WEBHOOK_URL", "")
 # URLs
 WAYFORPAY_PURCHASE_URL = "https://secure.wayforpay.com/pay"
 WAYFORPAY_API_URL = "https://api.wayforpay.com/api"
+
+
+def _public_base() -> str:
+    """Origin нашого бекенду — для self-hosted /pay auto-submit сторінки."""
+    if WEBHOOK_URL:
+        p = urlparse(WEBHOOK_URL)
+        if p.scheme and p.netloc:
+            return f"{p.scheme}://{p.netloc}"
+    return os.getenv("PUBLIC_BASE_URL", "https://worker-production-abd5.up.railway.app")
+
+
+def pay_page_url(telegram_id: int, period: str = "monthly") -> str:
+    """URL нашої /pay сторінки (рендерить POST-форму). НЕ прямий WayForPay GET —
+    той дає 'Bad Request, this page requires only POST data'."""
+    return f"{_public_base()}/pay?telegram_id={telegram_id}&period={period}"
 
 # Параметри підписки
 SUBSCRIPTION_AMOUNT = 1.49
