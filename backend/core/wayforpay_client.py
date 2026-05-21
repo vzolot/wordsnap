@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 MERCHANT_LOGIN = os.getenv("WAYFORPAY_MERCHANT_LOGIN", "")
 MERCHANT_SECRET = os.getenv("WAYFORPAY_MERCHANT_SECRET", "")
+MERCHANT_PASSWORD = os.getenv("WAYFORPAY_MERCHANT_PASSWORD", "")
 MERCHANT_DOMAIN = os.getenv("WAYFORPAY_MERCHANT_DOMAIN", "t.me/WordSnapBot")
 RETURN_URL = os.getenv("WAYFORPAY_RETURN_URL", "https://t.me/WordSnapBot")
 WEBHOOK_URL = os.getenv("WAYFORPAY_WEBHOOK_URL", "")
@@ -28,6 +29,7 @@ WEBHOOK_URL = os.getenv("WAYFORPAY_WEBHOOK_URL", "")
 # URLs
 WAYFORPAY_PURCHASE_URL = "https://secure.wayforpay.com/pay"
 WAYFORPAY_API_URL = "https://api.wayforpay.com/api"
+WAYFORPAY_REGULAR_API_URL = "https://api.wayforpay.com/regularApi"
 
 
 def _public_base() -> str:
@@ -320,6 +322,46 @@ async def charge_recurring(
             "reason": str(e),
             "raw": {},
         }
+
+
+async def cancel_regular_payment(order_reference: str) -> dict:
+    """Скасовує WayForPay-managed регулярну підписку через regularApi REMOVE.
+
+    На відміну від Purchase/Charge (підпис secret key), regularApi
+    автентифікується merchantPassword (значення «Merchant password» з кабінету,
+    воно вже у форматі готового хешу). orderReference — це ref першого платежу
+    що створив регулярку (зберігаємо у users.subscription_order_ref).
+
+    Returns dict: success (reasonCode 4100 = Ok), reason_code, reason, raw.
+    """
+    if not MERCHANT_PASSWORD:
+        return {"success": False, "reason_code": "NO_PASSWORD",
+                "reason": "WAYFORPAY_MERCHANT_PASSWORD not configured", "raw": {}}
+
+    payload = {
+        "requestType": "REMOVE",
+        "merchantAccount": MERCHANT_LOGIN,
+        "merchantPassword": MERCHANT_PASSWORD,
+        "orderReference": order_reference,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(WAYFORPAY_REGULAR_API_URL, json=payload)
+            data = response.json()
+            code = str(data.get("reasonCode", ""))
+            logger.info(
+                f"WayForPay regularApi REMOVE order={order_reference}: "
+                f"reasonCode={code} reason={data.get('reason')}"
+            )
+            return {
+                "success": code == "4100",
+                "reason_code": code,
+                "reason": data.get("reason", ""),
+                "raw": data,
+            }
+    except Exception as e:
+        logger.error(f"WayForPay regularApi REMOVE error: {e}", exc_info=True)
+        return {"success": False, "reason_code": "ERROR", "reason": str(e), "raw": {}}
 
 
 async def remove_recurring_token(rec_token: str) -> bool:

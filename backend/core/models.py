@@ -48,6 +48,9 @@ class User(Base):
     subscription_status: Mapped[str] = mapped_column(
         String(20), default="none", server_default="none"
     )  # none, active, cancelled, expired, failed
+    # orderReference активної WayForPay-регулярки — ключ для скасування
+    # підписки через regularApi REMOVE.
+    subscription_order_ref: Mapped[str | None] = mapped_column(String(80), nullable=True)
 
     # Нагадування
     reminder_time: Mapped[time] = mapped_column(Time, default=time(9, 0))

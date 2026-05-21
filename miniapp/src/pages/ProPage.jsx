@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStats, createBuyLink, getReferral, readCache, writeCache } from '../api/client';
+import { getStats, createBuyLink, cancelSubscription, getReferral, readCache, writeCache } from '../api/client';
 import { track } from '../utils/analytics';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
@@ -13,6 +13,9 @@ function ProPage() {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelMsg, setCancelMsg] = useState('');
   const navigate = useNavigate();
   const { t } = useT();
   const tg = window.Telegram?.WebApp;
@@ -47,7 +50,28 @@ function ProPage() {
   };
 
   const isPro = stats?.plan === 'pro';
+  const isCancelled = stats?.subscription_status === 'cancelled';
   const [period, setPeriod] = useState('annual'); // дефолт — annual бо вигідніше
+
+  const handleCancel = async () => {
+    track('subscription_cancel_clicked');
+    setCancelling(true);
+    setCancelMsg('');
+    try {
+      const r = await cancelSubscription();
+      const until = r.data?.pro_until ? new Date(r.data.pro_until).toLocaleDateString() : '';
+      setCancelMsg(t('pro.cancel.success', { date: until }));
+      setCancelConfirm(false);
+      // оновлюємо стан щоб показати cancelled
+      getStats().then(rr => { setStats(rr.data); writeCache('stats', rr.data); }).catch(() => {});
+      track('subscription_cancelled_ui');
+    } catch (e) {
+      setCancelMsg(t('pro.cancel.error'));
+      track('subscription_cancel_failed');
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const featureKeys = [
     'pro.features.unlimited',
@@ -132,6 +156,42 @@ function ProPage() {
                 <p className="pro-finefoot" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   {t('pro.active.until', { date: new Date(stats.plan_expires_at).toLocaleDateString() })}
                 </p>
+              )}
+
+              {/* Скасування підписки — обовʼязкова можливість відписатись */}
+              {cancelMsg ? (
+                <p className="pro-finefoot" style={{ color: 'rgba(255,255,255,0.7)', marginTop: 12 }}>{cancelMsg}</p>
+              ) : isCancelled ? (
+                <p className="pro-finefoot" style={{ color: 'rgba(255,255,255,0.55)', marginTop: 12 }}>
+                  {t('pro.cancel.already')}
+                </p>
+              ) : !cancelConfirm ? (
+                <button
+                  type="button"
+                  onClick={() => { setCancelConfirm(true); }}
+                  style={{ display: 'block', margin: '14px auto 0', background: 'none', border: 'none',
+                    color: 'rgba(255,255,255,0.45)', fontSize: 13, textDecoration: 'underline',
+                    textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  {t('pro.cancel.button')}
+                </button>
+              ) : (
+                <div style={{ marginTop: 14, textAlign: 'center' }}>
+                  <p className="pro-finefoot" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10 }}>
+                    {t('pro.cancel.confirm')}
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                    <button type="button" className="btn btn-secondary" style={{ flex: 1, maxWidth: 160 }}
+                      onClick={() => setCancelConfirm(false)} disabled={cancelling}>
+                      {t('pro.cancel.keep')}
+                    </button>
+                    <button type="button" className="btn" style={{ flex: 1, maxWidth: 160,
+                      background: 'rgba(239,68,68,0.15)', color: '#F87171', border: '1px solid rgba(239,68,68,0.4)' }}
+                      onClick={handleCancel} disabled={cancelling}>
+                      {cancelling ? '…' : t('pro.cancel.confirm_yes')}
+                    </button>
+                  </div>
+                </div>
               )}
             </>
           ) : (

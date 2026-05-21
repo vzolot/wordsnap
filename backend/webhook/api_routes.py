@@ -272,6 +272,7 @@ async def get_stats(telegram_id: int = Query(...)):
             "plan": "pro" if is_pro else user.plan,
             "plan_expires_at": user.plan_expires_at.isoformat() if user.plan_expires_at else None,
             "auto_renew": user.auto_renew,
+            "subscription_status": user.subscription_status,
             "native_lang": user.native_lang,
             "target_lang": user.target_lang,
             "reminders_enabled": user.reminders_enabled,
@@ -952,6 +953,7 @@ async def wayforpay_callback(request: Request):
                 telegram_id=telegram_id,
                 rec_token=str(rec_token) if rec_token else None,
                 duration_days=duration_days,
+                order_ref=order_ref,
             )
             # Сповіщаємо у бот-чат
             try:
@@ -1002,6 +1004,53 @@ async def create_buy_link(
         "payment_url": payment_url,
         "period": period,
         "amount": amount,
+    }
+
+
+@router.post("/api/cancel_subscription")
+async def cancel_subscription_endpoint(telegram_id: int = Query(...)):
+    """Скасовує авто-продовження підписки. Pro лишається активним до кінця
+    оплаченого періоду (`plan_expires_at`), нових списань не буде.
+
+    Спершу прибираємо WayForPay-managed регулярку через regularApi REMOVE
+    (щоб WayForPay перестав списувати), потім ставимо локальний стан
+    cancelled. Локальний стан міняємо завжди — навіть якщо WayForPay-виклик
+    не вдався, щоб поважати намір юзера (а збій логуємо й повертаємо у
+    відповіді, щоб фронт міг показати «зверніться в підтримку»)."""
+    from core.user_service import cancel_subscription as _cancel_db
+    from core.wayforpay_client import cancel_regular_payment
+
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        order_ref = user.subscription_order_ref
+        plan_expires_at = user.plan_expires_at
+
+    wayforpay_removed = True
+    wfp_reason = None
+    if order_ref:
+        result = await cancel_regular_payment(order_ref)
+        wayforpay_removed = result["success"]
+        wfp_reason = result.get("reason")
+        if not wayforpay_removed:
+            logger.warning(
+                f"cancel_subscription: WayForPay REMOVE failed for {telegram_id} "
+                f"order={order_ref}: {result.get('reason_code')} {wfp_reason}"
+            )
+
+    await _cancel_db(telegram_id)
+
+    analytics.capture(telegram_id, "subscription_cancelled", {
+        "wayforpay_removed": wayforpay_removed,
+        "reason": wfp_reason,
+        "had_order_ref": bool(order_ref),
+    })
+
+    return {
+        "cancelled": True,
+        "wayforpay_removed": wayforpay_removed,
+        "pro_until": plan_expires_at.isoformat() if plan_expires_at else None,
     }
 
 

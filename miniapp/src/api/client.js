@@ -51,6 +51,7 @@ export const updateWordTranslation = (wordId, translation) =>
 export const getSongs = () => api.get('/api/songs');
 export const getThemes = () => api.get('/api/themes');
 export const createBuyLink = (period = 'monthly') => api.post('/api/buy', null, { params: { period } });
+export const cancelSubscription = () => api.post('/api/cancel_subscription');
 export const getReferral = () => api.get('/api/referral');
 // Apply a referral on mini-app entry (когда юзер прийшов за `?startapp=ref_<code>`
 // прямим лінком замість через чат-бот). Backend сам відхиляє дубль/self-referral.

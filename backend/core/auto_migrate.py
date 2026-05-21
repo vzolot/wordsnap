@@ -163,6 +163,12 @@ MIGRATIONS: list[tuple[str, str]] = [
         "users.affiliate_at",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS affiliate_at TIMESTAMPTZ",
     ),
+    # orderReference активної WayForPay-регулярки. Зберігаємо при першому
+    # успішному платежі — потрібен для скасування підписки через regularApi.
+    (
+        "users.subscription_order_ref",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_order_ref VARCHAR(80)",
+    ),
     (
         "affiliates table",
         """

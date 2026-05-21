@@ -191,6 +191,7 @@ async def activate_pro_subscription(
     telegram_id: int,
     rec_token: str | None = None,
     duration_days: int = 30,
+    order_ref: str | None = None,
 ) -> User | None:
     """
     Активує Pro підписку для юзера.
@@ -223,6 +224,11 @@ async def activate_pro_subscription(
         user.plan_expires_at = new_expires
         user.last_payment_date = now
         user.subscription_status = "active"
+
+        # Зберігаємо ref першого платежу (тільки якщо ще нема) — потрібен для
+        # скасування регулярки. Renewals не перетирають оригінальний ref.
+        if order_ref and not user.subscription_order_ref:
+            user.subscription_order_ref = order_ref
         
         # Списуємо за день до закінчення
         user.next_charge_date = new_expires - timedelta(days=1)
