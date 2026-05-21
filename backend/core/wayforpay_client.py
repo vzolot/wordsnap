@@ -353,8 +353,11 @@ async def cancel_regular_payment(order_reference: str) -> dict:
                 f"WayForPay regularApi REMOVE order={order_reference}: "
                 f"reasonCode={code} reason={data.get('reason')}"
             )
+            # 4100 = removed; 4102 = "Rule is not found" → регулярки вже нема,
+            # що і є бажаним кінцевим станом (майбутніх списань не буде). Обидва
+            # трактуємо як успіх скасування.
             return {
-                "success": code == "4100",
+                "success": code in ("4100", "4102"),
                 "reason_code": code,
                 "reason": data.get("reason", ""),
                 "raw": data,
