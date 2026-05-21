@@ -45,6 +45,7 @@ export const getReviewWords = () => api.get('/api/review');
 export const submitReview = (wordId, quality, mode = 'cards') =>
   api.post('/api/review', { word_id: wordId, quality, mode });
 export const addWord = (word) => api.post('/api/words', { word });
+export const bulkAddWords = (words) => api.post('/api/words/bulk', { words });
 export const deleteWord = (wordId) => api.delete(`/api/words/${wordId}`);
 export const updateWordTranslation = (wordId, translation) =>
   api.patch(`/api/words/${wordId}`, { translation });

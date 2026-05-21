@@ -72,12 +72,14 @@ Three review modes feed the same SM-2 scheduler:
 | `/` (Home) | Greeting, streak card with calendar dots, snap input, 3 stat tiles |
 | `/words` | Searchable word list with status filter chips (all/new/learning/mastered) + sort, click → detail modal |
 | `/review` | Three modes via `?mode=cards\|quiz\|spelling`; same SM-2 scheduler |
-| `/songs` | Curated lyric packs (Imagine, Yesterday, Perfect…) — tap a song → see word list → add |
-| `/themes` | Curated theme packs (Travel, Food, Office…) — same flow |
+| `/songs` | Curated lyric packs (Imagine, Yesterday, Perfect…) — tap a song → see word list → add one-by-one or **«Add all»** |
+| `/themes` | Curated theme packs (Travel, Food, Office…) — same flow + **«Add all»** |
 | `/stats` | XP card with tier ladder, 6 stat tiles, link to `/leaderboard` |
 | `/leaderboard` | Top-50 by total XP, segmented by `target_lang`, your-rank pinned if outside top |
 | `/pro` | Subscription card (annual/monthly toggle) + referral block |
 | `/settings` | Avatar (32 emojis), native lang, target lang, reminders toggle, leaderboard opt-out, timezone |
+
+**Bulk add (2026-05-21):** «Add all» button on Song/Theme detail → `POST /api/words/bulk` (`{words: [...]}`). Respects the snap limit — pre-computes budget (`daily_limit − used`), adds up to it, rest → `skipped_limit` (natural paywall nudge). Dedupes against existing words, generates AI+image with `Semaphore(4)` concurrency, increments counter once for the batch. Returns `{added, duplicates, skipped_limit, failed, added_count, limit_hit}`; UI marks each word ✓/• and shows a summary line (`songs.bulk_*` i18n in 6 langs). Single-word add path unchanged.
 
 ### 3.3 Onboarding stories (in-app onboarding)
 **Primary onboarding surface** — works for users who arrive via direct mini-app link without ever touching the bot. 4 slides:

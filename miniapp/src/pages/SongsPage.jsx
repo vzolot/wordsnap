@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { addWord, clearCache, getSongs, readCache, writeCache } from '../api/client';
+import { addWord, bulkAddWords, clearCache, getSongs, readCache, writeCache } from '../api/client';
 import { pollImage } from '../utils/pollImage';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
@@ -86,8 +86,63 @@ function SongDetail({ pack, targetLang, onBack, t }) {
   const [statusMap, setStatusMap] = useState({}); // word -> 'idle'|'loading'|'added'|'duplicate'|'error'
   const [results, setResults] = useState({}); // word -> data shown inline
   const [errors, setErrors] = useState({}); // word -> error msg
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState('');
   const unmountedRef = useRef(false);
   useEffect(() => () => { unmountedRef.current = true; }, []);
+
+  const handleAddAll = async () => {
+    if (bulkBusy) return;
+    const pending = pack.words.filter(w => !['added', 'loading'].includes(statusMap[w]));
+    if (pending.length === 0) return;
+    setBulkBusy(true);
+    setBulkMsg('');
+    setStatusMap(s => {
+      const next = { ...s };
+      pending.forEach(w => { next[w] = 'loading'; });
+      return next;
+    });
+    try {
+      const r = await bulkAddWords(pending);
+      const d = r.data || {};
+      if (d.error === 'setup_required') {
+        setBulkMsg(t('songs.bulk_setup'));
+        setStatusMap(s => { const n = { ...s }; pending.forEach(w => { n[w] = 'idle'; }); return n; });
+        return;
+      }
+      const added = new Set(d.added || []);
+      const dups = new Set(d.duplicates || []);
+      setStatusMap(s => {
+        const n = { ...s };
+        pending.forEach(w => {
+          if (added.has(w)) n[w] = 'added';
+          else if (dups.has(w)) n[w] = 'duplicate';
+          else n[w] = 'idle'; // skipped_limit / failed → лишаємо додаваними поодинці
+        });
+        return n;
+      });
+      const addedCount = d.added_count || 0;
+      if (d.limit_hit) {
+        setBulkMsg(t('songs.bulk_limit', { added: addedCount, left: (d.skipped_limit || []).length }));
+      } else {
+        setBulkMsg(t('songs.bulk_done', { added: addedCount, dup: (d.duplicates || []).length }));
+      }
+      const cachedStats = readCache('stats', { ignoreTtl: true });
+      if (cachedStats && addedCount) {
+        writeCache('stats', {
+          ...cachedStats,
+          total_words: (cachedStats.total_words || 0) + addedCount,
+          used_today: (cachedStats.used_today || 0) + addedCount,
+        });
+      }
+      clearCache('words');
+    } catch {
+      setBulkMsg(t('songs.bulk_error'));
+      setStatusMap(s => { const n = { ...s }; pending.forEach(w => { if (n[w] === 'loading') n[w] = 'idle'; }); return n; });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const handleAdd = async (word) => {
     if (statusMap[word] === 'loading' || statusMap[word] === 'added') return;
@@ -161,6 +216,18 @@ function SongDetail({ pack, targetLang, onBack, t }) {
         </div>
       </div>
       <p className="body-2" style={{ marginBottom: 14, marginTop: 8 }}>{t('songs.song_sub')}</p>
+
+      <button
+        className="btn btn-gradient"
+        style={{ width: '100%', marginBottom: 6 }}
+        onClick={handleAddAll}
+        disabled={bulkBusy}
+      >
+        {bulkBusy ? t('songs.bulk_adding') : t('songs.add_all', { n: pack.words.length })}
+      </button>
+      {bulkMsg && (
+        <p className="body-2" style={{ marginBottom: 12, textAlign: 'center', color: 'var(--text-2)' }}>{bulkMsg}</p>
+      )}
 
       <div className="song-words">
         {pack.words.map(w => {

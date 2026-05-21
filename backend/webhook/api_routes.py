@@ -24,6 +24,10 @@ class WordRequest(BaseModel):
     word: str
 
 
+class WordsBulkRequest(BaseModel):
+    words: list[str]
+
+
 class ReviewRequest(BaseModel):
     word_id: int
     quality: int = 3
@@ -452,6 +456,112 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
         "word": _serialize_word(saved) if saved else None,
         "ai_data": ai_data,
         "image_url": image_url,
+    }
+
+
+@router.post("/api/words/bulk")
+async def add_words_bulk_endpoint(data: WordsBulkRequest, telegram_id: int = Query(...)):
+    """Додає одразу пачку слів (з набору пісні/теми) одним кліком.
+
+    Поважає ліміт: рахуємо бюджет (`daily_limit - used`) наперед і беремо лише
+    стільки нових слів, скільки дозволено — решта йде у skipped_limit (це і є
+    природний paywall-nudge). Дублікати фільтруємо. AI+image генеруємо з
+    обмеженою конкурентністю (semaphore=4), щоб 15-словний набір не тягнувся
+    хвилину. Лічильник інкрементуємо один раз на фактично додані.
+    """
+    import asyncio as _aio
+    from core.user_service import get_or_create_user, get_user_status
+    from core.word_service import word_exists, save_word
+    from core.openai_client import get_word_data
+    from core.unsplash_client import search_image
+
+    words = [(w or "").strip() for w in (data.words or [])]
+    words = [w for w in words if 2 <= len(w) <= 100]
+    # дедуп у межах самого запиту, зберігаємо порядок
+    seen: set[str] = set()
+    words = [w for w in words if not (w.lower() in seen or seen.add(w.lower()))]
+    if not words:
+        raise HTTPException(status_code=400, detail="No valid words")
+    if len(words) > 60:
+        words = words[:60]  # safety cap
+
+    user = await get_or_create_user(telegram_id=telegram_id)
+    if not user.target_lang:
+        return {"error": "setup_required"}
+
+    # Бюджет: скільки ще можна додати (daily_limit вже у тижневих одиницях для free)
+    status = await get_user_status(user, user.native_lang)
+    budget = max(0, int(status["daily_limit"]) - int(status["used_today"]))
+
+    # Дублікати — паралельні перевірки існування
+    exist_flags = await _aio.gather(*[
+        word_exists(user.id, w, user.target_lang) for w in words
+    ])
+    duplicates = [w for w, ex in zip(words, exist_flags) if ex]
+    fresh = [w for w, ex in zip(words, exist_flags) if not ex]
+
+    to_add = fresh[:budget]
+    skipped_limit = fresh[budget:]
+
+    added: list[str] = []
+    failed: list[str] = []
+
+    if to_add:
+        sem = _aio.Semaphore(4)
+
+        async def _process(w: str):
+            async with sem:
+                try:
+                    ai_task = _aio.create_task(get_word_data(
+                        w, target_lang=user.target_lang, native_lang=user.native_lang or "uk"
+                    ))
+                    img_task = _aio.create_task(search_image(w))
+                    ai_data = await ai_task
+                    if not ai_data or ai_data.get("is_real") is False:
+                        img_task.cancel()
+                        failed.append(w)
+                        return
+                    image_url = await img_task
+                    ok = await save_word(
+                        user_id=user.id, word=w, target_lang=user.target_lang,
+                        ai_data=ai_data, image_url=image_url,
+                    )
+                    (added if ok else failed).append(w)
+                except Exception as e:
+                    logger.warning(f"bulk add failed for {w!r}: {e}")
+                    failed.append(w)
+
+        await _aio.gather(*[_process(w) for w in to_add])
+
+    # Інкремент лічильника один раз на фактично додані
+    if added:
+        async with SessionLocal() as session:
+            u = (await session.execute(
+                select(User).where(User.id == user.id)
+            )).scalar_one_or_none()
+            if u:
+                u.words_added_today = (u.words_added_today or 0) + len(added)
+                u.total_words = (u.total_words or 0) + len(added)
+                await session.commit()
+
+    analytics.capture(telegram_id, "words_bulk_added", {
+        "target_lang": user.target_lang,
+        "requested": len(words),
+        "added": len(added),
+        "duplicates": len(duplicates),
+        "skipped_limit": len(skipped_limit),
+        "failed": len(failed),
+        "source": "miniapp",
+    })
+
+    return {
+        "ok": True,
+        "added": added,
+        "duplicates": duplicates,
+        "skipped_limit": skipped_limit,
+        "failed": failed,
+        "added_count": len(added),
+        "limit_hit": len(skipped_limit) > 0,
     }
 
 
