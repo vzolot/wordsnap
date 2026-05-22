@@ -141,6 +141,10 @@ Added 2026-05-19. Separate channel from user-to-user referrals — for paid infl
 - Works for both first-time HPP payments (`webhook/api_routes.py` WayForPay callback) AND monthly recurring charges (`scheduler/recurring_charges.py`).
 - Idempotent via `payment_id` FK — webhook re-deliveries don't double-credit.
 
+**Active influencers (as of 2026-05-22):** both on default terms (20% × 180d). Each slug must exist in the `affiliates` table (`/admin_aff_create <slug> <name>`) for attribution to fire.
+- **Rue** (`rue`) — South Africa, English-speaking audience → `https://t.me/WordSnapBot?start=aff_rue`
+- **Sheku** (`sheku`) — same English-cohort logic → `https://t.me/WordSnapBot?start=aff_sheku`
+
 **Admin commands (in `@WordSnapBot`, admin-only):**
 - `/admin_aff_create <slug> <name> [pct] [days]` — register a new influencer. Defaults: `pct=20`, `days=180`.
   - Example: `/admin_aff_create rue Rue` (uses defaults) or `/admin_aff_create rue Rue 20 180` (explicit).
