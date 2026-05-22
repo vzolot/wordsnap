@@ -377,6 +377,35 @@ Both repos share one Supabase project (`personal_*` table prefix on the founder 
 5. Mode adoption (Cards/Quiz/Spelling)
 6. Streak milestones (retention health)
 
+### Economics — costs & revenue (snapshot 2026-05-23)
+
+**Recurring monthly (~$110/mo fixed):**
+| Service | $/mo | Note |
+|---|---|---|
+| **Claude Pro Max** | **$100** | powers Claude Code (dev + Telegram bridge) — 84% of fixed cost; a dev-tooling sub, not WordSnap-runtime |
+| Railway | $5 | backend (API + bot + schedulers) |
+| ElevenLabs (Starter) | $5 | Reels TTS + music |
+| Vercel · Supabase · PostHog · Sentry | $0 | all on free tier (confirmed 2026-05-23) |
+
+**Usage-based API credits (prepaid, pay-as-you-go — separate from Claude Max):**
+| Service | Topped up | Used to date | Balance |
+|---|---|---|---|
+| OpenAI (gpt-4o-mini + Whisper) | $12 | ~$2 | $10 |
+| Anthropic API (bots' content gen, now Sonnet 4.6) | $48 | ~$23 | $25 |
+
+The `ANTHROPIC_API_KEY` powers the threads/personal bots' generation; the **Claude Pro Max** subscription powers Claude Code (this repo's dev + the bridge) — two separate Anthropic bills, don't conflate.
+
+**One-time / variable:**
+- **Meta Ads: $82.39** lifetime (now paused, $0/day — see ads chronology in §5).
+- **WayForPay: $0 to us** — the 3% fee is surcharged on top of the customer's payment.
+- Reddit Ads: $0 (blocked).
+
+**Total cash out to date (~1 month in): ≈ $252.**
+
+**Revenue (2026-05-23): $4.47/mo** — 3 paying customers × $1.49 monthly Pro (`danishurka`, `luchnykov`, `Альона`). The founder's 2 personal test payments (`payment_history` id 1 & 5, $2.98 total) were excluded from bot revenue stats on 2026-05-23 — status flipped to `excluded_test` (reversible; rows kept for audit; previously inflated gross to $7.45).
+
+**Reality check:** ~$110/mo fixed burn (dominated by the $100 Claude Max dev sub) vs $4.47 MRR — deeply pre-profitability. Stripping the dev subscription, actual WordSnap runtime infra is **~$10/mo + API cents**. The real lever now is acquisition (paid ads paused as non-working — §5), not cost-cutting.
+
 ---
 
 ## 6. Tech architecture (compact)
