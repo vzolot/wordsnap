@@ -87,6 +87,12 @@ async def cmd_start(message: Message):
     # зберігаємо у `users.affiliate_slug` + `affiliate_at`. Подальші
     # платежі цього юзера автоматично генерують revenue-share row
     # у `affiliate_revenue` через `record_payment_share()`.
+    #
+    # Аудиторія інфлюенсерів — міжнародна (напр. підписники Rue/Sheku в
+    # ПАР, англомовні), не українська. Тому онбординг для афіліат-когорти
+    # ведемо англійською (вітання + питання рідної мови). Після того як
+    # юзер обере рідну мову кнопкою, решта флоу йде вже цією мовою.
+    is_affiliate = bool(user.affiliate_slug)  # returning, ще без target_lang
     if payload and payload.startswith("aff_"):
         from core.affiliates import (
             apply_affiliate_to_user,
@@ -96,13 +102,13 @@ async def cmd_start(message: Message):
         slug = parse_affiliate_payload(payload)
         if slug:
             applied = await apply_affiliate_to_user(user.id, slug)
+            is_affiliate = True
             if applied:
                 aff = await get_affiliate(slug)
                 influencer_name = aff.name if aff else slug
-                lang = user.native_lang or "uk"
                 try:
                     await message.answer(
-                        bt("affiliate.welcome", lang, name=influencer_name)
+                        bt("affiliate.welcome", "en", name=influencer_name)
                     )
                 except Exception as e:
                     logger.warning(f"affiliate welcome msg failed: {e}")
@@ -161,7 +167,9 @@ async def cmd_start(message: Message):
 
     # Новий юзер або ще не обрав мову — запускаємо онбординг
     if not user.target_lang:
-        lang = user.native_lang or "uk"
+        # Афіліат-когорта онбординг англійською (міжнародна аудиторія),
+        # решта — збереженою рідною мовою (дефолт uk).
+        lang = "en" if is_affiliate else (user.native_lang or "uk")
         # Single-message welcome (новий копірайт), потім питаємо рідну мову
         await message.answer(bt("onboard.welcome", lang))
         await message.answer(

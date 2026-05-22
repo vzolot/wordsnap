@@ -47,12 +47,18 @@ def parse_affiliate_payload(payload: str) -> str | None:
 
 
 def affiliate_deeplink(slug: str, *, bot_username: str = "WordSnapBot") -> str:
-    """Канонічна URL'а для cap'іту інфлюенсеру. Direct mini-app universal
-    link, як ad-flow — start_param приходить у SPA, але атрибуція все
-    одно зберігається на бекенді через POST /api/onboarding/save_survey
-    (як для igads-cohort) АБО через /start payload якщо юзер пройде через
-    bot-chat-flow. Подвійне покриття."""
-    return f"https://t.me/{bot_username}/app?startapp=aff_{slug}"
+    """Канонічна URL'а для інфлюенсера — **bot-chat** deeplink (НЕ direct
+    mini-app). Відкриває чат з ботом, де юзер спершу обирає рідну мову
+    в онбордингу, а потім запускає mini-app уже своєю мовою.
+
+    Чому не `?startapp=aff_<slug>` (direct mini-app): (1) аудиторія
+    інфлюенсерів міжнародна (напр. підписники Rue в ПАР не знають
+    української, а дефолтний онбординг ішов uk); пройшовши через бот,
+    юзер сам обирає мову. (2) mini-app НЕ парсить `aff_` start_param —
+    атрибуція афіліата відбувається ВИКЛЮЧНО у `cmd_start` через
+    `apply_affiliate_to_user`, тож direct-mini-app лінк взагалі не
+    зараховував реферала. Bot-chat лінк фіксить і UX, і атрибуцію."""
+    return f"https://t.me/{bot_username}?start=aff_{slug}"
 
 
 async def get_affiliate(slug: str) -> Affiliate | None:

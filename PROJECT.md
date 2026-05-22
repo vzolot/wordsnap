@@ -130,10 +130,11 @@ Payment flow: WayForPay HPP via auto-submitted POST form (`/pay` HTML route → 
 
 ### 3.6.1 Affiliate / influencer revenue-share program
 
-Added 2026-05-19. Separate channel from user-to-user referrals — for paid influencer partnerships (Rue and future).
+Added 2026-05-19. Separate channel from user-to-user referrals — for paid influencer partnerships (Rue, Sheku, and future).
 
 **Mechanics (default Rue terms):**
-- Influencer gets a unique `slug` (e.g. `rue`) → trackable deeplink `https://t.me/WordSnapBot/app?startapp=aff_<slug>`.
+- Influencer gets a unique `slug` (e.g. `rue`) → trackable **bot-chat** deeplink `https://t.me/WordSnapBot?start=aff_<slug>`.
+- **Bot-chat, not direct mini-app (reworked 2026-05-22).** The link opens the bot chat (`?start=`), not the mini-app (`?startapp=`). Reasons: (1) affiliate audiences are international (e.g. Rue's & Sheku's South-African followers don't speak Ukrainian) — the bot onboarding lets them pick their native language first, then launches the mini-app already localized; (2) the mini-app never parsed the `aff_` start_param, so affiliate attribution happens **only** in the bot's `cmd_start` via `apply_affiliate_to_user` — the old `?startapp=aff_` link wasn't crediting the influencer at all. **Affiliate-cohort onboarding is in English** (`onboard.welcome` + `setup.ask_native` forced to `en`); once the user taps a native-language button the rest of the flow continues in that chosen language, and the mini-app opens localized off `users.native_lang`.
 - New user taps the link → `users.affiliate_slug` + `users.affiliate_at` set on **first touch only** (never overwritten by subsequent ad clicks or other links).
 - Every successful payment by that user within `duration_days` of `affiliate_at` generates a row in `affiliate_revenue` with `rev_share_pct` of `payment_amount` as `share_amount`.
 - Default terms: **20% × 180 days (6 months)**. Configurable per-influencer.
@@ -154,7 +155,7 @@ Added 2026-05-19. Separate channel from user-to-user referrals — for paid infl
 - `affiliate_revenue(id, affiliate_slug FK, user_id FK, payment_id FK, payment_amount, rev_share_pct, share_amount, payment_at, ts)` — source-of-truth for payouts. One row per qualifying payment.
 - `users.affiliate_slug` + `users.affiliate_at` — attribution columns.
 
-**i18n:** `affiliate.welcome` in all 6 langs (e.g. uk: «👋 Привіт! Ви прийшли за порадою <b>Rue</b>. Ласкаво просимо у WordSnap.»). Sent to the user on first `/start aff_<slug>` or on first mini-app entry via direct universal link.
+**i18n:** `affiliate.welcome` exists in all 6 langs, but for the affiliate cohort it is sent in **English** (en: «👋 Hi! You came in via <b>Rue</b>'s recommendation. Welcome to WordSnap.») on first `/start aff_<slug>`, matching the English onboarding.
 
 **Payouts:** manual once-per-month flow — admin queries `/admin_aff`, sends Rue (or whoever) the `owed` amount through whatever payment channel is agreed. Auto-payout integration is out of scope until the channel proves out.
 
