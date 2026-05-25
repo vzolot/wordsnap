@@ -15,6 +15,7 @@ from sqlalchemy import func, or_, select
 
 from .db import SessionLocal
 from .models import PaymentHistory, Review, User, Word
+from .streaks import calculate_streak
 
 PeriodKind = Literal["today_live", "yesterday_full", "month_30d"]
 
@@ -101,14 +102,20 @@ async def _gather_metrics(p: dict) -> dict:
                 User.created_at < day_end_utc,
             )
         )).scalar() or 0
+        # "Active" = users who actually did a review in the window. (NB:
+        # users.last_active_at is a dead column — never updated, always ==
+        # created_at — so it measured "recently registered", not activity.
+        # Reviews are the real activity signal.)
         active_in_period = (await s.execute(
-            select(func.count(User.id)).where(
-                User.last_active_at >= day_start_utc,
-                User.last_active_at < day_end_utc,
+            select(func.count(func.distinct(Review.user_id))).where(
+                Review.reviewed_at >= day_start_utc,
+                Review.reviewed_at < day_end_utc,
             )
         )).scalar() or 0
         wau = (await s.execute(
-            select(func.count(User.id)).where(User.last_active_at >= week_start_utc)
+            select(func.count(func.distinct(Review.user_id))).where(
+                Review.reviewed_at >= week_start_utc,
+            )
         )).scalar() or 0
 
         # Pro & trial — всі point-in-time
@@ -183,18 +190,35 @@ async def _gather_metrics(p: dict) -> dict:
             )
         )).scalar() or 0
 
-        # Engagement: avg streak among active learners (point-in-time)
-        avg_streak = (await s.execute(
-            select(func.avg(User.streak_days)).where(User.streak_days > 0)
-        )).scalar() or 0
-
-        # Top 3 streaks
-        top_users_rows = (await s.execute(
-            select(User.first_name, User.streak_days, User.total_xp)
-            .where(User.streak_days > 0)
-            .order_by(User.streak_days.desc(), User.total_xp.desc())
-            .limit(3)
-        )).all()
+        # Streaks computed from review history (users.streak_days is a dead
+        # column — never written). Only users who reviewed today or yesterday
+        # can have a live streak, so we only score those candidates.
+        candidate_ids = [
+            row[0] for row in (await s.execute(
+                select(func.distinct(Review.user_id)).where(
+                    Review.reviewed_at >= now - timedelta(days=2)
+                )
+            )).all()
+        ]
+        streak_by_id: dict[int, int] = {}
+        for uid in candidate_ids:
+            st = await calculate_streak(s, uid)
+            if st > 0:
+                streak_by_id[uid] = st
+        avg_streak = (
+            sum(streak_by_id.values()) / len(streak_by_id) if streak_by_id else 0
+        )
+        top_ids = sorted(streak_by_id, key=lambda u: streak_by_id[u], reverse=True)[:3]
+        top_users_rows = []
+        if top_ids:
+            name_map = {
+                r[0]: (r[1], r[2]) for r in (await s.execute(
+                    select(User.id, User.first_name, User.total_xp).where(User.id.in_(top_ids))
+                )).all()
+            }
+            for uid in top_ids:
+                first_name, total_xp = name_map.get(uid, (None, 0))
+                top_users_rows.append((first_name, streak_by_id[uid], total_xp))
 
     return {
         "users": {
