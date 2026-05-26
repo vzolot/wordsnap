@@ -227,7 +227,9 @@ async def cb_snap_add(callback: CallbackQuery) -> None:
         return
 
     if await word_exists(user.id, word, user.target_lang):
-        await callback.answer(bt("snap.duplicate_short", lang), show_alert=False)
+        # Modal alert (was a silent toast — users tapped duplicates and thought
+        # the bot was broken because nothing visible happened).
+        await callback.answer(bt("snap.duplicate_short", lang), show_alert=True)
         return
 
     await callback.answer(bt("snap.adding", lang))

@@ -316,6 +316,12 @@ async def extract_words_from_image(
         w = w.strip().strip("«».,!?;:\"'`").lower()
         if not (2 <= len(w) <= 60):
             continue
+        # Drop sentences. Vocabulary is single words or short phrases / phrasal
+        # verbs / fixed idioms — capped at 3 space-separated tokens. Anything
+        # longer (e.g. "wish someone could be someone else") is a sentence the
+        # downstream AI will reject anyway.
+        if len(w.split()) > 3:
+            continue
         if w in seen:
             continue
         seen.add(w)
@@ -434,6 +440,12 @@ async def extract_words_from_transcript(
             continue
         w = w.strip().strip("«».,!?;:\"'`").lower()
         if not (2 <= len(w) <= 60):
+            continue
+        # Drop sentences. Vocabulary is single words or short phrases / phrasal
+        # verbs / fixed idioms — capped at 3 space-separated tokens. Anything
+        # longer (e.g. "wish someone could be someone else") is a sentence the
+        # downstream AI will reject anyway.
+        if len(w.split()) > 3:
             continue
         if w in seen:
             continue
