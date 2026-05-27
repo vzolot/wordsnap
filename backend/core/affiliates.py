@@ -118,6 +118,12 @@ async def apply_affiliate_to_user(user_id: int, slug: str) -> bool:
         )).scalar_one_or_none()
         if user is None:
             return False
+        if user.is_test_account:
+            # Founder / internal testers tapping the affiliate link shouldn't
+            # show up as referrals in /admin_aff. Real influencer attribution
+            # only.
+            logger.info("skip affiliate %r — user %s is is_test_account", slug, user_id)
+            return False
         if user.affiliate_slug:
             return False  # first-touch — не перетираємо
         # Перевіряємо що такий affiliate існує (без FK violation)
@@ -216,18 +222,29 @@ async def get_affiliate_stats(slug: str, *, days: int | None = None) -> dict[str
         if aff is None:
             return {"error": f"affiliate {slug!r} not found"}
 
+        # Filter out test accounts (founder / internal testers) from both
+        # acquired-users count and revenue rolls — they shouldn't inflate an
+        # influencer's referral numbers when tapping the link for testing.
+        real_user_ids = select(User.id).where(User.is_test_account.is_(False))
+
         rev_q = select(
             func.count(AffiliateRevenue.id).label("payments"),
             func.coalesce(func.sum(AffiliateRevenue.payment_amount), 0).label("gross"),
             func.coalesce(func.sum(AffiliateRevenue.share_amount), 0).label("share"),
             func.count(func.distinct(AffiliateRevenue.user_id)).label("paying_users"),
-        ).where(AffiliateRevenue.affiliate_slug == slug)
+        ).where(
+            AffiliateRevenue.affiliate_slug == slug,
+            AffiliateRevenue.user_id.in_(real_user_ids),
+        )
         if days is not None:
             cutoff = datetime.now(timezone.utc) - timedelta(days=days)
             rev_q = rev_q.where(AffiliateRevenue.payment_at >= cutoff)
         rev = (await session.execute(rev_q)).one()
 
-        users_q = select(func.count(User.id)).where(User.affiliate_slug == slug)
+        users_q = select(func.count(User.id)).where(
+            User.affiliate_slug == slug,
+            User.is_test_account.is_(False),
+        )
         if days is not None:
             cutoff = datetime.now(timezone.utc) - timedelta(days=days)
             users_q = users_q.where(User.affiliate_at >= cutoff)
