@@ -94,10 +94,19 @@ async def _gather_metrics(p: dict) -> dict:
     week_start_utc, _ = _utc_window(today_local - timedelta(days=6), 7)
 
     async with SessionLocal() as s:
+        # Real users only — `users.is_test_account=TRUE` is the founder/internal
+        # testers. Used as a subquery filter on every Review/Word/PaymentHistory
+        # query (via user_id IN real_users) and as a WHERE on User queries.
+        real_users = select(User.id).where(User.is_test_account.is_(False))
+        real_user_filter = User.is_test_account.is_(False)
+
         # Users — point-in-time totals + period-bounded counts
-        total_users = (await s.execute(select(func.count(User.id)))).scalar() or 0
+        total_users = (await s.execute(
+            select(func.count(User.id)).where(real_user_filter)
+        )).scalar() or 0
         new_users_in_period = (await s.execute(
             select(func.count(User.id)).where(
+                real_user_filter,
                 User.created_at >= day_start_utc,
                 User.created_at < day_end_utc,
             )
@@ -108,12 +117,14 @@ async def _gather_metrics(p: dict) -> dict:
         # Reviews are the real activity signal.)
         active_in_period = (await s.execute(
             select(func.count(func.distinct(Review.user_id))).where(
+                Review.user_id.in_(real_users),
                 Review.reviewed_at >= day_start_utc,
                 Review.reviewed_at < day_end_utc,
             )
         )).scalar() or 0
         wau = (await s.execute(
             select(func.count(func.distinct(Review.user_id))).where(
+                Review.user_id.in_(real_users),
                 Review.reviewed_at >= week_start_utc,
             )
         )).scalar() or 0
@@ -121,18 +132,21 @@ async def _gather_metrics(p: dict) -> dict:
         # Pro & trial — всі point-in-time
         active_pro = (await s.execute(
             select(func.count(User.id)).where(
+                real_user_filter,
                 User.plan == "pro",
                 User.plan_expires_at > now,
             )
         )).scalar() or 0
         trial_users = (await s.execute(
             select(func.count(User.id)).where(
+                real_user_filter,
                 User.plan != "pro",
                 User.created_at > now - timedelta(days=7),
             )
         )).scalar() or 0
         trial_ending_soon = (await s.execute(
             select(func.count(User.id)).where(
+                real_user_filter,
                 User.plan != "pro",
                 User.created_at <= now - timedelta(days=5),
                 User.created_at > now - timedelta(days=7),
@@ -146,6 +160,7 @@ async def _gather_metrics(p: dict) -> dict:
         )
         revenue_period = (await s.execute(
             select(func.coalesce(func.sum(PaymentHistory.amount), 0)).where(
+                PaymentHistory.user_id.in_(real_users),
                 revenue_filter,
                 PaymentHistory.created_at >= day_start_utc,
                 PaymentHistory.created_at < day_end_utc,
@@ -153,30 +168,37 @@ async def _gather_metrics(p: dict) -> dict:
         )).scalar() or 0
         payments_period_count = (await s.execute(
             select(func.count(PaymentHistory.id)).where(
+                PaymentHistory.user_id.in_(real_users),
                 revenue_filter,
                 PaymentHistory.created_at >= day_start_utc,
                 PaymentHistory.created_at < day_end_utc,
             )
         )).scalar() or 0
         revenue_total = (await s.execute(
-            select(func.coalesce(func.sum(PaymentHistory.amount), 0)).where(revenue_filter)
+            select(func.coalesce(func.sum(PaymentHistory.amount), 0)).where(
+                PaymentHistory.user_id.in_(real_users),
+                revenue_filter,
+            )
         )).scalar() or 0
 
         # Words in period + by source
         words_in_period = (await s.execute(
             select(func.count(Word.id)).where(
+                Word.user_id.in_(real_users),
                 Word.created_at >= day_start_utc,
                 Word.created_at < day_end_utc,
             )
         )).scalar() or 0
         unique_word_users = (await s.execute(
             select(func.count(func.distinct(Word.user_id))).where(
+                Word.user_id.in_(real_users),
                 Word.created_at >= day_start_utc,
                 Word.created_at < day_end_utc,
             )
         )).scalar() or 0
         words_by_source = (await s.execute(
             select(Word.source, func.count(Word.id)).where(
+                Word.user_id.in_(real_users),
                 Word.created_at >= day_start_utc,
                 Word.created_at < day_end_utc,
             ).group_by(Word.source)
@@ -185,6 +207,7 @@ async def _gather_metrics(p: dict) -> dict:
         # Reviews in period
         reviews_in_period = (await s.execute(
             select(func.count(Review.id)).where(
+                Review.user_id.in_(real_users),
                 Review.reviewed_at >= day_start_utc,
                 Review.reviewed_at < day_end_utc,
             )
@@ -196,7 +219,8 @@ async def _gather_metrics(p: dict) -> dict:
         candidate_ids = [
             row[0] for row in (await s.execute(
                 select(func.distinct(Review.user_id)).where(
-                    Review.reviewed_at >= now - timedelta(days=2)
+                    Review.user_id.in_(real_users),
+                    Review.reviewed_at >= now - timedelta(days=2),
                 )
             )).all()
         ]

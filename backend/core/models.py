@@ -96,6 +96,14 @@ class User(Base):
     streak_days: Mapped[int] = mapped_column(Integer, default=0)
     last_activity_date: Mapped[date | None] = mapped_column(Date)
 
+    # When True, this row is excluded from admin/product analytics (admin_report.
+    # py and any other internal stats) — for the founder's own account and any
+    # future internal testers. Real product behavior (Pro, streaks shown to the
+    # user, reminders) is unaffected; only analytics filter on this.
+    is_test_account: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
+
     # Часові мітки
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

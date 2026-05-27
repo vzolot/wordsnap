@@ -254,6 +254,14 @@ MIGRATIONS: list[tuple[str, str]] = [
         END $$;
         """,
     ),
+    # Flag for internal/test accounts (founder, future testers) so they don't
+    # dilute product analytics. `admin_report.py` filters this out everywhere.
+    # Set manually via SQL (`UPDATE users SET is_test_account=TRUE WHERE
+    # telegram_id=<id>`) — not auto-managed.
+    (
+        "users.is_test_account",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_test_account BOOLEAN NOT NULL DEFAULT FALSE",
+    ),
 ]
 
 
