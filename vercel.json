@@ -4,6 +4,7 @@
     { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/open", "destination": "/open.html" },
     { "source": "/demo", "destination": "/demo.html" },
+    { "source": "/land", "destination": "/land.html" },
     { "source": "/preview", "destination": "/preview.html" }
   ]
 }
