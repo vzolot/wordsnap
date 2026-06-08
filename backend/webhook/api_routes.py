@@ -1129,19 +1129,25 @@ async def create_stars_invoice(
     `backend/bot/main.py` (handler нижче) і активує Pro через
     `activate_pro_subscription`.
 
-    Тарифи в Stars підібрано близько до USD-еквіваленту картки:
-      monthly: 99 ★ (~$1.30 vs $1.49 на карті)
-      annual:  599 ★ (~$7.80 vs $8.99 на карті)
-    Маленька знижка для Stars — бо немає еквайра і це native UX-win.
+    Тарифи в Stars обрано на ~30% вище за USD-номінал картки — Telegram
+    бере ~30% при конвертації Stars → fiat (≈$0.013/Star при withdraw),
+    тому щоб бот по чистому отримував стільки ж, скільки з картки, ціна
+    в Stars має бути піднята на цей коефіцієнт:
+      monthly: 129 ★ (~$1.68 → ~$1.18 net after TG conversion)
+      annual:  799 ★ (~$10.39 → ~$10.39 net)
 
-    Стартова перевірка регулярки: Stars НЕ підтримують auto-renew нативно,
-    тому це **разова оплата** на duration_days. Recurring лишається на карті
-    (WayForPay). У UI це треба явно сказати: "Stars = one-time".
+    Stars НЕ підтримують auto-renew нативно — це разова оплата. Recurring
+    залишається на карті (WayForPay).
+
+    NB про `provider_token=""`: Telegram Bot API явно вимагає **порожній
+    рядок** для currency='XTR' (а не None / відсутній). aiogram 3.13.1 з
+    default `provider_token=None` падає на стороні Telegram → ось чому без
+    цього параметра ендпойнт повертав 500.
     """
     if period not in ("monthly", "annual"):
         raise HTTPException(status_code=400, detail="period must be monthly or annual")
 
-    stars_price = 99 if period == "monthly" else 599
+    stars_price = 129 if period == "monthly" else 799
     duration_days = 30 if period == "monthly" else 365
 
     # payload кодує юзера+період+ts для ідентифікації в successful_payment.
@@ -1160,12 +1166,16 @@ async def create_stars_invoice(
                 f"learning (one-time payment, no auto-renew)"
             ),
             payload=invoice_payload,
+            provider_token="",   # MUST be empty string for XTR (see docstring)
             currency="XTR",
             prices=[LabeledPrice(label=f"Pro {period}", amount=stars_price)],
         )
     except Exception as e:
+        # Включаємо текст помилки у відповідь — у проді stack trace йде у logger,
+        # а юзеру повертаємо короткий рядок щоб у devtools було видно реальну причину
+        # (інакше Railway віддає bland "Internal Server Error" без деталей).
         logger.exception(f"create_invoice_link failed for {telegram_id}: {e}")
-        raise HTTPException(status_code=500, detail="invoice creation failed")
+        raise HTTPException(status_code=500, detail=f"invoice creation failed: {type(e).__name__}: {e}")
 
     analytics.capture(telegram_id, "stars_invoice_created", {
         "period": period,

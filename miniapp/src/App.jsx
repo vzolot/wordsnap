@@ -59,6 +59,11 @@ function RouteAnalytics() {
 // Standards/Best Practices: native Telegram BackButton на підсторінках.
 // Показуємо на не-home роутах, ховаємо на home. onClick → history back.
 // Замінює in-page «← Back» текстові кнопки у нативний жест.
+//
+// КРИТИЧНО: коли Telegram відкриває native modal (`tg.openInvoice` для Stars,
+// `tg.showPopup`, etc.) — він скидає `BackButton.onClick`. Після закриття
+// modal'а кнопка візуально лишається, але вона *мертва* — тап не робить
+// нічого. Підхоплюємо подію `invoiceClosed` і перевстановлюємо show + onClick.
 function TelegramBackButton() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -67,10 +72,25 @@ function TelegramBackButton() {
     const bb = tg?.BackButton;
     if (!bb) return;
     const isHome = location.pathname === '/' || location.pathname === '/home';
-    if (isHome) bb.hide(); else bb.show();
+    const apply = () => { if (isHome) bb.hide(); else bb.show(); };
     const onBack = () => navigate(-1);
+
+    apply();
     try { bb.onClick(onBack); } catch {}
-    return () => { try { bb.offClick(onBack); } catch {} };
+
+    // Restore handler after Telegram's native modals close.
+    const onModalClosed = () => {
+      apply();
+      try { bb.onClick(onBack); } catch {}
+    };
+    try { tg.onEvent?.('invoiceClosed', onModalClosed); } catch {}
+    try { tg.onEvent?.('popupClosed', onModalClosed); } catch {}
+
+    return () => {
+      try { bb.offClick(onBack); } catch {}
+      try { tg.offEvent?.('invoiceClosed', onModalClosed); } catch {}
+      try { tg.offEvent?.('popupClosed', onModalClosed); } catch {}
+    };
   }, [location.pathname, navigate]);
   return null;
 }

@@ -110,7 +110,11 @@ function ProPage() {
   // Telegram Stars — secondary one-time payment option (no auto-renew). Card
   // (WayForPay) залишається основним (з recurring). Stars відкриваємо через
   // native `tg.openInvoice` — юзер не покидає мініап.
-  const STARS_PRICES = { monthly: 99, annual: 599 };
+  // Stars-ціни на ~30% вище за USD-номінал картки — щоб після конвертації
+  // Telegram (~$0.013/star при withdraw) бот по чистому отримував стільки ж,
+  // скільки з картки (~$1.45/міс і ~$8.72/рік net). Бекенд тримає ті ж самі
+  // цифри в /api/buy/stars (api_routes.py:create_stars_invoice).
+  const STARS_PRICES = { monthly: 129, annual: 799 };
   const handleBuyStars = async () => {
     track('stars_buy_clicked', { period });
     setStarsLoading(true);
