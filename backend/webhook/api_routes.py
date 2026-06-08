@@ -774,7 +774,7 @@ async def apply_referral_endpoint(
 
     # Сповістити referrer'а через Telegram (точно як bot/main.py:107-119).
     try:
-        from bot.main import bot as tg_bot
+        from bot.instance import bot as tg_bot
         from core.bot_i18n import t as bt
         referrer_lang = referrer.native_lang or "uk"
         await tg_bot.send_message(
@@ -1155,7 +1155,7 @@ async def create_stars_invoice(
     ts = int(datetime.now(timezone.utc).timestamp())
     invoice_payload = f"stars_{telegram_id}_{period}_{ts}"
 
-    from bot.main import bot as tg_bot
+    from bot.instance import bot as tg_bot
     from aiogram.types import LabeledPrice
 
     try:

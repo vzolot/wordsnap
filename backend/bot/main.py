@@ -52,15 +52,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-if not TOKEN:
-    raise ValueError("TELEGRAM_BOT_TOKEN не знайдено в .env файлі!")
-
-bot = Bot(
-    token=TOKEN,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
-dp = Dispatcher()
+# Bot та Dispatcher живуть у окремому модулі (`bot/instance.py`) щоб FastAPI
+# хендлери могли імпортувати `bot` без re-execution цього файлу. Цей файл
+# запускається як `__main__` у проді, тож `from bot.main import bot` з боку
+# webhook'а раніше викликав повторне імпортування і RuntimeError на
+# `dp.include_router(admin_router)` (router уже attached). Див. instance.py.
+from bot.instance import bot, dp  # noqa: E402
 
 
 @dp.message(CommandStart())
