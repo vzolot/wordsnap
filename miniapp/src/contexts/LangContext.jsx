@@ -11,6 +11,13 @@ function getInitialLang() {
     if (saved && SUPPORTED_LANGS.includes(saved)) return saved;
   } catch {}
   const tg = window.Telegram?.WebApp;
+  // tApps Center cohort (direct mini-app via `startapp=tapps[...]`) — міжнародна
+  // аудиторія, форсимо EN-UI на першому вході. Перетвориться у нативну lang
+  // згодом коли юзер виставить native_lang з онбордингу / у Settings.
+  const startParam = tg?.initDataUnsafe?.start_param || '';
+  if (typeof startParam === 'string' && (startParam === 'tapps' || startParam.startsWith('tapps_'))) {
+    return 'en';
+  }
   return detectLang(tg?.initDataUnsafe?.user?.language_code);
 }
 

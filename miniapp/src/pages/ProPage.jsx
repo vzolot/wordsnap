@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStats, createBuyLink, cancelSubscription, getReferral, readCache, writeCache } from '../api/client';
+import { getStats, createBuyLink, createStarsInvoice, cancelSubscription, getReferral, readCache, writeCache } from '../api/client';
 import { track } from '../utils/analytics';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
@@ -16,6 +16,9 @@ function ProPage() {
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelMsg, setCancelMsg] = useState('');
+  const [starsLoading, setStarsLoading] = useState(false);
+  const [starsMsg, setStarsMsg] = useState('');
+  const [starsMsgClass, setStarsMsgClass] = useState('');  // 'ok' | 'err' | ''
   const navigate = useNavigate();
   const { t } = useT();
   const tg = window.Telegram?.WebApp;
@@ -101,6 +104,52 @@ function ProPage() {
       setError(t('pro.error.payment'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Telegram Stars — secondary one-time payment option (no auto-renew). Card
+  // (WayForPay) залишається основним (з recurring). Stars відкриваємо через
+  // native `tg.openInvoice` — юзер не покидає мініап.
+  const STARS_PRICES = { monthly: 99, annual: 599 };
+  const handleBuyStars = async () => {
+    track('stars_buy_clicked', { period });
+    setStarsLoading(true);
+    setStarsMsg('');
+    setStarsMsgClass('');
+    try {
+      const r = await createStarsInvoice(period);
+      const link = r.data?.invoice_link;
+      if (!link) throw new Error('No invoice link');
+      if (tg?.openInvoice) {
+        tg.openInvoice(link, (status) => {
+          track('stars_invoice_closed', { status, period });
+          if (status === 'paid') {
+            setStarsMsg(t('pro.stars_success'));
+            setStarsMsgClass('ok');
+            // Pro має бути активний — перечитуємо stats, щоб UI показав isPro.
+            getStats().then(rr => {
+              setStats(rr.data);
+              writeCache('stats', rr.data);
+            }).catch(() => {});
+          } else if (status === 'cancelled') {
+            setStarsMsg(t('pro.stars_cancelled'));
+            setStarsMsgClass('');
+          } else {
+            // 'failed' | 'pending' | інші — показуємо помилку
+            setStarsMsg(t('pro.stars_failed'));
+            setStarsMsgClass('err');
+          }
+        });
+      } else {
+        // Поза Telegram — нема openInvoice; рідкісний edge-case
+        window.open(link, '_blank');
+      }
+    } catch (e) {
+      track('stars_buy_failed', { period });
+      setStarsMsg(t('pro.stars_failed'));
+      setStarsMsgClass('err');
+    } finally {
+      setStarsLoading(false);
     }
   };
 
@@ -195,11 +244,33 @@ function ProPage() {
               )}
             </>
           ) : (
-            <button className="pro-cta" onClick={handleBuy} disabled={loading}>
-              {loading ? t('pro.cta_loading') : t('pro.cta_buy', {
-                price: period === 'annual' ? '$8.99' : '$1.49',
-              })}
-            </button>
+            <>
+              <button className="pro-cta" onClick={handleBuy} disabled={loading}>
+                {loading ? t('pro.cta_loading') : t('pro.cta_buy', {
+                  price: period === 'annual' ? '$8.99' : '$1.49',
+                })}
+              </button>
+
+              {/* Telegram Stars — secondary one-time payment.
+                  Card stays primary (with recurring); Stars дає native UX
+                  without leaving the mini-app, корисно для аудиторії tApps. */}
+              <div className="pro-stars-block">
+                <button
+                  type="button"
+                  className="pro-stars-btn"
+                  onClick={handleBuyStars}
+                  disabled={starsLoading}
+                >
+                  {starsLoading
+                    ? t('pro.cta_loading')
+                    : t('pro.cta_stars', { stars: STARS_PRICES[period] })}
+                </button>
+                <p className="pro-stars-sub">{t('pro.stars_subtitle')}</p>
+                {starsMsg && (
+                  <p className={`pro-stars-msg ${starsMsgClass}`}>{starsMsg}</p>
+                )}
+              </div>
+            </>
           )}
         </div>
 

@@ -52,6 +52,12 @@ export const updateWordTranslation = (wordId, translation) =>
 export const getSongs = () => api.get('/api/songs');
 export const getThemes = () => api.get('/api/themes');
 export const createBuyLink = (period = 'monthly') => api.post('/api/buy', null, { params: { period } });
+// Telegram Stars (XTR) — secondary payment option. Backend → bot.create_invoice_link →
+// returns a tg-invoice URL we feed to `Telegram.WebApp.openInvoice(link, cb)`.
+// One-time payment (Stars don't support recurring), so backend marks
+// subscription_status="one_time" — scheduler skips re-charge attempts.
+export const createStarsInvoice = (period = 'monthly') =>
+  api.post('/api/buy/stars', null, { params: { period } });
 export const cancelSubscription = () => api.post('/api/cancel_subscription');
 export const getReferral = () => api.get('/api/referral');
 // Apply a referral on mini-app entry (когда юзер прийшов за `?startapp=ref_<code>`

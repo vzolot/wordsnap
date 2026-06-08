@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import NavBar from './components/NavBar';
 import DebugBanner from './components/DebugBanner';
@@ -21,7 +21,17 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
 
 function applyTheme(scheme) {
-  document.documentElement.setAttribute('data-theme', scheme === 'dark' ? 'dark' : 'light');
+  const dark = scheme === 'dark';
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  // Standards/Best Practices: синхронізуємо колір хедера/фону Telegram-чрому
+  // з палітрою апи, щоб не було видимого швa між системним bar і нашим body.
+  // Значення мають збігатися з `--bg` у `index.css` (light/dark гілки).
+  try {
+    const tg = window.Telegram?.WebApp;
+    const bg = dark ? '#0B0610' : '#FFFFFF';
+    tg?.setHeaderColor?.(bg);
+    tg?.setBackgroundColor?.(bg);
+  } catch { /* old Telegram clients can throw — non-fatal */ }
 }
 
 function getInitialTheme() {
@@ -46,6 +56,25 @@ function RouteAnalytics() {
   return null;
 }
 
+// Standards/Best Practices: native Telegram BackButton на підсторінках.
+// Показуємо на не-home роутах, ховаємо на home. onClick → history back.
+// Замінює in-page «← Back» текстові кнопки у нативний жест.
+function TelegramBackButton() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    const tg = window.Telegram?.WebApp;
+    const bb = tg?.BackButton;
+    if (!bb) return;
+    const isHome = location.pathname === '/' || location.pathname === '/home';
+    if (isHome) bb.hide(); else bb.show();
+    const onBack = () => navigate(-1);
+    try { bb.onClick(onBack); } catch {}
+    return () => { try { bb.offClick(onBack); } catch {} };
+  }, [location.pathname, navigate]);
+  return null;
+}
+
 function App() {
   const [showWelcome, setShowWelcome] = useState(() => shouldShowWelcome());
 
@@ -61,6 +90,11 @@ function App() {
     if (tg) {
       tg.ready();
       tg.expand();
+      // Standards: запобігаємо випадковому закриттю апи свайпом униз
+      // (особливо у вертикальних флоу review/snap), і просимо підтвердження
+      // при свідомому закритті — щоб не втратити прогрес.
+      try { tg.disableVerticalSwipes?.(); } catch {}
+      try { tg.enableClosingConfirmation?.(); } catch {}
       tg.onEvent?.('themeChanged', () => {
         try {
           if (!localStorage.getItem('wordsnap.theme')) applyTheme(tg.colorScheme);
@@ -233,6 +267,7 @@ function App() {
       {showWelcome && <WelcomeStories onClose={() => setShowWelcome(false)} />}
       <BrowserRouter>
         <RouteAnalytics />
+        <TelegramBackButton />
         <div className="app">
           <DebugBanner />
           <Suspense fallback={<RouteFallback />}>
