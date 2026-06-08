@@ -424,12 +424,13 @@ The `ANTHROPIC_API_KEY` powers the threads/personal bots' generation; the **Clau
 - **TikTok Ads: ~$14** lifetime (582.38 UAH, ad `1866373691040786` v1+v2; KILLED 2026-05-29, 0 signups — see §5).
 - **WayForPay: $0 to us** — the 3% fee is surcharged on top of the customer's payment.
 - Reddit Ads: $0 (blocked).
+- **Supabase Pro $35/mo** (since 2026-06-08): org `kkrluypzbpqryccungow` upgraded after `nghgbxpjqznzjxufkesa` (threads-bot + personal-bot shared project) hit the free-tier 5GB/mo egress cap and started returning HTTP 402 on every PostgREST call (engagement bot broke mid-day). Breakdown: $25 base + $10 Micro Compute for the second project (Pro covers compute for only the first project in the org); $10 Pro compute credit nets one project to $0. Two-project layout kept intentionally — main wordsnap and bot-side data stay isolated, blast radius small. **Open follow-up:** profile egress leak in threads-bot / personal-bot (DB+storage are tiny ~17 MB total — quota burn came from request volume / repeated storage downloads). Pro gives 250 GB egress so we have margin, but worth not wasting it.
 
-**Total cash out to date (~1 month in): ≈ $266** (incl. TikTok $14 now itemized).
+**Total cash out to date (~1 month in): ≈ $266** (one-time + Meta + TikTok). **Recurring monthly burn now ≈ $145/mo** ($100 Claude Max + ~$10 Railway/Vercel + $35 Supabase Pro). Stripping the $100 Claude Max dev sub, WordSnap runtime infra is now **~$45/mo + API cents**.
 
 **Revenue (2026-05-23): $4.47/mo** — 3 paying customers × $1.49 monthly Pro (`danishurka`, `luchnykov`, `Альона`). The founder's 2 personal test payments (`payment_history` id 1 & 5, $2.98 total) were excluded from bot revenue stats on 2026-05-23 — status flipped to `excluded_test` (reversible; rows kept for audit; previously inflated gross to $7.45).
 
-**Reality check:** ~$110/mo fixed burn (dominated by the $100 Claude Max dev sub) vs $4.47 MRR — deeply pre-profitability. Stripping the dev subscription, actual WordSnap runtime infra is **~$10/mo + API cents**. The real lever now is acquisition — but paid is now confirmed dead across 4 tests on 2 platforms & both destination types (Meta+TikTok, t.me deeplink + /demo web lander, all 0 signups — §5), so the lever is **influencer/affiliate (Rue, Sheku — warm audiences) + organic (threads-bot)**, not more paid spend and not cost-cutting.
+**Reality check:** **~$145/mo fixed burn** (since 2026-06-08 Supabase Pro upgrade) vs $4.47 MRR — deeply pre-profitability. Dominated by the $100 Claude Max dev sub; stripping that, actual WordSnap runtime infra is **~$45/mo + API cents** ($35 Supabase Pro + ~$10 Railway/Vercel). The real lever now is acquisition — but paid is now confirmed dead across 5 tests on 2 platforms & 3 destination types (Meta+TikTok, t.me deeplink + /demo gated + /land frictionless, all 0 signups — §5), so the lever is **influencer/affiliate (Rue, Sheku — warm audiences) + organic (threads-bot)** plus the just-shipped tApps Center distribution surface (Phase 1, §5), not more paid spend and not cost-cutting.
 
 ---
 
