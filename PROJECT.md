@@ -369,7 +369,7 @@ Both repos share one Supabase project (`personal_*` table prefix on the founder 
 - **Bot chat fallback:** `https://t.me/WordSnapBot` — opens chat with "Open App" launch button.
 - **Referral system** — 17-day effective trial via `?startapp=ref_<code>`, direct mini-app entry (migrated 2026-05-17 — was bot-chat URL).
 - **Telegram bot username** — direct discoverability via Telegram search.
-- **tApps Center** (Phase 1 shipped 2026-06-08, listing/feature pending): curated TG-native mini-app showcase. Submission packet at `docs/tapps_submission.md`. Cohort link `https://t.me/WordSnapBot?start=tapps` (bot-chat → English onboarding) or `https://t.me/WordSnapBot/app?startapp=tapps` (direct mini-app, EN forced via `LangContext`). Attribution: `users.acquisition_payload LIKE 'tapps%'`. Web2 path (no TON yet) — relying on editorial discretion per rules; cover-letter template in submission doc. Phase 2 = TON Connect only if Phase 1 doesn't get a feature.
+- **tApps Center** (Phase 1 code shipped 2026-06-08, submission attempt 2026-06-08 → **blocked on TON**; decision A/B pending): curated TG-native mini-app showcase. Submission packet at `docs/tapps_submission.md`. Cohort link `https://t.me/WordSnapBot?start=tapps` (bot-chat → English onboarding) or `https://t.me/WordSnapBot/app?startapp=tapps` (direct mini-app, EN forced via `LangContext`). Attribution: `users.acquisition_payload LIKE 'tapps%'`. **Submission status 2026-06-08:** opened `@Telegram Apps Moderation` bot → first checklist (Set 1) **strictly requires** TON exclusivity + TON Connect SDK; clicking "I've read and agree" would be a misrepresentation since WordSnap is Web2. Did NOT submit. Second checklist (Set 2) we'd pass cleanly: Telegram Mini Apps Analytics SDK is live (DataChief token `VITE_TG_ANALYTICS_TOKEN` set in Vercel; `wordsnap` app registered in TON Foundation dashboard; SDK Status verified `Active`). Web2 editorial-discretion clause exists in the published rules but the moderation bot doesn't honour it — that path is via @tappscentre channel / support contact, not this bot. **EN-default fix shipped 2026-06-08** (separate commit `4d66ce8`) so the bot's runtime localization matches what `set_my_description` already published (EN default + uk/en variants); was hard-coded `native_lang="uk"` for every new user regardless of Telegram `language_code`, now derives from supported set `{uk,en,pl,de,es,fr}` with EN fallback — useful regardless of A/B choice below. **Decision pending — Path A vs Path B:** (A) build TON Connect + TON-accepted payments (~1-2 weeks) and re-submit cleanly via the bot; (B) try @tappscentre channel for Web2 editorial discretion first (~few days waiting, zero cost), fall back to A if rejected. Recommendation locked at B-first.
 
 ### Payment channels (2026-06-08 — Stars added as secondary)
 
@@ -438,7 +438,16 @@ The `ANTHROPIC_API_KEY` powers the threads/personal bots' generation; the **Clau
 
 ```
 backend/
-├── bot/              aiogram handlers (start, words, songs, themes, review)
+├── bot/              aiogram handlers (start, words, songs, themes, review).
+│                     `bot/instance.py` owns the `Bot` + `Dispatcher` singletons
+│                     so FastAPI handlers can `from bot.instance import bot`
+│                     without re-executing `bot/main.py` — the process is
+│                     launched as `__main__` in prod, so a `from bot.main`
+│                     import would re-run the module body and re-attach all
+│                     routers (RuntimeError). Touched on 2026-06-08 when the
+│                     Stars endpoint surfaced the latent bug; lesson: any new
+│                     lazy-import of `bot` must use `bot.instance`, never
+│                     `bot.main`.
 ├── webhook/          FastAPI routes (/api/*, /healthz, /pay, /api/wayforpay/callback)
 ├── core/             services (openai_client, unsplash_client, srs, rewards,
 │                     streaks, referral, avatars, analytics, auto_migrate, ...)
@@ -469,6 +478,11 @@ scripts/
 - `/api/stats` latency: **~50-80 ms** (parallel queries via `asyncio.gather`)
 - Words page on user with 50 words: ~2-3 MB image traffic (was ~10 MB before optimization)
 - Tab navigation: instant via idle-prefetched lazy chunks
+
+### Operations notes (2026-06-08)
+- **Repo public:** `github.com/vzolot/wordsnap` flipped from private to public on 2026-06-08 (secret audit: `.env` was never committed; PostHog `phc_` key embedded in `public/*.html` is the public client-side key, safe). Helps tApps Center credibility + build-in-public posture.
+- **Railway CLI is the primary deploy/debug path now.** `railway` linked to `eloquent-serenity / production / worker` (and `wordsnap-personal-bot` / `wordsnap-threads-bot` as sibling services in the same project). Replaces the slow "git push → wait 5-25 min for GitHub auto-deploy → guess from black-box 500s" cycle. Standard ops: `railway logs --build` (build progress live), `railway logs` (runtime tail), `railway redeploy` (force re-deploy without code change), `railway run <cmd>` (one-shot in the prod env). The Stars import RuntimeError on 2026-06-08 took 30 min to debug because we couldn't see logs; the next bug like it should be 2-3 min.
+- **Egress optimisation pass (2026-06-08, threads-bot + personal-bot repos):** after the Supabase Pro upgrade ([see §Costs](#costs)), profiled the egress sources on `nghgbxpjqznzjxufkesa` — base+storage were tiny (~17 MB) so the burn was request volume + payload size. Five fixes shipped to those two repos: new `get_approved_posts()` SQL filter (saves ~250 MB/mo on the */30-min publish cron), explicit-column SELECTs replacing `SELECT *` on hot-path reads (~400-500 MB/mo across both bots), an in-process FIFO cache on `RedditListener.reddit_reply_exists` (preventive — saves ~50 GB/mo when Reddit cohort comes back online), and trimmed engagement-bot `get_recent_replies(limit=10→5)` × 6 sites. Net savings ≈ **700-900 MB/mo**, leaving the new Pro 250 GB quota with a >300× safety margin. Open follow-up only if Stars/TON ever materially increase egress.
 
 ---
 
