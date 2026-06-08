@@ -1117,6 +1117,69 @@ async def create_buy_link(
     }
 
 
+@router.post("/api/buy/stars")
+async def create_stars_invoice(
+    telegram_id: int = Query(...),
+    period: str = Query("monthly"),
+):
+    """Створює Telegram Stars (XTR) invoice link для оплати Pro.
+
+    Mini-app потім відкриває цей link через `tg.openInvoice(link, cb)` —
+    native flow без виходу з мініапки. Successful_payment ловить
+    `backend/bot/main.py` (handler нижче) і активує Pro через
+    `activate_pro_subscription`.
+
+    Тарифи в Stars підібрано близько до USD-еквіваленту картки:
+      monthly: 99 ★ (~$1.30 vs $1.49 на карті)
+      annual:  599 ★ (~$7.80 vs $8.99 на карті)
+    Маленька знижка для Stars — бо немає еквайра і це native UX-win.
+
+    Стартова перевірка регулярки: Stars НЕ підтримують auto-renew нативно,
+    тому це **разова оплата** на duration_days. Recurring лишається на карті
+    (WayForPay). У UI це треба явно сказати: "Stars = one-time".
+    """
+    if period not in ("monthly", "annual"):
+        raise HTTPException(status_code=400, detail="period must be monthly or annual")
+
+    stars_price = 99 if period == "monthly" else 599
+    duration_days = 30 if period == "monthly" else 365
+
+    # payload кодує юзера+період+ts для ідентифікації в successful_payment.
+    # 64-байт ліміт Telegram для invoice payload — наш формат вкладається.
+    ts = int(datetime.now(timezone.utc).timestamp())
+    invoice_payload = f"stars_{telegram_id}_{period}_{ts}"
+
+    from bot.main import bot as tg_bot
+    from aiogram.types import LabeledPrice
+
+    try:
+        link = await tg_bot.create_invoice_link(
+            title="WordSnap Pro",
+            description=(
+                f"WordSnap Pro — {duration_days} days of unlimited "
+                f"learning (one-time payment, no auto-renew)"
+            ),
+            payload=invoice_payload,
+            currency="XTR",
+            prices=[LabeledPrice(label=f"Pro {period}", amount=stars_price)],
+        )
+    except Exception as e:
+        logger.exception(f"create_invoice_link failed for {telegram_id}: {e}")
+        raise HTTPException(status_code=500, detail="invoice creation failed")
+
+    analytics.capture(telegram_id, "stars_invoice_created", {
+        "period": period,
+        "stars_amount": stars_price,
+    })
+
+    return {
+        "invoice_link": link,
+        "period": period,
+        "stars_amount": stars_price,
+        "duration_days": duration_days,
+    }
+
+
 @router.post("/api/cancel_subscription")
 async def cancel_subscription_endpoint(telegram_id: int = Query(...)):
     """Скасовує авто-продовження підписки. Pro лишається активним до кінця

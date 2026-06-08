@@ -114,6 +114,26 @@ async def cmd_start(message: Message):
                     logger.warning(f"affiliate welcome msg failed: {e}")
         # Дальше — нормальний flow (онбординг якщо новий юзер).
 
+    # tApps Center cohort: payload `tapps` або `tapps_<sub>` (`tapps_banner`,
+    # `tapps_post_42` тощо). Аудиторія tApps міжнародна (англомовна за
+    # замовчуванням), тому форсимо EN-онбординг — той самий шлях, що для
+    # афіліат-когорти. Зберігаємо `acquisition_payload` для cohort-аналізу.
+    # Не запускаємо ad-survey: tApps — не paid-ad cohort з lang/motivation
+    # composite, просто organic channel з власним лендінгом.
+    is_international = is_affiliate
+    if payload and (payload == "tapps" or payload.startswith("tapps_")):
+        is_international = True
+        from sqlalchemy import update as sa_update
+        from core.db import SessionLocal
+        from core.models import User as UserModel
+        async with SessionLocal() as session:
+            await session.execute(
+                sa_update(UserModel).where(UserModel.id == user.id).values(
+                    acquisition_payload=payload[:64]
+                )
+            )
+            await session.commit()
+
     # Ad-cohort flow: payload `<source>_<campaign>[_<lang>[_<mot>]]` від
     # paid ads. Сурси: `igads_`/`ig_` (Meta), `reddit_` (Reddit Ads),
     # потенційно нові. Шлемо в survey-handler — він сам розрулить чи
@@ -167,9 +187,9 @@ async def cmd_start(message: Message):
 
     # Новий юзер або ще не обрав мову — запускаємо онбординг
     if not user.target_lang:
-        # Афіліат-когорта онбординг англійською (міжнародна аудиторія),
+        # Афіліат/tApps когорта онбординг англійською (міжнародна аудиторія),
         # решта — збереженою рідною мовою (дефолт uk).
-        lang = "en" if is_affiliate else (user.native_lang or "uk")
+        lang = "en" if is_international else (user.native_lang or "uk")
         # Single-message welcome (новий копірайт), потім питаємо рідну мову
         await message.answer(bt("onboard.welcome", lang))
         await message.answer(
@@ -211,6 +231,129 @@ async def cmd_start(message: Message):
     ])
     await message.answer(welcome_text, reply_markup=keyboard)
     logger.info(f"User {tg_user.id} ({tg_user.username}) started the bot")
+
+
+# ─── Telegram Stars payments (currency=XTR) ──────────────────────────────
+# Stars — додатковий (НЕ основний) канал оплати поряд з картою (WayForPay).
+# Mini-app викликає `POST /api/buy/stars` → `bot.create_invoice_link(...)` →
+# відкриває через `tg.openInvoice(link, cb)`. Stars не мають recurring,
+# тому `subscription_status="one_time"`, scheduler цих юзерів не зачіпає.
+
+@dp.pre_checkout_query()
+async def on_pre_checkout(query):
+    """Останній checkpoint перед списанням. Для Stars (XTR) валідація не
+    потрібна — баланс уже в гаманці. Відповідаємо ok=True завжди."""
+    try:
+        await query.answer(ok=True)
+    except Exception as e:
+        logger.exception(f"pre_checkout_query answer failed: {e}")
+        try:
+            await query.answer(ok=False, error_message="Payment processing error, please try again.")
+        except Exception:
+            pass
+
+
+@dp.message(F.successful_payment)
+async def on_successful_payment(message: Message):
+    """Активує Pro після успішної оплати Telegram Stars. Парсимо
+    `invoice_payload` (формат `stars_<tg_id>_<period>_<ts>`), пишемо
+    `payment_history`, ставимо `subscription_status='one_time'`."""
+    sp = message.successful_payment
+    if not sp:
+        return
+    payload = sp.invoice_payload or ""
+    if not payload.startswith("stars_"):
+        logger.warning(f"successful_payment with unknown payload: {payload!r}")
+        return
+    parts = payload.split("_", 3)
+    if len(parts) < 4:
+        logger.warning(f"stars payload malformed: {payload!r}")
+        return
+    _, tg_id_str, period, _ts = parts
+    try:
+        tg_id = int(tg_id_str)
+    except ValueError:
+        logger.warning(f"stars payload bad tg_id: {payload!r}")
+        return
+    # Безпека: payer == payload tg_id (інакше підміна).
+    if tg_id != message.from_user.id:
+        logger.warning(
+            f"stars payment from {message.from_user.id} but payload tg_id={tg_id}; refuse"
+        )
+        return
+    if period not in ("monthly", "annual"):
+        logger.warning(f"stars payload bad period: {period!r}")
+        return
+
+    duration_days = 30 if period == "monthly" else 365
+    stars_amount = sp.total_amount  # XTR: 1 unit = 1 Star
+    order_ref = payload
+
+    # Lazy imports — pattern як решта файлу.
+    from core.user_service import activate_pro_subscription
+    from core.db import SessionLocal
+    from core.models import PaymentHistory, User as UserModel
+    from sqlalchemy import update as sa_update
+    from core import analytics
+
+    user = await activate_pro_subscription(
+        telegram_id=tg_id,
+        rec_token=None,
+        duration_days=duration_days,
+        order_ref=order_ref,
+    )
+    if not user:
+        logger.error(f"Stars payment: activate_pro failed for {tg_id}")
+        return
+
+    async with SessionLocal() as session:
+        # subscription_status="one_time" → recurring_charges scheduler ігнорує
+        # цього юзера (інакше він шукав би rec_token якого нема).
+        await session.execute(
+            sa_update(UserModel).where(UserModel.telegram_id == tg_id).values(
+                subscription_status="one_time"
+            )
+        )
+        ph = PaymentHistory(
+            user_id=user.id,
+            order_reference=order_ref,
+            amount=float(stars_amount),
+            currency="XTR",
+            status="success",
+            transaction_status="Approved",
+            is_recurring=False,
+            raw_payload=sp.model_dump() if hasattr(sp, "model_dump") else None,
+        )
+        session.add(ph)
+        await session.commit()
+
+    # Дякуємо нативною мовою (en або uk-default fallback).
+    lang = user.native_lang or "en"
+    days_label = duration_days
+    if lang == "uk":
+        thank_text = (
+            f"⭐ <b>Оплата прийнята!</b>\n\n"
+            f"WordSnap Pro активний на {days_label} днів. Гарного навчання 💜"
+        )
+    else:
+        thank_text = (
+            f"⭐ <b>Payment received!</b>\n\n"
+            f"WordSnap Pro is active for {days_label} days. "
+            f"Enjoy unlimited learning 💜"
+        )
+    try:
+        await message.answer(thank_text)
+    except Exception as e:
+        logger.warning(f"stars thank-you reply failed: {e}")
+
+    try:
+        analytics.capture(tg_id, "stars_payment_successful", {
+            "period": period,
+            "stars_amount": stars_amount,
+            "duration_days": duration_days,
+        })
+    except Exception:
+        pass
 
 
 @dp.message(Command("help"))
