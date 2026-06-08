@@ -369,6 +369,12 @@ Both repos share one Supabase project (`personal_*` table prefix on the founder 
 - **Bot chat fallback:** `https://t.me/WordSnapBot` — opens chat with "Open App" launch button.
 - **Referral system** — 17-day effective trial via `?startapp=ref_<code>`, direct mini-app entry (migrated 2026-05-17 — was bot-chat URL).
 - **Telegram bot username** — direct discoverability via Telegram search.
+- **tApps Center** (Phase 1 shipped 2026-06-08, listing/feature pending): curated TG-native mini-app showcase. Submission packet at `docs/tapps_submission.md`. Cohort link `https://t.me/WordSnapBot?start=tapps` (bot-chat → English onboarding) or `https://t.me/WordSnapBot/app?startapp=tapps` (direct mini-app, EN forced via `LangContext`). Attribution: `users.acquisition_payload LIKE 'tapps%'`. Web2 path (no TON yet) — relying on editorial discretion per rules; cover-letter template in submission doc. Phase 2 = TON Connect only if Phase 1 doesn't get a feature.
+
+### Payment channels (2026-06-08 — Stars added as secondary)
+
+- **WayForPay card (primary, recurring)** — see §3 Recurring subscriptions. $1.49 monthly / $8.99 annual, auto-renew, Ukrainian acquirer. Existing flow unchanged.
+- **Telegram Stars (XTR, secondary, one-time)** — `POST /api/buy/stars` → `bot.create_invoice_link` → `tg.openInvoice` native flow. 99★ / month (~$1.30), 599★ / year (~$7.80) — slight Stars-side discount because no acquirer fee. `subscription_status='one_time'` excludes the user from the recurring scheduler. Stars **don't support auto-renew** natively, so this is explicitly a one-time top-up. Successful payments still feed `record_payment_share` for affiliates (USD-equiv conversion ~$0.013/star — to revisit if Stars become a meaningful slice of revenue).
 
 ### Brand positioning
 

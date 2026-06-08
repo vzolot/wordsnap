@@ -326,6 +326,23 @@ async def on_successful_payment(message: Message):
         )
         session.add(ph)
         await session.commit()
+        await session.refresh(ph)
+
+    # Affiliate revenue share: щоб виплати інфлюенсерам (Rue/Sheku/etc.) не
+    # залежали від каналу оплати. Stars → USD-еквівалент за поточним курсом
+    # Telegram (~$0.013/Star) для розрахунку відсотка інфлюенсера. Якщо Stars
+    # стануть помітною часткою revenue — переглянути курс.
+    try:
+        from core.affiliates import record_payment_share
+        usd_equiv = round(float(stars_amount) * 0.013, 2)
+        await record_payment_share(
+            user_id=user.id,
+            payment_id=ph.id,
+            payment_amount=usd_equiv,
+            payment_currency="USD",
+        )
+    except Exception as e:
+        logger.warning(f"stars affiliate share record failed (non-fatal): {e}")
 
     # Дякуємо нативною мовою (en або uk-default fallback).
     lang = user.native_lang or "en"
