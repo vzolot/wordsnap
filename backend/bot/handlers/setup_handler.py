@@ -92,7 +92,7 @@ def open_app_keyboard(lang: str) -> InlineKeyboardMarkup:
     ]])
 
 
-def ask_native_lang_text(lang: str = "uk") -> str:
+def ask_native_lang_text(lang: str = "en") -> str:
     return bt("setup.ask_native", lang)
 
 
@@ -101,7 +101,7 @@ def ask_native_lang_text(lang: str = "uk") -> str:
 @router.message(Command("language"))
 async def cmd_language(message: Message):
     user = await get_or_create_user(telegram_id=message.from_user.id)
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     await message.answer(ask_native_lang_text(lang), reply_markup=native_lang_keyboard())
 
 
@@ -109,7 +109,7 @@ async def cmd_language(message: Message):
 async def cmd_demo(message: Message):
     """Показати демо-слово для поточних налаштувань (без зміни мов)."""
     user = await get_or_create_user(telegram_id=message.from_user.id)
-    native = user.native_lang or "uk"
+    native = user.native_lang or "en"
     target = user.target_lang
     if not target:
         await message.answer(bt("word.setup_first", native))
@@ -279,7 +279,7 @@ async def _show_demo(callback: CallbackQuery, native_code: str, target_code: str
 async def handle_demo_snap(callback: CallbackQuery):
     target_code = callback.data.split(":")[1]
     user = await get_or_create_user(telegram_id=callback.from_user.id)
-    native = user.native_lang or "uk"
+    native = user.native_lang or "en"
 
     demo = get_demo_word(target_code, native)
     if not demo:

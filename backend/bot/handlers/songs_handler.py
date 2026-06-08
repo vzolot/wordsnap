@@ -84,7 +84,7 @@ async def cmd_songs(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     target = user.target_lang
     if not target:
         await message.answer("⚙️ /start")
@@ -101,7 +101,7 @@ async def cmd_songs(message: Message):
 @router.callback_query(F.data == "songs:list")
 async def show_songs_list(callback: CallbackQuery):
     user = await get_or_create_user(telegram_id=callback.from_user.id)
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     target = user.target_lang or "en"
     packs = get_packs(target)
     await callback.message.edit_text(
@@ -115,7 +115,7 @@ async def show_songs_list(callback: CallbackQuery):
 async def show_pack(callback: CallbackQuery):
     pack_id = callback.data.split(":", 1)[1]
     user = await get_or_create_user(telegram_id=callback.from_user.id)
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     target = user.target_lang or "en"
 
     pack = get_pack(target, pack_id)
@@ -144,7 +144,7 @@ async def add_word_from_pack(callback: CallbackQuery):
         username=callback.from_user.username,
         first_name=callback.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     target = user.target_lang or "en"
 
     pack = get_pack(target, pack_id)

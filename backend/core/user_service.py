@@ -46,13 +46,22 @@ async def get_or_create_user(
         
         if user is None:
             from .referral import generate_code
+            # tApps Center compliance: English as default; switch to user's
+            # Telegram language only if we support it. Was hard-coded "uk" —
+            # that meant a German/English/etc. user got Ukrainian onboarding
+            # until they manually changed it, which violated tApps rules.
+            SUPPORTED_NATIVE_LANGS = {"uk", "en", "pl", "de", "es", "fr"}
+            detected = (language_code or "").split("-")[0].lower()
+            initial_native_lang = (
+                detected if detected in SUPPORTED_NATIVE_LANGS else "en"
+            )
             user = User(
                 telegram_id=telegram_id,
                 username=username,
                 first_name=first_name,
                 last_name=last_name,
                 language_code=language_code,
-                native_lang="uk",
+                native_lang=initial_native_lang,
                 target_lang=None,
                 plan="free",
                 referral_code=generate_code(telegram_id),
@@ -94,7 +103,7 @@ async def can_add_word(user: User, lang: str | None = None) -> tuple[bool, str]:
       Коли вичерпано — потрібен Pro (XP дає знижки на Pro у tier-системі).
     """
     from .bot_i18n import t as bt
-    msg_lang = lang or user.native_lang or "uk"
+    msg_lang = lang or user.native_lang or "en"
 
     if user.plan == "pro":
         if user.plan_expires_at and user.plan_expires_at > datetime.now(timezone.utc):
@@ -130,7 +139,7 @@ async def can_add_word(user: User, lang: str | None = None) -> tuple[bool, str]:
 async def get_user_status(user: User, lang: str | None = None) -> dict:
     """Повертає поточний статус юзера для відображення."""
     from .bot_i18n import t as bt
-    msg_lang = lang or user.native_lang or "uk"
+    msg_lang = lang or user.native_lang or "en"
 
     is_trial = False
     trial_days_left = 0

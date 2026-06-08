@@ -52,7 +52,7 @@ async def _resolve_user_from(tg_user):
         last_name=tg_user.last_name,
         language_code=tg_user.language_code,
     )
-    return user, user.native_lang or "uk"
+    return user, user.native_lang or "en"
 
 
 @router.message(F.photo)
@@ -88,7 +88,7 @@ async def handle_photo(message: Message) -> None:
         words = await extract_words_from_image(
             image_b64,
             target_lang=user.target_lang,
-            native_lang=user.native_lang or "uk",
+            native_lang=user.native_lang or "en",
         )
     except Exception as e:
         logger.warning("snap photo extract failed: %s", e)
@@ -147,7 +147,7 @@ async def handle_voice(message: Message) -> None:
     words = await extract_words_from_transcript(
         transcript,
         target_lang=user.target_lang,
-        native_lang=user.native_lang or "uk",
+        native_lang=user.native_lang or "en",
     )
 
     analytics.capture(message.from_user.id, "snap_extracted", {

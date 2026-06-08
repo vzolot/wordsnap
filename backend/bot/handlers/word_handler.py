@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-def format_word_response(word: str, data: dict, native_lang: str = "uk", has_image: bool = False) -> str:
+def format_word_response(word: str, data: dict, native_lang: str = "en", has_image: bool = False) -> str:
     """Форматує AI-відповідь у HTML-текст для Telegram"""
     word_safe = escape(word)
     translation = escape(data.get('translation', ''))
@@ -77,7 +77,7 @@ async def cmd_add(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     target_name = lang_name(user.target_lang or "en")
     text = (
         f"{bt('add.title', lang)}\n\n"
@@ -97,7 +97,7 @@ async def handle_word(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
 
     if len(word) > 100:
         await message.answer(bt("word.too_long", lang))

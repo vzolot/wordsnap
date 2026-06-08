@@ -8,7 +8,7 @@ from core.bot_i18n import t as bt
 from core.constants import MINI_APP_URL
 
 
-def review_answer_keyboard(word_id: int, source: str = "rev", lang: str = "uk") -> InlineKeyboardMarkup:
+def review_answer_keyboard(word_id: int, source: str = "rev", lang: str = "en") -> InlineKeyboardMarkup:
     """3 кнопки оцінки: знав / згадав / забув."""
     builder = InlineKeyboardBuilder()
     builder.row(
@@ -31,7 +31,7 @@ def review_answer_keyboard(word_id: int, source: str = "rev", lang: str = "uk") 
 def show_translation_keyboard(
     word_id: int,
     source: str = "rev",
-    lang: str = "uk",
+    lang: str = "en",
     due_total: int = 0,
 ) -> InlineKeyboardMarkup:
     """Кнопка 'Показати переклад'. Для нагадувань додаємо ще 'Open App'.

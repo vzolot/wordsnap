@@ -158,7 +158,7 @@ async def start_survey(
     тільки Launch button, без in-bot Q&A. Інакше fallback на 2-питальний
     in-bot survey (backward compat).
     """
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     parsed = parse_ad_payload(payload)
     payload_lang = parsed["lang"]
     payload_mot = parsed["motivation"]
@@ -224,7 +224,7 @@ async def cb_survey_lang(callback: CallbackQuery) -> None:
         )
         await session.commit()
 
-    msg_lang = user.native_lang or "uk"
+    msg_lang = user.native_lang or "en"
     flag = next((f for c, f, _ in SUPPORTED_LANGS if c == code), "🌐")
     name = next((n for c, _, n in SUPPORTED_LANGS if c == code), code)
 
@@ -268,7 +268,7 @@ async def cb_survey_motivation(callback: CallbackQuery) -> None:
         )
         await session.commit()
 
-    msg_lang = user.native_lang or "uk"
+    msg_lang = user.native_lang or "en"
     motivation_label = bt(
         next(k for c, _, k in MOTIVATIONS if c == code), msg_lang
     )

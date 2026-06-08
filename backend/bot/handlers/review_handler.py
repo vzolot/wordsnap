@@ -29,7 +29,7 @@ def format_review_question(word) -> str:
     return text
 
 
-def format_review_revealed(word, native_lang: str = "uk") -> str:
+def format_review_revealed(word, native_lang: str = "en") -> str:
     word_safe = escape(word.word)
     translation = escape(word.translation or "")
     pos = escape(word.part_of_speech or "")
@@ -61,7 +61,7 @@ async def cmd_review(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
 
     words = await get_words_due_review(user.id, limit=10)
     if not words:
@@ -72,7 +72,7 @@ async def cmd_review(message: Message):
     await send_review_word(message, words[0], lang=lang)
 
 
-async def send_review_word(message: Message, word, source: str = "rev", lang: str = "uk") -> None:
+async def send_review_word(message: Message, word, source: str = "rev", lang: str = "en") -> None:
     word_safe = escape(word.word)
     pos = escape(word.part_of_speech or "")
     text = f"{bt('review.question_title', lang)}\n\n📚 <b>{word_safe}</b>"
@@ -91,7 +91,7 @@ async def show_translation(callback: CallbackQuery):
     source = parts[2] if len(parts) > 2 else "rev"
 
     user = await get_or_create_user(telegram_id=callback.from_user.id)
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
 
     word = await get_word_by_id(word_id)
     if not word:
@@ -108,7 +108,7 @@ async def show_translation(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("review:"))
 async def handle_review_answer(callback: CallbackQuery):
     user = await get_or_create_user(telegram_id=callback.from_user.id)
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
 
     parts = callback.data.split(":")
     if len(parts) < 3:

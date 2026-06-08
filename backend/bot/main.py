@@ -155,8 +155,8 @@ async def cmd_start(message: Message):
         result = await apply_referral(invitee_id=user.id, referrer_code=payload[4:])
         if result:
             referrer, invitee = result
-            invitee_lang = invitee.native_lang or "uk"
-            referrer_lang = referrer.native_lang or "uk"
+            invitee_lang = invitee.native_lang or "en"
+            referrer_lang = referrer.native_lang or "en"
             # Invitee: показуємо повну суму (trial 7 + бонус 10 = 17), бо це
             # значно сильніший value-prop ніж "+10". Referrer бачить +10 як
             # бонус до своєї підписки.
@@ -186,7 +186,7 @@ async def cmd_start(message: Message):
     if not user.target_lang:
         # Афіліат/tApps когорта онбординг англійською (міжнародна аудиторія),
         # решта — збереженою рідною мовою (дефолт uk).
-        lang = "en" if is_international else (user.native_lang or "uk")
+        lang = "en" if is_international else (user.native_lang or "en")
         # Single-message welcome (новий копірайт), потім питаємо рідну мову
         await message.answer(bt("onboard.welcome", lang))
         await message.answer(
@@ -196,7 +196,7 @@ async def cmd_start(message: Message):
         logger.info(f"New user {tg_user.id} — started language setup")
         return
 
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     status = await get_user_status(user, lang)
     target = user.target_lang or "en"
 
@@ -377,7 +377,7 @@ async def cmd_help(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     await message.answer(help_text(lang))
 
 
@@ -388,7 +388,7 @@ async def cmd_app(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
             text=bt("setup.open_app", lang),
@@ -405,7 +405,7 @@ async def cmd_settings(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text=bt("settings.lang_btn", lang),
@@ -422,7 +422,7 @@ async def cmd_settings(message: Message):
 @dp.callback_query(F.data == "settings:language")
 async def settings_language(callback: CallbackQuery):
     user = await get_or_create_user(telegram_id=callback.from_user.id)
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     await callback.message.edit_text(
         ask_native_lang_text(lang),
         reply_markup=native_lang_keyboard(),
@@ -437,7 +437,7 @@ async def cmd_stats(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     status = await get_user_status(user, lang)
 
     text = (
@@ -462,7 +462,7 @@ async def cmd_premium(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
     await message.answer(premium_text(lang))
 
 
@@ -473,7 +473,7 @@ async def cmd_buy(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
 
     try:
         # Кнопка веде на наш /pay endpoint (рендерить auto-submit POST форму),
@@ -497,7 +497,7 @@ async def cmd_subscription(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
 
     if user.plan == "pro" and user.plan_expires_at:
         is_active = user.plan_expires_at > datetime.now(timezone.utc)
@@ -529,7 +529,7 @@ async def cmd_unsubscribe(message: Message):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
     )
-    lang = user.native_lang or "uk"
+    lang = user.native_lang or "en"
 
     if user.plan != "pro":
         await message.answer(bt("unsub.no_active", lang))

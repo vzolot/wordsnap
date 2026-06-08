@@ -1389,7 +1389,7 @@ T: dict[str, dict[str, str]] = {
 }
 
 
-def t(key: str, lang: str = "uk", **vars: Any) -> str:
+def t(key: str, lang: str = "en", **vars: Any) -> str:
     # Для мов, для яких ще нема повного перекладу (наприклад "fr"), —
     # фолбек на англійську, не на українську (так універсальніше).
     dict_ = T.get(lang) or T.get("en") or T["uk"]
@@ -1399,7 +1399,7 @@ def t(key: str, lang: str = "uk", **vars: Any) -> str:
     return s
 
 
-def help_text(lang: str = "uk") -> str:
+def help_text(lang: str = "en") -> str:
     return (
         f"{t('help.title', lang)}\n\n"
         f"{t('help.learning', lang)}\n"
@@ -1418,7 +1418,7 @@ def help_text(lang: str = "uk") -> str:
     )
 
 
-def premium_text(lang: str = "uk") -> str:
+def premium_text(lang: str = "en") -> str:
     return (
         f"{t('premium.title', lang)}\n\n"
         f"{t('premium.benefits_title', lang)}\n"
@@ -1432,7 +1432,7 @@ def premium_text(lang: str = "uk") -> str:
     )
 
 
-def buy_text(lang: str = "uk") -> str:
+def buy_text(lang: str = "en") -> str:
     return (
         f"{t('buy.title', lang)}\n\n"
         f"{t('buy.amount', lang)}\n"
