@@ -26,6 +26,17 @@ function StatsPage() {
   const isPro = stats?.plan === 'pro';
   const learning = (stats?.total_words || 0) - (stats?.learned_words || 0);
   const xp = stats?.total_xp || 0;
+  const xpCycle = stats?.xp_this_cycle ?? 0;
+  // Cycle-end is the same anchor pushed forward 30 days (monthly subscribers)
+  // or just the first of next calendar month (everyone else). Computed on the
+  // client because backend only sends `cycle_start_at`.
+  const cycleStartAt = stats?.cycle_start_at ? new Date(stats.cycle_start_at) : null;
+  const cycleEndsLabel = (() => {
+    if (!cycleStartAt) return '';
+    const reset = new Date(cycleStartAt);
+    reset.setUTCMonth(reset.getUTCMonth() + 1);
+    return reset.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  })();
   const tierXp = stats?.tier_xp ?? 0;
   const tierKey = stats?.tier_key || 'rewards.beginner';
   const nextXp = stats?.next_tier_xp;
@@ -64,9 +75,26 @@ function StatsPage() {
           </Link>
         </div>
 
+        {/* Monthly XP — resets on subscription cycle (Pro) or 1st of month
+            (free). Lifetime tier card below stays the trophy/achievement
+            view. Two metrics serve two different psychological functions:
+            monthly = "how am I growing right now", lifetime = "how far have
+            I come overall". 2026-06-09 product change. */}
+        <div className="cycle-xp-row">
+          <div>
+            <div className="cycle-xp-label">{t('stats.xp_this_cycle')}</div>
+            <div className="cycle-xp-num">{xpCycle}</div>
+          </div>
+          {cycleEndsLabel && (
+            <div className="cycle-xp-reset">
+              {t('stats.cycle_resets', { date: cycleEndsLabel })}
+            </div>
+          )}
+        </div>
+
         <div className="xp-card">
           <div className="xp-card-head">
-            <span>✨ {t('stats.xp_label')}</span>
+            <span>🏆 {t('stats.xp_lifetime_label')}</span>
             <span className="xp-card-tier">{t(tierKey)}</span>
           </div>
           <div className="xp-card-num">{xp}</div>

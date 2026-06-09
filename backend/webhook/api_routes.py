@@ -169,7 +169,10 @@ async def get_stats(telegram_id: int = Query(...)):
             return {
                 "total_words": 0, "learned_words": 0, "streak": 0,
                 "reviewed_today": 0, "total_reviews": 0, "total_xp": 0,
-                "xp_today": 0,
+                "xp_today": 0, "xp_this_cycle": 0,
+                "cycle_start_at": datetime.now(timezone.utc).replace(
+                    day=1, hour=0, minute=0, second=0, microsecond=0
+                ).isoformat(),
                 "total_spent": 0.0,
                 "tier_xp": beginner[0], "tier_key": beginner[1],
                 "tier_reward_key": beginner[2],
@@ -221,8 +224,38 @@ async def get_stats(telegram_id: int = Query(...)):
                 )).all()
                 return sum(xp_for_result(r.result) * int(r.n) for r in rows)
 
-        learned, reviewed_today, streak, total_spent, xp_today = await _aio.gather(
-            q_learned(), q_reviewed_today(), q_streak(), q_total_spent(), q_xp_today()
+        # Monthly XP cycle (2026-06-09 product change): user wanted XP to
+        # reset every month so there's always growth to chase even after the
+        # max tier — `total_xp` becomes the lifetime trophy, `xp_this_cycle`
+        # is the live progress meter. Rule for picking the cycle anchor:
+        #   • Pro user who paid within the last 30 days → from `last_payment_date`
+        #     (monthly subscribers get a fresh start exactly on renewal day)
+        #   • Everyone else → start of current calendar month
+        # This degrades cleanly for annual Pro (paid > 30 days ago) and for
+        # free users — both get a predictable 1st-of-month reset.
+        now = datetime.now(timezone.utc)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        cycle_start = month_start
+        if (
+            user.plan == "pro"
+            and user.last_payment_date
+            and (now - user.last_payment_date).days <= 30
+            and user.last_payment_date > month_start
+        ):
+            cycle_start = user.last_payment_date
+
+        async def q_xp_this_cycle() -> int:
+            async with SessionLocal() as s:
+                rows = (await s.execute(
+                    select(Review.result, func.count().label("n")).where(
+                        Review.user_id == uid,
+                        Review.reviewed_at >= cycle_start,
+                    ).group_by(Review.result)
+                )).all()
+                return sum(xp_for_result(r.result) * int(r.n) for r in rows)
+
+        learned, reviewed_today, streak, total_spent, xp_today, xp_this_cycle = await _aio.gather(
+            q_learned(), q_reviewed_today(), q_streak(), q_total_spent(), q_xp_today(), q_xp_this_cycle()
         )
 
         now = datetime.now(timezone.utc)
@@ -265,6 +298,8 @@ async def get_stats(telegram_id: int = Query(...)):
             "total_reviews": user.total_reviews,
             "total_xp": xp,
             "xp_today": xp_today,
+            "xp_this_cycle": xp_this_cycle,
+            "cycle_start_at": cycle_start.isoformat(),
             "total_spent": total_spent,
             "tier_xp": tier[0],
             "tier_key": tier[1],

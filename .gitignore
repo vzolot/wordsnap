@@ -7,3 +7,6 @@ venv/
 .venv/
 node_modules/
 .vercel
+.DS_Store
+*.swp
+*.swo

@@ -1,9 +1,19 @@
 import { Link } from 'react-router-dom';
 import { useT } from '../contexts/LangContext';
 import ThemeToggle from './ThemeToggle';
+import { readCache } from '../api/client';
 
-function AppBar({ showProLink = true, isPro = false }) {
+// AppBar reads `isPro` from the stats cache by default so every page gets the
+// green PRO badge consistently. The five Pages that don't pass `isPro` were
+// previously defaulting to `false` and rendering the pink "Get Pro" CTA even
+// for paying users (visible bug 2026-06-09: Words / Topics / Songs tabs
+// showed the gradient CTA while Home / Stats showed the green badge for the
+// same Pro user). Pages can still override with the explicit `isPro` prop
+// when they already compute it for their own logic (HomePage / StatsPage).
+function AppBar({ showProLink = true, isPro: isProProp = null }) {
   const { t } = useT();
+  const cached = readCache('stats', { ignoreTtl: true });
+  const isPro = isProProp !== null ? isProProp : (cached?.plan === 'pro');
   return (
     <header className="app-bar">
       <div className="app-bar-logo">W</div>
