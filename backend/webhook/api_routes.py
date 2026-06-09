@@ -1190,6 +1190,87 @@ async def create_stars_invoice(
     }
 
 
+@router.post("/api/buy/ton/init")
+async def create_ton_invoice(
+    telegram_id: int = Query(...),
+    period: str = Query("monthly"),
+):
+    """Повертає параметри для TON Connect `sendTransaction({to, amount, payload})`.
+
+    Frontend бере звідси `to` (наш гаманець), `amount_nano` (сума у нано-TON),
+    і `comment` (унікальний короткий тег), будує BOC-payload через
+    `@ton/core` і викликає `tonConnectUI.sendTransaction(...)`. Юзер
+    підписує транзакцію у Tonkeeper.
+
+    Pro активується **не** цим ендпойнтом, а chain-watcher'ом (фоновий loop
+    `scheduler/ton_watcher.py`), який бачить нову транзакцію на нашу адресу
+    через TONAPI, парсить `comment`, і викликає `activate_pro_subscription`.
+
+    Ціна в TON — статична зараз (1 TON / 5 TON). TODO Phase 3: cron що
+    раз на тиждень тягне курс TON і коригує ціни в БД щоб net ≈ card net.
+
+    Створюємо pending-row у `payment_history` (status='pending') одразу;
+    watcher оновлює до 'success' коли знаходить on-chain match.
+    """
+    if period not in ("monthly", "annual"):
+        raise HTTPException(status_code=400, detail="period must be monthly or annual")
+
+    import os
+    wallet = os.getenv("WORDSNAP_TON_WALLET")
+    if not wallet:
+        raise HTTPException(status_code=500, detail="TON wallet not configured (WORDSNAP_TON_WALLET env)")
+
+    # Pricing in TON @ ~$1.70 (2026-06-09). Monthly 1 ≈ $1.70 (slight
+    # premium vs $1.45 card net), annual 5 ≈ $8.50 (≈ $8.72 card net).
+    amount_ton = 1.0 if period == "monthly" else 5.0
+    amount_nano = int(amount_ton * 1_000_000_000)
+    duration_days = 30 if period == "monthly" else 365
+
+    # `comment` is the chain-side identifier: max ~123 bytes per TL-B
+    # text-comment cell, ours is ~22 bytes. Last 6 digits of unix ts is
+    # the de-dup component — collisions would need two requests in the same
+    # microsecond for the same user+period.
+    short_ts = int(datetime.now(timezone.utc).timestamp()) % 1_000_000
+    comment = f"ws_{telegram_id}_{period}_{short_ts}"
+
+    async with SessionLocal() as session:
+        user = (await session.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )).scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="user not found")
+        ph = PaymentHistory(
+            user_id=user.id,
+            order_reference=comment,
+            amount=float(amount_ton),
+            currency="TON",
+            status="pending",
+            transaction_status="PendingChain",
+            is_recurring=False,
+        )
+        session.add(ph)
+        await session.commit()
+
+    valid_until = int(datetime.now(timezone.utc).timestamp()) + 300  # 5 min
+
+    try:
+        analytics.capture(telegram_id, "ton_invoice_created", {
+            "period": period,
+            "amount_ton": amount_ton,
+        })
+    except Exception:
+        pass
+
+    return {
+        "to": wallet,
+        "amount_nano": str(amount_nano),  # TON Connect expects strings
+        "comment": comment,
+        "valid_until": valid_until,
+        "amount_ton": amount_ton,
+        "duration_days": duration_days,
+    }
+
+
 @router.post("/api/cancel_subscription")
 async def cancel_subscription_endpoint(telegram_id: int = Query(...)):
     """Скасовує авто-продовження підписки. Pro лишається активним до кінця

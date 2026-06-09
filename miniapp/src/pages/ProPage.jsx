@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStats, createBuyLink, createStarsInvoice, cancelSubscription, getReferral, readCache, writeCache } from '../api/client';
-import { TonConnectButton, useTonAddress } from '@tonconnect/ui-react';
+import { getStats, createBuyLink, createStarsInvoice, createTonInvoice, cancelSubscription, getReferral, readCache, writeCache } from '../api/client';
+import { TonConnectButton, useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
+import { beginCell } from '@ton/core';
+
+// TL-B text-comment payload for a TON transfer: 32-bit op=0 + UTF-8 text.
+// Serialised as a single cell, returned as base64 BOC ready for the
+// `payload` field of `tonConnectUI.sendTransaction(...)`. Standard pattern
+// used by every TON wallet for human-readable transfer memos.
+function buildCommentPayload(text) {
+  return beginCell()
+    .storeUint(0, 32)
+    .storeStringTail(text)
+    .endCell()
+    .toBoc()
+    .toString('base64');
+}
 import { track } from '../utils/analytics';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
@@ -27,6 +41,10 @@ function ProPage() {
   // add a "Pay X TON" CTA in this same block that constructs a transaction
   // via `tonConnectUI.sendTransaction(...)`.
   const tonAddress = useTonAddress();
+  const [tonConnectUI] = useTonConnectUI();
+  const [tonLoading, setTonLoading] = useState(false);
+  const [tonMsg, setTonMsg] = useState('');
+  const [tonMsgClass, setTonMsgClass] = useState('');
 
   useEffect(() => {
     track('pro_page_viewed', {
@@ -120,6 +138,69 @@ function ProPage() {
   // скільки з картки (~$1.45/міс і ~$8.72/рік net). Бекенд тримає ті ж самі
   // цифри в /api/buy/stars (api_routes.py:create_stars_invoice).
   const STARS_PRICES = { monthly: 129, annual: 799 };
+
+  // TON Connect — third payment lane (one-time, no recurring). Frontend
+  // builds the TX from the backend-issued `to / amount / comment` triple
+  // and asks `tonConnectUI.sendTransaction(...)` to relay it through the
+  // user's wallet. Pro activation is server-side via `scheduler/ton_watcher`
+  // watching the chain — we poll `getStats` here purely to refresh the UI
+  // once the watcher flips the user to Pro.
+  const TON_PRICES = { monthly: 1, annual: 5 };
+
+  const handleBuyTon = async () => {
+    track('ton_buy_clicked', { period });
+    if (!tonAddress) {
+      setTonMsg(t('pro.ton_connect_first'));
+      setTonMsgClass('err');
+      return;
+    }
+    setTonLoading(true);
+    setTonMsg('');
+    setTonMsgClass('');
+    try {
+      const r = await createTonInvoice(period);
+      const { to, amount_nano, comment, valid_until } = r.data;
+      await tonConnectUI.sendTransaction({
+        validUntil: valid_until,
+        messages: [
+          {
+            address: to,
+            amount: amount_nano,
+            payload: buildCommentPayload(comment),
+          },
+        ],
+      });
+      setTonMsg(t('pro.ton_waiting'));
+      setTonMsgClass('');
+      track('ton_tx_signed', { period, comment });
+
+      const pollStarted = Date.now();
+      const poll = setInterval(async () => {
+        try {
+          const s = await getStats();
+          if (s.data?.plan === 'pro') {
+            clearInterval(poll);
+            setStats(s.data);
+            writeCache('stats', s.data);
+            setTonMsg(t('pro.ton_success'));
+            setTonMsgClass('ok');
+            track('ton_pro_activated', { period });
+          } else if (Date.now() - pollStarted > 180_000) {
+            clearInterval(poll);
+            setTonMsg(t('pro.ton_pending'));
+            setTonMsgClass('');
+          }
+        } catch { /* keep polling */ }
+      }, 5000);
+    } catch (e) {
+      track('ton_buy_failed', { period, err: String(e?.message || e).slice(0, 80) });
+      setTonMsg(t('pro.ton_failed'));
+      setTonMsgClass('err');
+    } finally {
+      setTonLoading(false);
+    }
+  };
+
   const handleBuyStars = async () => {
     track('stars_buy_clicked', { period });
     setStarsLoading(true);
@@ -280,10 +361,10 @@ function ProPage() {
                 )}
               </div>
 
-              {/* TON wallet connection — Phase 1 of TON integration.
-                  Just the handshake; Phase 2 adds a "Pay X TON" CTA here
-                  that calls `tonConnectUI.sendTransaction(...)` and the
-                  backend watches the chain for the matching comment. */}
+              {/* TON Connect — third payment lane. Phase 1 was the wallet
+                  handshake; Phase 2 (this) adds the actual Pay X TON CTA.
+                  Server-side `scheduler/ton_watcher` watches TONAPI for the
+                  matching comment and activates Pro. */}
               <div className="pro-ton-block">
                 <p className="pro-ton-sub">
                   {tonAddress ? t('pro.ton_connected') : t('pro.ton_subtitle')}
@@ -291,6 +372,27 @@ function ProPage() {
                 <div className="pro-ton-btn-wrap">
                   <TonConnectButton />
                 </div>
+                {tonAddress && (
+                  <>
+                    <button
+                      type="button"
+                      className="pro-stars-btn"
+                      style={{ marginTop: 12 }}
+                      onClick={handleBuyTon}
+                      disabled={tonLoading}
+                    >
+                      {tonLoading
+                        ? t('pro.cta_loading')
+                        : t('pro.cta_ton', { amount: TON_PRICES[period] })}
+                    </button>
+                    <p className="pro-stars-sub" style={{ marginTop: 6 }}>
+                      {t('pro.ton_pay_subtitle')}
+                    </p>
+                  </>
+                )}
+                {tonMsg && (
+                  <p className={`pro-stars-msg ${tonMsgClass}`}>{tonMsg}</p>
+                )}
               </div>
             </>
           )}

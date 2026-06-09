@@ -58,6 +58,13 @@ export const createBuyLink = (period = 'monthly') => api.post('/api/buy', null, 
 // subscription_status="one_time" — scheduler skips re-charge attempts.
 export const createStarsInvoice = (period = 'monthly') =>
   api.post('/api/buy/stars', null, { params: { period } });
+// TON (TON Connect) — third payment option. Backend returns `{to, amount_nano,
+// comment, valid_until, amount_ton, duration_days}`; frontend uses @ton/core to
+// build a BOC comment payload and calls `tonConnectUI.sendTransaction(...)`.
+// Pro activation happens server-side via `scheduler/ton_watcher.py` watching
+// the chain through TONAPI.
+export const createTonInvoice = (period = 'monthly') =>
+  api.post('/api/buy/ton/init', null, { params: { period } });
 export const cancelSubscription = () => api.post('/api/cancel_subscription');
 export const getReferral = () => api.get('/api/referral');
 // Apply a referral on mini-app entry (когда юзер прийшов за `?startapp=ref_<code>`
