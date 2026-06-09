@@ -9,18 +9,18 @@ if (typeof globalThis.Buffer === 'undefined') globalThis.Buffer = Buffer
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { TonConnectUIProvider } from '@tonconnect/ui-react'
 import './index.css'
 import App from './App.jsx'
 import { initSentry, SentryErrorBoundary } from './sentry.js'
 
 initSentry();
 
-// TON Connect provider wraps the whole app so any page can read the connected
-// wallet via `useTonAddress` / `useTonConnectUI`. Manifest is served by the
-// same miniapp deploy (`public/tonconnect-manifest.json`) — must be a public
-// HTTPS URL TON wallets can fetch when verifying the connection request.
-const TON_MANIFEST_URL = 'https://miniapp-omega-three.vercel.app/tonconnect-manifest.json';
+// TON Connect provider used to wrap the entire <App /> here — that loaded
+// @tonconnect/ui-react + @ton/core (combined ~200 KB gzipped) on every first
+// visit, including for users who never opened Pro. 2026-06-09 Phase 3 split:
+// moved the provider INTO ProPage so the TON code lives in the ProPage
+// lazy chunk and only downloads when the user actually opens the Pro tab.
+// Bundle savings: ~115 KB gzipped on first paint.
 
 // Telegram Mini Apps Analytics SDK — обовʼязковий для tApps Center listing.
 // Токен видається @DataChief_bot після реєстрації мініапи; зберігаємо у
@@ -48,9 +48,7 @@ const Fallback = () => (
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <SentryErrorBoundary fallback={<Fallback />}>
-      <TonConnectUIProvider manifestUrl={TON_MANIFEST_URL}>
-        <App />
-      </TonConnectUIProvider>
+      <App />
     </SentryErrorBoundary>
   </StrictMode>,
 )

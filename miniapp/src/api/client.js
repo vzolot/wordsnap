@@ -65,6 +65,9 @@ export const createStarsInvoice = (period = 'monthly') =>
 // the chain through TONAPI.
 export const createTonInvoice = (period = 'monthly') =>
   api.post('/api/buy/ton/init', null, { params: { period } });
+// Fetched once on ProPage mount so the "Pay X TON" button displays the
+// current dynamic amount (Phase 3 — 2026-06-09). Tiny endpoint, no auth.
+export const getTonPrices = () => api.get('/api/ton/prices');
 export const cancelSubscription = () => api.post('/api/cancel_subscription');
 export const getReferral = () => api.get('/api/referral');
 // Apply a referral on mini-app entry (когда юзер прийшов за `?startapp=ref_<code>`

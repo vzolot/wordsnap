@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStats, createBuyLink, createStarsInvoice, createTonInvoice, cancelSubscription, getReferral, readCache, writeCache } from '../api/client';
-import { TonConnectButton, useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
+import { getStats, createBuyLink, createStarsInvoice, createTonInvoice, getTonPrices, cancelSubscription, getReferral, readCache, writeCache } from '../api/client';
+import { TonConnectButton, TonConnectUIProvider, useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
 import { beginCell } from '@ton/core';
+
+// TON manifest lives at the miniapp root, served by Vercel. Was previously
+// declared in main.jsx with the provider wrapping the whole app — moved here
+// 2026-06-09 Phase 3 so @tonconnect/ui-react + @ton/core ride in this lazy
+// chunk instead of the first-paint bundle.
+const TON_MANIFEST_URL = 'https://miniapp-omega-three.vercel.app/tonconnect-manifest.json';
 
 // TL-B text-comment payload for a TON transfer: 32-bit op=0 + UTF-8 text.
 // Serialised as a single cell, returned as base64 BOC ready for the
@@ -20,7 +26,7 @@ import { track } from '../utils/analytics';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 
-function ProPage() {
+function ProPageInner() {
   // Початковий рендер відразу з кешу — Pro card і реферал-блок з'являються
   // одночасно. Свіжі дані фоном.
   const [stats, setStats] = useState(() => readCache('stats', { ignoreTtl: true }));
@@ -145,7 +151,18 @@ function ProPage() {
   // user's wallet. Pro activation is server-side via `scheduler/ton_watcher`
   // watching the chain — we poll `getStats` here purely to refresh the UI
   // once the watcher flips the user to Pro.
-  const TON_PRICES = { monthly: 1, annual: 5 };
+  // Dynamic TON pricing (Phase 3 — 2026-06-09). Falls back to the static
+  // values that were right at $1.70/TON until the API responds.
+  const [tonPrices, setTonPrices] = useState({ monthly: 1, annual: 5 });
+  useEffect(() => {
+    getTonPrices()
+      .then(r => {
+        const p = r.data?.prices_ton;
+        if (p?.monthly && p?.annual) setTonPrices(p);
+      })
+      .catch(() => { /* keep fallback */ });
+  }, []);
+  const TON_PRICES = tonPrices;
 
   const handleBuyTon = async () => {
     track('ton_buy_clicked', { period });
@@ -436,6 +453,17 @@ function ProPage() {
         </button>
       </div>
     </>
+  );
+}
+
+// Wrapper that mounts the TonConnectUIProvider only for this page (Phase 3
+// route-split — kept TON code out of the first-paint bundle). useTonAddress /
+// useTonConnectUI inside ProPageInner read from this provider's context.
+function ProPage() {
+  return (
+    <TonConnectUIProvider manifestUrl={TON_MANIFEST_URL}>
+      <ProPageInner />
+    </TonConnectUIProvider>
   );
 }
 

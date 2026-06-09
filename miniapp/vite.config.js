@@ -36,7 +36,14 @@ export default defineConfig({
           }
           if (id.includes('/react-router')) return 'vendor-router';
           if (id.includes('/axios/')) return 'vendor-http';
-          // Все інше з node_modules — невелика збірна "vendor-misc".
+          // TON Connect + @ton/core: don't claim them for any vendor chunk.
+          // Returning undefined lets Vite's natural code-splitting fold them
+          // into the lazy chunk that imports them (currently `ProPage.jsx`).
+          // 2026-06-09 Phase 3 split — before this, vendor-misc was 681 KB
+          // because everything from node_modules was lumped here regardless
+          // of whether it was on the first-paint path.
+          if (id.includes('@tonconnect/') || id.includes('@ton/')) return undefined;
+          // Everything else from node_modules → vendor-misc.
           // posthog-js не сюди — він вантажиться через dynamic import,
           // Vite зробить його окремим chunk'ом автоматично.
           return 'vendor-misc';

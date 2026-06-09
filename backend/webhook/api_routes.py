@@ -1225,6 +1225,66 @@ async def create_stars_invoice(
     }
 
 
+@router.get("/api/ton/prices")
+async def get_ton_prices():
+    """Returns current TON pricing for the ProPage to display before the
+    user taps Pay X TON. Tiny endpoint — pure read of the cached price +
+    a constant USD target, no DB query. Hit ~once per ProPage mount."""
+    import math
+    price_usd = await _get_ton_price_usd()
+    out = {}
+    for period in ("monthly", "annual"):
+        target_usd = _TARGET_NET_USD[period]
+        min_ton = _MIN_TON[period]
+        amount_ton = max(min_ton, math.ceil(target_usd / price_usd))
+        out[period] = amount_ton
+    return {"prices_ton": out, "ton_price_usd": round(price_usd, 3)}
+
+
+# Dynamic TON pricing (Phase 3 — 2026-06-09). Hardcoded 1 / 5 TON was a
+# Phase 2 placeholder that breaks when TON moves: at $1.70 each amount is
+# fine, but if TON hits $4 we'd overcharge users 2.3× the card-net target.
+# This module-level cache calls CoinGecko's free `/simple/price` once per
+# hour and computes the TON amount needed to net the same as the card.
+# We round UP to whole TON with sensible minimums (1 monthly, 2 annual) so
+# the displayed amount stays clickable; tiny over-charge is acceptable —
+# it leaves room for TON to move down without immediately under-billing.
+_TON_PRICE_CACHE: dict = {"price_usd": 1.70, "fetched_at": None}
+_TON_PRICE_TTL_SECONDS = 3600
+
+# Target net the bot should net per period (matches card net after WayForPay 3%).
+_TARGET_NET_USD = {"monthly": 1.50, "annual": 9.00}
+_MIN_TON = {"monthly": 1.0, "annual": 2.0}
+
+
+async def _get_ton_price_usd() -> float:
+    """Returns current TON price in USD with 1-hour memoisation. CoinGecko's
+    free tier rate-limits at ~30 calls/min — well under our 1/hour. Any
+    failure (network, CoinGecko 5xx, parse error) falls back to the last
+    successful price, or the hardcoded $1.70 if we've never fetched."""
+    import httpx
+    now = datetime.now(timezone.utc)
+    cached_at = _TON_PRICE_CACHE.get("fetched_at")
+    if cached_at and (now - cached_at).total_seconds() < _TON_PRICE_TTL_SECONDS:
+        return _TON_PRICE_CACHE["price_usd"]
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(
+                "https://api.coingecko.com/api/v3/simple/price",
+                params={"ids": "the-open-network", "vs_currencies": "usd"},
+            )
+            r.raise_for_status()
+            price = float(r.json()["the-open-network"]["usd"])
+            if price > 0:
+                _TON_PRICE_CACHE.update({"price_usd": price, "fetched_at": now})
+                logger.info("ton price refreshed: $%.3f", price)
+                return price
+    except Exception as exc:
+        logger.warning("ton price fetch failed (using cached $%.3f): %s",
+                       _TON_PRICE_CACHE["price_usd"], exc)
+    return _TON_PRICE_CACHE["price_usd"]
+
+
 @router.post("/api/buy/ton/init")
 async def create_ton_invoice(
     telegram_id: int = Query(...),
@@ -1255,9 +1315,17 @@ async def create_ton_invoice(
     if not wallet:
         raise HTTPException(status_code=500, detail="TON wallet not configured (WORDSNAP_TON_WALLET env)")
 
-    # Pricing in TON @ ~$1.70 (2026-06-09). Monthly 1 ≈ $1.70 (slight
-    # premium vs $1.45 card net), annual 5 ≈ $8.50 (≈ $8.72 card net).
-    amount_ton = 1.0 if period == "monthly" else 5.0
+    # Pricing in TON — dynamic since Phase 3 (2026-06-09). Reads spot TON
+    # price from CoinGecko (1h cache) and computes the TON amount needed to
+    # net the same as the card after WayForPay's 3%. Rounded UP to whole
+    # TON with sensible minimums (1 monthly / 2 annual) — keeps the displayed
+    # number clean and leaves a tiny buffer for TON to drop without the
+    # immediate next invoice undershooting target.
+    import math
+    price_usd = await _get_ton_price_usd()
+    target_usd = _TARGET_NET_USD[period]
+    min_ton = _MIN_TON[period]
+    amount_ton = max(min_ton, math.ceil(target_usd / price_usd))
     amount_nano = int(amount_ton * 1_000_000_000)
     duration_days = 30 if period == "monthly" else 365
 
