@@ -1241,48 +1241,14 @@ async def get_ton_prices():
     return {"prices_ton": out, "ton_price_usd": round(price_usd, 3)}
 
 
-# Dynamic TON pricing (Phase 3 — 2026-06-09). Hardcoded 1 / 5 TON was a
-# Phase 2 placeholder that breaks when TON moves: at $1.70 each amount is
-# fine, but if TON hits $4 we'd overcharge users 2.3× the card-net target.
-# This module-level cache calls CoinGecko's free `/simple/price` once per
-# hour and computes the TON amount needed to net the same as the card.
-# We round UP to whole TON with sensible minimums (1 monthly, 2 annual) so
-# the displayed amount stays clickable; tiny over-charge is acceptable —
-# it leaves room for TON to move down without immediately under-billing.
-_TON_PRICE_CACHE: dict = {"price_usd": 1.70, "fetched_at": None}
-_TON_PRICE_TTL_SECONDS = 3600
-
-# Target net the bot should net per period (matches card net after WayForPay 3%).
-_TARGET_NET_USD = {"monthly": 1.50, "annual": 9.00}
-_MIN_TON = {"monthly": 1.0, "annual": 2.0}
-
-
-async def _get_ton_price_usd() -> float:
-    """Returns current TON price in USD with 1-hour memoisation. CoinGecko's
-    free tier rate-limits at ~30 calls/min — well under our 1/hour. Any
-    failure (network, CoinGecko 5xx, parse error) falls back to the last
-    successful price, or the hardcoded $1.70 if we've never fetched."""
-    import httpx
-    now = datetime.now(timezone.utc)
-    cached_at = _TON_PRICE_CACHE.get("fetched_at")
-    if cached_at and (now - cached_at).total_seconds() < _TON_PRICE_TTL_SECONDS:
-        return _TON_PRICE_CACHE["price_usd"]
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.get(
-                "https://api.coingecko.com/api/v3/simple/price",
-                params={"ids": "the-open-network", "vs_currencies": "usd"},
-            )
-            r.raise_for_status()
-            price = float(r.json()["the-open-network"]["usd"])
-            if price > 0:
-                _TON_PRICE_CACHE.update({"price_usd": price, "fetched_at": now})
-                logger.info("ton price refreshed: $%.3f", price)
-                return price
-    except Exception as exc:
-        logger.warning("ton price fetch failed (using cached $%.3f): %s",
-                       _TON_PRICE_CACHE["price_usd"], exc)
-    return _TON_PRICE_CACHE["price_usd"]
+# TON pricing helpers moved to `core/ton_pricing.py` so `scheduler/ton_watcher`
+# can read the same cached price for its affiliate revenue-share computation
+# (previously hard-coded $1.70/TON, silently bit-rotting on price moves).
+from core.ton_pricing import (
+    get_ton_price_usd as _get_ton_price_usd,
+    TARGET_NET_USD as _TARGET_NET_USD,
+    MIN_TON as _MIN_TON,
+)
 
 
 @router.post("/api/buy/ton/init")

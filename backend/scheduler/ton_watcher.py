@@ -191,10 +191,15 @@ async def _process_event(ev: dict, wallet: str) -> None:
                 user.telegram_id, tx_hash, amount_ton, period,
             )
 
-        # Best-effort affiliate share — same idea as Stars handler.
+        # Best-effort affiliate share — same idea as Stars handler. Uses the
+        # live TON spot price (with 1h cache) so the share % is calibrated
+        # to what TON was actually worth when the payment landed, not a
+        # bit-rotted $1.70 from when Phase 2 shipped.
         try:
             from core.affiliates import record_payment_share
-            usd_equiv = round(amount_ton * 1.70, 2)
+            from core.ton_pricing import get_ton_price_usd
+            ton_price_usd = await get_ton_price_usd()
+            usd_equiv = round(amount_ton * ton_price_usd, 2)
             await record_payment_share(
                 user_id=ph.user_id,
                 payment_id=ph.id,
