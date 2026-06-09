@@ -1,3 +1,12 @@
+// Buffer polyfill — MUST be first, before anything that pulls @ton/core.
+// @ton/core's BOC encoder uses Node's Buffer at runtime; browsers don't
+// provide it. The Vite config's `define: { global: 'globalThis' }` covers
+// most paths, this assignment covers the cases where module-eval reads
+// `Buffer` directly. Without this, ProPage crashes the ErrorBoundary on
+// import (saw it 2026-06-09 right after shipping the TON Pay CTA).
+import { Buffer } from 'buffer'
+if (typeof globalThis.Buffer === 'undefined') globalThis.Buffer = Buffer
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { TonConnectUIProvider } from '@tonconnect/ui-react'

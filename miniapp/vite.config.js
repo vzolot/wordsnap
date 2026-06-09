@@ -4,6 +4,24 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // @ton/core needs a Node-style `Buffer` global. Vite doesn't polyfill it
+  // by default — without these the BOC encoder in `buildCommentPayload`
+  // throws `ReferenceError: Buffer is not defined` at render time and
+  // crashes the SentryErrorBoundary (saw it 2026-06-09 right after shipping
+  // the TON Pay CTA). main.jsx also imports `Buffer` from the polyfill and
+  // assigns it onto globalThis to belt-and-braces against any code path
+  // that reads `Buffer` before this define is in scope.
+  define: {
+    global: 'globalThis',
+  },
+  resolve: {
+    alias: {
+      buffer: 'buffer/',
+    },
+  },
+  optimizeDeps: {
+    include: ['buffer'],
+  },
   build: {
     rollupOptions: {
       output: {
