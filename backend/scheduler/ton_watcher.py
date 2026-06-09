@@ -107,15 +107,23 @@ async def _fetch_recent_events(wallet: str, api_key: str, limit: int = 30) -> li
 
 async def _process_event(ev: dict, wallet: str) -> None:
     """For each TON-transfer-to-us in this event, see if the comment matches
-    a pending payment_history row → activate Pro + mark success."""
+    a pending payment_history row → activate Pro + mark success.
+
+    Address-match rationale: dropped. TONAPI returns recipient addresses in
+    raw `0:hex` form, but the env var `WORDSNAP_TON_WALLET` is the friendly
+    `UQ…` base64 — string comparison (and the loose substring fallback I had
+    initially) never matched. We could canonicalise via a TON address lib,
+    but the comment alone is sufficient: it's a unique self-issued tag of
+    the form `ws_<tg_id>_<period>_<short_ts>` that only exists for an
+    invoice WE created. If we see a TonTransfer with that comment in OUR
+    wallet's event stream, it's our payment. The payment_history lookup +
+    `status == 'success'` short-circuit covers idempotency. Outgoing
+    refunds also appear in the event stream but won't carry our comment
+    format, so they're a no-op."""
     for action in ev.get("actions", []) or []:
         if action.get("type") != "TonTransfer":
             continue
         tt = action.get("TonTransfer") or {}
-        # We only care about transfers INTO our wallet.
-        recipient = (tt.get("recipient") or {}).get("address")
-        if not recipient or not _addr_match(recipient, wallet):
-            continue
         comment = _extract_comment(action)
         if not comment or not _COMMENT_RE.match(comment):
             continue
@@ -209,24 +217,6 @@ async def _process_event(ev: dict, wallet: str) -> None:
             )
         except Exception as e:
             logger.warning("ton thank-you message failed: %s", e)
-
-
-def _addr_match(a: str, b: str) -> bool:
-    """Loose match — TON addresses come in multiple representations
-    (`0:...` raw, `EQ...` / `UQ...` user-facing). Treat them as equal if
-    either is contained in the other (the workchain prefix `0:` differs from
-    base64 forms but the hash hex / b64 chars overlap enough). For perfect
-    matching we'd use `pytonlib`/`pytoniq`, but the comment match already
-    disambiguates which payment a tx belongs to — address is just a
-    sanity gate."""
-    if not a or not b:
-        return False
-    if a == b:
-        return True
-    # Strip workchain prefix for raw addresses.
-    a_core = a.split(":")[-1].lower()
-    b_core = b.split(":")[-1].lower()
-    return a_core == b_core or a_core in b_core or b_core in a_core
 
 
 async def ton_watcher_loop(bot=None) -> None:
