@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStats, createBuyLink, createStarsInvoice, cancelSubscription, getReferral, readCache, writeCache } from '../api/client';
+import { TonConnectButton, useTonAddress } from '@tonconnect/ui-react';
 import { track } from '../utils/analytics';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
@@ -22,6 +23,10 @@ function ProPage() {
   const navigate = useNavigate();
   const { t } = useT();
   const tg = window.Telegram?.WebApp;
+  // TON Connect — Phase 1 just wires up the wallet handshake. Phase 2 will
+  // add a "Pay X TON" CTA in this same block that constructs a transaction
+  // via `tonConnectUI.sendTransaction(...)`.
+  const tonAddress = useTonAddress();
 
   useEffect(() => {
     track('pro_page_viewed', {
@@ -273,6 +278,19 @@ function ProPage() {
                 {starsMsg && (
                   <p className={`pro-stars-msg ${starsMsgClass}`}>{starsMsg}</p>
                 )}
+              </div>
+
+              {/* TON wallet connection — Phase 1 of TON integration.
+                  Just the handshake; Phase 2 adds a "Pay X TON" CTA here
+                  that calls `tonConnectUI.sendTransaction(...)` and the
+                  backend watches the chain for the matching comment. */}
+              <div className="pro-ton-block">
+                <p className="pro-ton-sub">
+                  {tonAddress ? t('pro.ton_connected') : t('pro.ton_subtitle')}
+                </p>
+                <div className="pro-ton-btn-wrap">
+                  <TonConnectButton />
+                </div>
               </div>
             </>
           )}
