@@ -71,6 +71,27 @@ function ReviewPage() {
 
   const current = words[index];
 
+  // Image-prefetch: the user flagged on 2026-06-09 that swapping to the next
+  // word briefly shows the PREVIOUS image (~200-500 ms) before the new one
+  // paints. Two causes: (a) React reconciles the same <img> element when
+  // `current` changes, so the browser keeps showing the old src until the
+  // new one loads — already mitigated by the `key={current.id}` on each
+  // <img> (forces unmount/remount, instantly clears stale image). (b) The
+  // new image still has to be downloaded fresh, which is the actual delay
+  // visible to the user. Mitigate (b) by warming the browser cache: spin
+  // up `new Image()` objects for the next 2 words in the queue as soon as
+  // we advance. When the user taps Easy/Hard/Forgot, the next card's image
+  // is already in cache and paints on the same frame.
+  useEffect(() => {
+    const next = [words[index + 1], words[index + 2]].filter(
+      w => w && w.image_url
+    );
+    next.forEach(w => {
+      const img = new Image();
+      img.src = optimizeImage(w.image_url);
+    });
+  }, [index, words]);
+
   const advance = (quality) => {
     const xpGain = quality === 5 ? 10 : quality === 3 ? 6 : 2;
     setStats(s => ({
@@ -232,7 +253,7 @@ function CardsMode({ current, onAnswer, t, lang }) {
     <>
       <div className="review-card">
         {current.image_url
-          ? <img src={optimizeImage(current.image_url)} alt="" className="review-image" loading="lazy" />
+          ? <img key={current.id} src={optimizeImage(current.image_url)} alt="" className="review-image" />
           : <WordPlaceholder word={current.word} className="review-image" />}
         <div className="review-pos">{current.part_of_speech || ''}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
@@ -310,7 +331,7 @@ function QuizMode({ current, pool, onAnswer, t, lang }) {
   return (
     <div className="review-card">
       {current.image_url
-        ? <img src={optimizeImage(current.image_url)} alt="" className="review-image" loading="lazy" />
+        ? <img key={current.id} src={optimizeImage(current.image_url)} alt="" className="review-image" />
         : <WordPlaceholder word={current.word} className="review-image" />}
       <div className="review-pos">{current.part_of_speech || ''}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
@@ -374,7 +395,7 @@ function SpellingMode({ current, onAnswer, t, lang }) {
   return (
     <div className="review-card">
       {current.image_url
-        ? <img src={optimizeImage(current.image_url)} alt="" className="review-image" loading="lazy" />
+        ? <img key={current.id} src={optimizeImage(current.image_url)} alt="" className="review-image" />
         : <WordPlaceholder word={current.word} className="review-image" />}
       <div className="review-pos">{current.part_of_speech || ''}</div>
       <div className="spelling-prompt">
