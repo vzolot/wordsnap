@@ -153,15 +153,23 @@ async def _gather_metrics(p: dict) -> dict:
             )
         )).scalar() or 0
 
-        # Payments
+        # Payments. `revenue_*` totals are USD-only — TON / Stars (XTR) live
+        # in the same `payment_history` table but their `amount` column
+        # stores the native unit (1.0 TON, 129★, etc.) which would mislead
+        # if summed alongside dollars. The 2026-06-09 founder TON test
+        # showed up as "+$1.00" in the daily report and surfaced this bug.
+        # Multi-currency display (separate TON / Stars lines) is a TODO; for
+        # now we filter to USD so the headline figure stays accurate.
         revenue_filter = or_(
             PaymentHistory.status == "success",
             PaymentHistory.transaction_status == "Approved",
         )
+        usd_only = PaymentHistory.currency == "USD"
         revenue_period = (await s.execute(
             select(func.coalesce(func.sum(PaymentHistory.amount), 0)).where(
                 PaymentHistory.user_id.in_(real_users),
                 revenue_filter,
+                usd_only,
                 PaymentHistory.created_at >= day_start_utc,
                 PaymentHistory.created_at < day_end_utc,
             )
@@ -170,6 +178,7 @@ async def _gather_metrics(p: dict) -> dict:
             select(func.count(PaymentHistory.id)).where(
                 PaymentHistory.user_id.in_(real_users),
                 revenue_filter,
+                usd_only,
                 PaymentHistory.created_at >= day_start_utc,
                 PaymentHistory.created_at < day_end_utc,
             )
@@ -178,6 +187,7 @@ async def _gather_metrics(p: dict) -> dict:
             select(func.coalesce(func.sum(PaymentHistory.amount), 0)).where(
                 PaymentHistory.user_id.in_(real_users),
                 revenue_filter,
+                usd_only,
             )
         )).scalar() or 0
 
