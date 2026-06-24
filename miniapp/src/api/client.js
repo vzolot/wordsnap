@@ -36,6 +36,15 @@ api.interceptors.request.use((config) => {
   } else {
     return Promise.reject(new Error('NO_TELEGRAM_ID'));
   }
+  // Signed Telegram WebApp initData — the backend validates this HMAC and
+  // derives telegram_id from it (the query param above is ignored when a
+  // valid header is present). Without it the API returns 401. Raw initData
+  // lives on Telegram.WebApp.initData.
+  const initData = window.Telegram?.WebApp?.initData;
+  if (initData) {
+    config.headers = config.headers || {};
+    config.headers['X-Telegram-Init-Data'] = initData;
+  }
   return config;
 });
 
