@@ -262,6 +262,13 @@ MIGRATIONS: list[tuple[str, str]] = [
         "users.is_test_account",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_test_account BOOLEAN NOT NULL DEFAULT FALSE",
     ),
+    # True коли користувач явно обрав рідну мову (бот-сетап / Settings). Mini-app
+    # тоді показує UI цією мовою навіть якщо мова телефона інша. Авто-визначена
+    # мова лишає false → UI слідує за мовою телефона (tApps-вимога).
+    (
+        "users.lang_explicit",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS lang_explicit BOOLEAN NOT NULL DEFAULT FALSE",
+    ),
 ]
 
 

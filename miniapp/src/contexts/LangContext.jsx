@@ -62,25 +62,47 @@ export function LangProvider({ children }) {
     setLangState(next);
   };
 
-  // We still fetch stats on mount (other UI bits need to know when it's
-  // loaded), but we no longer overwrite the active UI lang from
-  // `stats.native_lang`. That field stays the source of truth for bot-side
-  // messages (Telegram texts the bot sends out of band), not for the
-  // mini-app UI. The 2026-06-16 tApps Center bug report was that we were
-  // doing exactly that overwrite and showing Ukrainian to moderators whose
-  // Telegram was set to a different language.
+  // On mount we fetch stats and honour an EXPLICIT native-language choice the
+  // user made OUTSIDE this device's mini-app — e.g. they picked Ukrainian in
+  // the bot /start flow while their Telegram language is English. The backend
+  // flags such picks with `stats.lang_explicit=true` (set only on a real user
+  // choice, never on the language auto-detected from `language_code`). When
+  // that flag is set we show the app in their chosen `native_lang` even though
+  // the phone language differs.
+  //
+  // This does NOT reintroduce the 2026-06-16 tApps Center bug ("app shows
+  // Ukrainian ignoring Telegram language"): that was caused by native_lang
+  // defaulting to "uk" for everyone. It's now derived from language_code, and
+  // we override the phone language ONLY on an explicit choice. Guards:
+  //   - a local in-app explicit pick (EXPLICIT_KEY) always wins — skip;
+  //   - the tApps moderator deeplink (?startapp=tapps) forces EN — skip.
   useEffect(() => {
     let cancelled = false;
     const markLoaded = () => { if (!cancelled) setLoaded(true); };
+
+    const applyServerLang = (resp) => {
+      if (cancelled) return;
+      const data = resp?.data || {};
+      let hasLocalExplicit = false;
+      try { hasLocalExplicit = localStorage.getItem(EXPLICIT_KEY) === '1'; } catch {}
+      const tg = window.Telegram?.WebApp;
+      const sp = tg?.initDataUnsafe?.start_param || '';
+      const isTapps = typeof sp === 'string' && (sp === 'tapps' || sp.startsWith('tapps_'));
+      if (!hasLocalExplicit && !isTapps && data.lang_explicit && SUPPORTED_LANGS.includes(data.native_lang)) {
+        setLangState(data.native_lang);
+      }
+    };
+    const onStats = (r) => { applyServerLang(r); markLoaded(); };
+
     if (getTelegramUserId()) {
-      getStats().then(markLoaded).catch(markLoaded);
+      getStats().then(onStats).catch(markLoaded);
     } else {
       let tries = 0;
       const interval = setInterval(() => {
         tries += 1;
         if (getTelegramUserId() || tries >= 10) {
           clearInterval(interval);
-          if (getTelegramUserId()) getStats().then(markLoaded).catch(markLoaded);
+          if (getTelegramUserId()) getStats().then(onStats).catch(markLoaded);
           else markLoaded();
         }
       }, 200);

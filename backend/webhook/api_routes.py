@@ -182,6 +182,7 @@ async def get_stats(telegram_id: int = Query(...)):
                 "plan": "free", "plan_expires_at": None,
                 "used_today": 0, "daily_limit": 10,
                 "native_lang": "uk", "target_lang": None,
+                "lang_explicit": False,
                 "is_trial": True,
             }
 
@@ -313,6 +314,7 @@ async def get_stats(telegram_id: int = Query(...)):
             "auto_renew": user.auto_renew,
             "subscription_status": user.subscription_status,
             "native_lang": user.native_lang,
+            "lang_explicit": user.lang_explicit,
             "target_lang": user.target_lang,
             "reminders_enabled": user.reminders_enabled,
             "timezone": user.timezone,
@@ -711,6 +713,9 @@ async def update_user_settings(data: SettingsRequest, telegram_id: int = Query(.
         if data.native_lang not in SUPPORTED_LANGS:
             raise HTTPException(status_code=400, detail="Unsupported native_lang")
         updates["native_lang"] = data.native_lang
+        # Явний вибір — UI mini-app слідуватиме за цією мовою (не за мовою
+        # телефона) при наступних завантаженнях, навіть на інших пристроях.
+        updates["lang_explicit"] = True
     if data.target_lang is not None:
         if data.target_lang not in SUPPORTED_LANGS:
             raise HTTPException(status_code=400, detail="Unsupported target_lang")

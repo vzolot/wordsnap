@@ -25,6 +25,13 @@ class User(Base):
     # Налаштування мов
     native_lang: Mapped[str] = mapped_column(String(5), default="uk")
     target_lang: Mapped[str | None] = mapped_column(String(5))
+    # True коли користувач САМ обрав рідну мову (бот-сетап або Settings), на
+    # відміну від авто-визначеної з language_code телефона. Mini-app тоді
+    # показує UI цією мовою навіть якщо мова телефона інша. Default false —
+    # авто-визначена мова НЕ override'ить мову телефона (tApps-вимога).
+    lang_explicit: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     region: Mapped[str | None] = mapped_column(String(50))
     # Аватар у leaderboard. None → детермінований default з telegram_id.
     avatar_emoji: Mapped[str | None] = mapped_column(String(16), nullable=True)

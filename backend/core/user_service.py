@@ -303,6 +303,9 @@ async def update_user_languages(
         if user:
             user.native_lang = native_lang
             user.target_lang = target_lang
+            # Явний вибір користувача (бот-сетап) — mini-app показуватиме UI
+            # цією мовою навіть якщо мова телефона інша.
+            user.lang_explicit = True
             await session.commit()
             logger.info(f"Updated languages for user {telegram_id}: {native_lang} → {target_lang}")
 
