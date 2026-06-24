@@ -146,10 +146,16 @@ async def delete_word(word_id: int, telegram_id: int = Query(...)):
 
 
 async def _total_spent(session, user_id: int) -> float:
-    """Загальна сума успішних платежів юзера (USD)."""
+    """Загальна сума успішних платежів юзера у USD.
+
+    Фільтруємо до currency='USD' — TON/Stars(XTR) зберігають `amount` у
+    нативних одиницях (1.0 TON, 129★), і їх не можна сумувати з доларами без
+    конвертації. Інакше Stars-юзер показував би '129' витрачено.
+    """
     spent = (await session.execute(
         select(func.coalesce(func.sum(PaymentHistory.amount), 0)).where(
             PaymentHistory.user_id == user_id,
+            PaymentHistory.currency == "USD",
             or_(
                 PaymentHistory.status == "success",
                 PaymentHistory.transaction_status == "Approved",
@@ -350,7 +356,18 @@ async def submit_review(data: ReviewRequest, telegram_id: int = Query(...)):
 
     result_map = {1: "forgot", 3: "struggled", 5: "knew"}
     result = result_map.get(data.quality, "struggled")
-    word, new_interval, tier_up = await process_review(data.word_id, result)
+
+    # Перевірка власника: рев'ю можна слати лише по СВОЇХ словах. telegram_id
+    # тут уже перевірений (initData middleware), тому resolve'имо user.id і
+    # передаємо у process_review як гейт.
+    async with SessionLocal() as _s:
+        _caller = await _get_user(_s, telegram_id)
+        if not _caller:
+            raise HTTPException(status_code=404, detail="User not found")
+        caller_user_id = _caller.id
+    word, new_interval, tier_up = await process_review(
+        data.word_id, result, user_id=caller_user_id
+    )
 
     analytics.capture(telegram_id, "review_submitted", {
         "result": result,
@@ -1044,18 +1061,22 @@ async def wayforpay_callback(request: Request):
     # orderReference, тому новий рядок == нове реальне списання.
     is_new_payment = False
     if telegram_id is not None:
+        from sqlalchemy.exc import IntegrityError
         try:
             async with SessionLocal() as session:
                 user = await _get_user(session, telegram_id)
                 if user:
-                    # Уникаємо дублікатів — order_reference унікальний
+                    # Швидкий pre-check + надійний гейт через unique-INSERT.
+                    # is_new_payment ставимо True ЛИШЕ після успішного commit'у:
+                    # два паралельні callback'и з тим самим orderReference обидва
+                    # пройшли б pre-check, але commit виживе тільки в одного —
+                    # інший впаде на unique constraint і Pro не подвоїться.
                     existing = (await session.execute(
-                        select(PaymentHistory).where(
+                        select(PaymentHistory.id).where(
                             PaymentHistory.order_reference == order_ref
                         )
                     )).scalar_one_or_none()
                     if not existing:
-                        is_new_payment = True
                         payment_row = PaymentHistory(
                             user_id=user.id,
                             order_reference=order_ref,
@@ -1070,25 +1091,32 @@ async def wayforpay_callback(request: Request):
                             raw_payload=data,
                         )
                         session.add(payment_row)
-                        await session.commit()
-                        await session.refresh(payment_row)
-                        # Affiliate revenue-share: якщо у юзера активний
-                        # affiliate_slug і успішний платіж - фіксуємо share.
-                        # Невдалі платежі ігноруємо (не платимо інфлюенсеру
-                        # за failed transaction'и).
-                        if success:
-                            try:
-                                from core.affiliates import record_payment_share
-                                await record_payment_share(
-                                    user_id=user.id,
-                                    payment_id=payment_row.id,
-                                    payment_amount=float(amount),
-                                    payment_currency=str(data.get("currency", "USD")),
-                                )
-                            except Exception as e:
-                                logger.warning(
-                                    f"WayForPay: affiliate share record failed: {e}"
-                                )
+                        try:
+                            await session.commit()
+                        except IntegrityError:
+                            # Програли гонку з паралельним callback'ом на той
+                            # самий orderReference — НЕ активуємо Pro вдруге.
+                            await session.rollback()
+                            logger.info(
+                                f"WayForPay: duplicate callback race for {order_ref}, skipping"
+                            )
+                        else:
+                            is_new_payment = True
+                            await session.refresh(payment_row)
+                            # Affiliate revenue-share лише на успішний платіж.
+                            if success:
+                                try:
+                                    from core.affiliates import record_payment_share
+                                    await record_payment_share(
+                                        user_id=user.id,
+                                        payment_id=payment_row.id,
+                                        payment_amount=float(amount),
+                                        payment_currency=str(data.get("currency", "USD")),
+                                    )
+                                except Exception as e:
+                                    logger.warning(
+                                        f"WayForPay: affiliate share record failed: {e}"
+                                    )
         except Exception as e:
             logger.error(f"WayForPay: failed to save payment history: {e}", exc_info=True)
 
@@ -1097,6 +1125,18 @@ async def wayforpay_callback(request: Request):
     # на цей serviceUrl з унікальним orderReference, is_recurring=False).
     # is_new_payment гарантує ідемпотентність проти повторних callback'ів.
     if success and telegram_id is not None and is_new_payment:
+        # Cross-check: тривалість беремо з реально сплаченої суми, не лише з
+        # тегу в orderReference — щоб місячний платіж ($1.49) не міг видати рік
+        # через підмінений/дрейфнутий ref. Поріг $5 між monthly($1.49)/annual($8.99).
+        currency = str(data.get("currency", "USD"))
+        if currency == "USD" and amount > 0:
+            paid_period = "annual" if amount >= 5.0 else "monthly"
+            if paid_period != period:
+                logger.warning(
+                    f"WayForPay: ref period '{period}' != paid amount {amount} {currency}; "
+                    f"using amount-derived '{paid_period}' for {order_ref}"
+                )
+                period = paid_period
         duration_days = 365 if period == "annual" else 30
         try:
             await activate_pro_subscription(

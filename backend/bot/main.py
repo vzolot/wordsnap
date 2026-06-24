@@ -290,8 +290,22 @@ async def on_successful_payment(message: Message):
     from core.user_service import activate_pro_subscription
     from core.db import SessionLocal
     from core.models import PaymentHistory, User as UserModel
-    from sqlalchemy import update as sa_update
+    from sqlalchemy import select, update as sa_update
     from core import analytics
+
+    # Ідемпотентність: Telegram може повторно доставити той самий
+    # successful_payment (retry / рестарт бота до коміту offset). order_ref
+    # (== invoice_payload з фіксованим ts) однаковий при повторі, тому якщо
+    # рядок уже є — нічого не активуємо вдруге (інакше +30/365 днів безкоштовно).
+    async with SessionLocal() as session:
+        dup = (await session.execute(
+            select(PaymentHistory.id).where(
+                PaymentHistory.order_reference == order_ref
+            )
+        )).scalar_one_or_none()
+    if dup:
+        logger.info(f"Stars payment: duplicate update for {order_ref}, ignoring")
+        return
 
     user = await activate_pro_subscription(
         telegram_id=tg_id,

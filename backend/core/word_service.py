@@ -141,21 +141,33 @@ async def get_word_by_id(word_id: int) -> Word | None:
 async def process_review(
     word_id: int,
     result: ReviewResult,
+    user_id: int | None = None,
 ) -> tuple[Word | None, float, tuple[int, str, str | None] | None]:
     """
     Обробляє відповідь юзера на повторення.
+
+    `user_id` (коли передано) гейтить доступ — слово мусить належати цьому
+    юзеру. Без цього будь-хто міг би слати рев'ю по чужих word_id і псувати
+    їхній SRS-графік / накручувати XP. None лишено для внутрішніх викликів.
 
     Returns: (updated_word, new_interval_days, tier_crossed_or_None)
     tier_crossed — нагорода за подоланий поріг. None якщо tier не змінився.
     """
     async with SessionLocal() as session:
-        db_result = await session.execute(
-            select(Word).where(Word.id == word_id)
-        )
+        stmt = select(Word).where(Word.id == word_id)
+        if user_id is not None:
+            stmt = stmt.where(Word.user_id == user_id)
+        db_result = await session.execute(stmt)
         word = db_result.scalar_one_or_none()
 
         if not word:
             return None, 0, None
+
+        # Знімаємо ДО-значення перед перезаписом — інакше interval_before/
+        # ease_before дорівнювали б *after* (поля вже оновлені) і історія рев'ю
+        # завжди була б порожньою.
+        prev_interval = word.interval_days
+        prev_ease = word.ease_factor
 
         new_interval, new_ease, next_review, new_status = calculate_next_review(
             result=result,
@@ -179,9 +191,9 @@ async def process_review(
             word_id=word.id,
             user_id=word.user_id,
             result=result,
-            interval_before=word.interval_days,
+            interval_before=prev_interval,
             interval_after=new_interval,
-            ease_before=word.ease_factor,
+            ease_before=prev_ease,
             ease_after=new_ease,
         )
         session.add(review_record)

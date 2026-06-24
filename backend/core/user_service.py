@@ -281,10 +281,14 @@ async def cancel_subscription(telegram_id: int) -> User | None:
         user.auto_renew = False
         user.subscription_status = "cancelled"
         user.next_charge_date = None
-        
+        # Прибираємо збережений рекурент-токен — щоб жоден шлях (app-side cron,
+        # випадковий повторний charge) не зміг списати за старим токеном після
+        # скасування. WayForPay-managed regularOn зупиняє REMOVE у caller'і.
+        user.payment_rec_token = None
+
         await session.commit()
         await session.refresh(user)
-        
+
         logger.info(f"Cancelled auto-renew for user {telegram_id}")
         return user
 
