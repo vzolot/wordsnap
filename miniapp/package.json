@@ -12,11 +12,8 @@
   "dependencies": {
     "@sentry/react": "^8.55.2",
     "@telegram-apps/analytics": "^1.6.4",
-    "@ton/core": "^0.63.1",
-    "@tonconnect/ui-react": "^2.4.4",
     "@twa-dev/sdk": "^8.0.2",
     "axios": "^1.15.2",
-    "buffer": "^6.0.3",
     "posthog-js": "^1.372.8",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

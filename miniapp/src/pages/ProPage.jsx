@@ -1,27 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStats, createBuyLink, createStarsInvoice, createTonInvoice, getTonPrices, cancelSubscription, getReferral, readCache, writeCache } from '../api/client';
-import { TonConnectButton, TonConnectUIProvider, useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
-import { beginCell } from '@ton/core';
-
-// TON manifest lives at the miniapp root, served by Vercel. Was previously
-// declared in main.jsx with the provider wrapping the whole app — moved here
-// 2026-06-09 Phase 3 so @tonconnect/ui-react + @ton/core ride in this lazy
-// chunk instead of the first-paint bundle.
-const TON_MANIFEST_URL = 'https://miniapp-omega-three.vercel.app/tonconnect-manifest.json';
-
-// TL-B text-comment payload for a TON transfer: 32-bit op=0 + UTF-8 text.
-// Serialised as a single cell, returned as base64 BOC ready for the
-// `payload` field of `tonConnectUI.sendTransaction(...)`. Standard pattern
-// used by every TON wallet for human-readable transfer memos.
-function buildCommentPayload(text) {
-  return beginCell()
-    .storeUint(0, 32)
-    .storeStringTail(text)
-    .endCell()
-    .toBoc()
-    .toString('base64');
-}
+import { getStats, createBuyLink, createStarsInvoice, cancelSubscription, getReferral, readCache, writeCache } from '../api/client';
 import { track } from '../utils/analytics';
 import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
@@ -43,14 +22,6 @@ function ProPageInner() {
   const navigate = useNavigate();
   const { t } = useT();
   const tg = window.Telegram?.WebApp;
-  // TON Connect — Phase 1 just wires up the wallet handshake. Phase 2 will
-  // add a "Pay X TON" CTA in this same block that constructs a transaction
-  // via `tonConnectUI.sendTransaction(...)`.
-  const tonAddress = useTonAddress();
-  const [tonConnectUI] = useTonConnectUI();
-  const [tonLoading, setTonLoading] = useState(false);
-  const [tonMsg, setTonMsg] = useState('');
-  const [tonMsgClass, setTonMsgClass] = useState('');
 
   useEffect(() => {
     track('pro_page_viewed', {
@@ -97,7 +68,7 @@ function ProPageInner() {
       // оновлюємо стан щоб показати cancelled
       getStats().then(rr => { setStats(rr.data); writeCache('stats', rr.data); }).catch(() => {});
       track('subscription_cancelled_ui');
-    } catch (e) {
+    } catch {
       setCancelMsg(t('pro.cancel.error'));
       track('subscription_cancel_failed');
     } finally {
@@ -128,7 +99,7 @@ function ProPageInner() {
       });
       if (tg?.openLink) tg.openLink(url);
       else window.open(url, '_blank');
-    } catch (e) {
+    } catch {
       track('buy_failed', { period });
       setError(t('pro.error.payment'));
     } finally {
@@ -144,79 +115,6 @@ function ProPageInner() {
   // скільки з картки (~$1.45/міс і ~$8.72/рік net). Бекенд тримає ті ж самі
   // цифри в /api/buy/stars (api_routes.py:create_stars_invoice).
   const STARS_PRICES = { monthly: 129, annual: 799 };
-
-  // TON Connect — third payment lane (one-time, no recurring). Frontend
-  // builds the TX from the backend-issued `to / amount / comment` triple
-  // and asks `tonConnectUI.sendTransaction(...)` to relay it through the
-  // user's wallet. Pro activation is server-side via `scheduler/ton_watcher`
-  // watching the chain — we poll `getStats` here purely to refresh the UI
-  // once the watcher flips the user to Pro.
-  // Dynamic TON pricing (Phase 3 — 2026-06-09). Falls back to the static
-  // values that were right at $1.70/TON until the API responds.
-  const [tonPrices, setTonPrices] = useState({ monthly: 1, annual: 5 });
-  useEffect(() => {
-    getTonPrices()
-      .then(r => {
-        const p = r.data?.prices_ton;
-        if (p?.monthly && p?.annual) setTonPrices(p);
-      })
-      .catch(() => { /* keep fallback */ });
-  }, []);
-  const TON_PRICES = tonPrices;
-
-  const handleBuyTon = async () => {
-    track('ton_buy_clicked', { period });
-    if (!tonAddress) {
-      setTonMsg(t('pro.ton_connect_first'));
-      setTonMsgClass('err');
-      return;
-    }
-    setTonLoading(true);
-    setTonMsg('');
-    setTonMsgClass('');
-    try {
-      const r = await createTonInvoice(period);
-      const { to, amount_nano, comment, valid_until } = r.data;
-      await tonConnectUI.sendTransaction({
-        validUntil: valid_until,
-        messages: [
-          {
-            address: to,
-            amount: amount_nano,
-            payload: buildCommentPayload(comment),
-          },
-        ],
-      });
-      setTonMsg(t('pro.ton_waiting'));
-      setTonMsgClass('');
-      track('ton_tx_signed', { period, comment });
-
-      const pollStarted = Date.now();
-      const poll = setInterval(async () => {
-        try {
-          const s = await getStats();
-          if (s.data?.plan === 'pro') {
-            clearInterval(poll);
-            setStats(s.data);
-            writeCache('stats', s.data);
-            setTonMsg(t('pro.ton_success'));
-            setTonMsgClass('ok');
-            track('ton_pro_activated', { period });
-          } else if (Date.now() - pollStarted > 180_000) {
-            clearInterval(poll);
-            setTonMsg(t('pro.ton_pending'));
-            setTonMsgClass('');
-          }
-        } catch { /* keep polling */ }
-      }, 5000);
-    } catch (e) {
-      track('ton_buy_failed', { period, err: String(e?.message || e).slice(0, 80) });
-      setTonMsg(t('pro.ton_failed'));
-      setTonMsgClass('err');
-    } finally {
-      setTonLoading(false);
-    }
-  };
 
   const handleBuyStars = async () => {
     track('stars_buy_clicked', { period });
@@ -251,7 +149,7 @@ function ProPageInner() {
         // Поза Telegram — нема openInvoice; рідкісний edge-case
         window.open(link, '_blank');
       }
-    } catch (e) {
+    } catch {
       track('stars_buy_failed', { period });
       setStarsMsg(t('pro.stars_failed'));
       setStarsMsgClass('err');
@@ -377,40 +275,6 @@ function ProPageInner() {
                   <p className={`pro-stars-msg ${starsMsgClass}`}>{starsMsg}</p>
                 )}
               </div>
-
-              {/* TON Connect — third payment lane. Phase 1 was the wallet
-                  handshake; Phase 2 (this) adds the actual Pay X TON CTA.
-                  Server-side `scheduler/ton_watcher` watches TONAPI for the
-                  matching comment and activates Pro. */}
-              <div className="pro-ton-block">
-                <p className="pro-ton-sub">
-                  {tonAddress ? t('pro.ton_connected') : t('pro.ton_subtitle')}
-                </p>
-                <div className="pro-ton-btn-wrap">
-                  <TonConnectButton />
-                </div>
-                {tonAddress && (
-                  <>
-                    <button
-                      type="button"
-                      className="pro-stars-btn"
-                      style={{ marginTop: 12 }}
-                      onClick={handleBuyTon}
-                      disabled={tonLoading}
-                    >
-                      {tonLoading
-                        ? t('pro.cta_loading')
-                        : t('pro.cta_ton', { amount: TON_PRICES[period] })}
-                    </button>
-                    <p className="pro-stars-sub" style={{ marginTop: 6 }}>
-                      {t('pro.ton_pay_subtitle')}
-                    </p>
-                  </>
-                )}
-                {tonMsg && (
-                  <p className={`pro-stars-msg ${tonMsgClass}`}>{tonMsg}</p>
-                )}
-              </div>
             </>
           )}
         </div>
@@ -456,15 +320,4 @@ function ProPageInner() {
   );
 }
 
-// Wrapper that mounts the TonConnectUIProvider only for this page (Phase 3
-// route-split — kept TON code out of the first-paint bundle). useTonAddress /
-// useTonConnectUI inside ProPageInner read from this provider's context.
-function ProPage() {
-  return (
-    <TonConnectUIProvider manifestUrl={TON_MANIFEST_URL}>
-      <ProPageInner />
-    </TonConnectUIProvider>
-  );
-}
-
-export default ProPage;
+export default ProPageInner;
