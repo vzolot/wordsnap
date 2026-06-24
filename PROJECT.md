@@ -454,6 +454,22 @@ The `ANTHROPIC_API_KEY` powers the threads/personal bots' generation; the **Clau
 
 ## 6. Tech architecture (compact)
 
+**API auth (2026-06-24 — security hardening).** Every `/api/*` request must
+carry a signed `X-Telegram-Init-Data` header; an HMAC middleware in
+`webhook/server.py` validates it (`core/tg_auth.verify_init_data`, key =
+`HMAC-SHA256("WebAppData", bot_token)`) and overrides the `telegram_id` query
+param with the verified value — so endpoints keep `telegram_id: int =
+Query(...)` but the value is trusted. Before this, `telegram_id` was trusted
+blindly (anyone could read/modify any account = IDOR). **Public exceptions**
+(no auth): `/api/wayforpay/callback` + `/wayforpay/callback` (own signature),
+`/api/lead/capture` (anonymous lander), `/pay` + `/health` (not under `/api/`).
+**Any new `/api/*` endpoint is authed by default** — add it to
+`_PUBLIC_API_PATHS` only if it must be anonymous. **Kill-switch:** set
+`REQUIRE_TG_AUTH=0` in Railway env to drop to log-only enforcement if a deploy
+locks users out (default on). The mini-app sends the header from
+`Telegram.WebApp.initData` (axios interceptor in `miniapp/src/api/client.js`).
+Per-word ownership is also enforced in `process_review` (was: any `word_id`).
+
 ```
 backend/
 ├── bot/              aiogram handlers (start, words, songs, themes, review).
