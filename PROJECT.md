@@ -51,6 +51,37 @@ Three review modes feed the same SM-2 scheduler:
 - Free-tier daily limit is 0 (post-trial blocks adds entirely) — by design, but creates `paywall_hit` spike. Watch the funnel.
 - Sentry / PostHog keys must be set in Railway and Vercel envs (already done).
 
+### Changelog — 2026-06-24 (TON removal + security/correctness hardening)
+
+A full bug audit (payments, auth, schedulers, frontend) ran this day; the fixes below shipped. Detail per area lives in the relevant section; this is the index.
+
+**Security (critical):**
+- **`/api/*` now requires Telegram `initData` auth** — closed a full IDOR (telegram_id was trusted blindly; anyone could read/cancel/modify any account). HMAC middleware + `core/tg_auth.py`; `REQUIRE_TG_AUTH=0` env kill-switch. Full detail in §6 "API auth". New `/api` endpoints are authed by default.
+- **Per-word ownership** enforced in `process_review` — reviews can only touch the caller's own words (was: any `word_id` → cross-user SRS/XP tampering).
+
+**Payments (high):**
+- **Stars idempotency** — `successful_payment` skips activation if a `PaymentHistory` row for that `order_reference` already exists (Telegram can redeliver the update → was double-crediting Pro).
+- **WayForPay callback idempotency** — activation gated on a successful unique INSERT (catch `IntegrityError` on the race), so concurrent duplicate callbacks no longer double-extend Pro. Granted duration is cross-checked against the amount actually paid (USD), not just the orderRef tag.
+- **`_total_spent` is USD-only** — Stars(XTR)/TON native amounts no longer summed as dollars (a Stars user showed "129" spent).
+- **Cancellation clears `payment_rec_token`** — no path can charge on the old token post-cancel. (Open: confirm WayForPay `regularOn` vs regularApi-rule in the merchant dashboard — REMOVE returning 4102 "Rule not found" is treated as success, which could mask a still-active `regularOn` schedule.)
+
+**SRS / schedulers (medium):**
+- **Review history fixed** — `Review.interval_before/ease_before` now capture the real pre-values (were == after; history was always empty).
+- **Blocked users** — on `TelegramForbiddenError` the reminder / streak-save / re-engage loops flip `reminders_enabled=False` (was retried every tick forever).
+- **Daily snap-counter** resets on the user's **local** date (their `timezone`), not server UTC.
+- **`image_backfill`** uses `ORDER BY random()` so a batch of permanently-unmatchable orphans can't starve older words.
+- **Stars invoice endpoint** returns a generic 502 instead of echoing the raw exception text.
+
+**Mini-app (medium/low):**
+- `prefetchAll` snapshots a cache epoch (bumped by `clearCache`) and drops late writes → a just-deleted/reviewed word can't be resurrected by an in-flight prefetch.
+- Stars button: `starsLoading` resets in the `openInvoice` callback, not `finally` → re-tap while the native invoice is open can't create a 2nd invoice.
+- Review: `current`-guarded mode render (no crash mid-transition); quiz options memoized on `current.id` only (async pool swap no longer reshuffles answers mid-question); `CardsMode` keyed for consistent reset.
+- `SnapCard` shows only the localized error; raw backend detail → analytics/console.
+
+**Product changes (same day):**
+- **TON payment lane removed** (zero conversions) — see §Payment channels. Card + Stars remain.
+- **Explicit native-language choice now drives mini-app UI** even when the phone language differs — backend `users.lang_explicit` flag, honored by `LangContext`. Guarded so it doesn't regress the 2026-06-16 tApps language complaint.
+
 ---
 
 ## 3. Feature inventory
