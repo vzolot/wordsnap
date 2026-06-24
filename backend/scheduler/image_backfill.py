@@ -13,7 +13,7 @@ import asyncio
 import logging
 
 from aiogram import Bot
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 
 from core.db import SessionLocal
 from core.models import Word
@@ -30,9 +30,12 @@ async def backfill_once() -> int:
     """Один прохід — шукає слова без картинки і пробує Unsplash. Повертає
     скільки оновлено."""
     async with SessionLocal() as session:
+        # Випадковий порядок, не newest-first: інакше якщо найновіші 20 «сиріт»
+        # стабільно не мають картинки в Unsplash, цикл ретраїв їх вічно і
+        # ніколи не доходить до старіших. random() поступово покриває всі.
         rows = (await session.execute(
             select(Word).where(Word.image_url.is_(None))
-            .order_by(Word.created_at.desc())
+            .order_by(func.random())
             .limit(BATCH_SIZE)
         )).scalars().all()
 

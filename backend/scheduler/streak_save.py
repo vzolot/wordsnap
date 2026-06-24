@@ -82,6 +82,8 @@ async def check_and_send_streak_saves(bot: Bot) -> None:
                     logger.warning(
                         f"streak_save send failed for user {user.telegram_id}: {e}"
                     )
+                    from core.user_service import disable_reminders_if_blocked
+                    await disable_reminders_if_blocked(user.telegram_id, e)
 
             if sent:
                 logger.info(f"🔥 Sent {sent} streak-save pushes")

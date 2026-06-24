@@ -125,6 +125,8 @@ async def send_reengage_for_user(bot: Bot, user: User, days_since: int) -> bool:
             logger.warning(
                 "reengage send failed for user %s: %s", user.telegram_id, e
             )
+            from core.user_service import disable_reminders_if_blocked
+            await disable_reminders_if_blocked(user.telegram_id, e)
             return False
 
         await session.execute(

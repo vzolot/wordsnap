@@ -185,6 +185,8 @@ async def send_daily_push_for_user(bot: Bot, user: User, *, force: bool = False)
         )
     except Exception as e:
         logger.warning(f"daily_push bot.send_message failed for {user.telegram_id}: {e}")
+        from core.user_service import disable_reminders_if_blocked
+        await disable_reminders_if_blocked(user.telegram_id, e)
         return "send_failed"
 
     analytics.capture(user.telegram_id, "daily_push_sent", {

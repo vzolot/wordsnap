@@ -1254,8 +1254,10 @@ async def create_stars_invoice(
         # Включаємо текст помилки у відповідь — у проді stack trace йде у logger,
         # а юзеру повертаємо короткий рядок щоб у devtools було видно реальну причину
         # (інакше Railway віддає bland "Internal Server Error" без деталей).
+        # Деталі — лише в лог; клієнту generic-повідомлення, щоб не світити
+        # внутрішні винятки/конфіг назовні.
         logger.exception(f"create_invoice_link failed for {telegram_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"invoice creation failed: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=502, detail="Stars invoice creation failed")
 
     analytics.capture(telegram_id, "stars_invoice_created", {
         "period": period,

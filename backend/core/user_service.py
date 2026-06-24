@@ -81,8 +81,15 @@ async def get_or_create_user(
         else:
             user.username = username or user.username
             user.first_name = first_name or user.first_name
-            
-            today = date.today()
+
+            # Скидаємо денний лічильник снапів за ЛОКАЛЬНОЮ датою юзера, не за
+            # датою сервера — інакше ліміт котиться опівночі сервера (UTC), що
+            # на години розходиться з північчю юзера.
+            try:
+                from zoneinfo import ZoneInfo
+                today = datetime.now(ZoneInfo(user.timezone or "Europe/Kiev")).date()
+            except Exception:
+                today = date.today()
             if user.last_reset_date != today:
                 user.words_added_today = 0
                 user.last_reset_date = today
@@ -291,6 +298,27 @@ async def cancel_subscription(telegram_id: int) -> User | None:
 
         logger.info(f"Cancelled auto-renew for user {telegram_id}")
         return user
+
+
+async def disable_reminders_if_blocked(telegram_id: int, exc: Exception) -> bool:
+    """Якщо помилка надсилання — це TelegramForbiddenError (юзер заблокував
+    бота), вимикаємо reminders_enabled, щоб шедулери не ретраїли його вічно
+    (кожен tick, нескінченно). Повертає True якщо вимкнули."""
+    try:
+        from aiogram.exceptions import TelegramForbiddenError
+    except Exception:
+        return False
+    if not isinstance(exc, TelegramForbiddenError):
+        return False
+    async with SessionLocal() as session:
+        await session.execute(
+            update(User).where(User.telegram_id == telegram_id).values(
+                reminders_enabled=False
+            )
+        )
+        await session.commit()
+    logger.info(f"Disabled reminders for {telegram_id} (bot blocked)")
+    return True
 
 
 async def update_user_languages(
