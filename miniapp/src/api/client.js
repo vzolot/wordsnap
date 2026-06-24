@@ -107,7 +107,13 @@ export function writeCache(key, data) {
   } catch {}
 }
 
+// Bumped on every clearCache so an in-flight prefetch (started before a
+// mutation) won't re-write stale data and resurrect a just-deleted/reviewed
+// word. prefetchAll() snapshots this and only writes if it hasn't changed.
+let _cacheEpoch = 0;
+
 export function clearCache(key) {
+  _cacheEpoch += 1;
   try { localStorage.removeItem(`wordsnap.cache.${key}`); } catch {}
 }
 
@@ -116,12 +122,16 @@ export function clearCache(key) {
  * додатку, щоб дані вже були готові коли користувач переходить між екранами.
  */
 export function prefetchAll() {
-  getStats().then(r => writeCache('stats', r.data)).catch(() => {});
-  getWords().then(r => writeCache('words', r.data)).catch(() => {});
-  getReviewWords().then(r => writeCache('review', r.data)).catch(() => {});
-  getSongs().then(r => writeCache('songs', r.data)).catch(() => {});
-  getThemes().then(r => writeCache('themes', r.data)).catch(() => {});
-  getReferral().then(r => writeCache('referral', r.data)).catch(() => {});
+  // Snapshot the epoch; if any clearCache fires (a mutation) before a prefetch
+  // response lands, drop that write so it can't overwrite freshly-mutated data.
+  const epoch = _cacheEpoch;
+  const w = (key, data) => { if (_cacheEpoch === epoch) writeCache(key, data); };
+  getStats().then(r => w('stats', r.data)).catch(() => {});
+  getWords().then(r => w('words', r.data)).catch(() => {});
+  getReviewWords().then(r => w('review', r.data)).catch(() => {});
+  getSongs().then(r => w('songs', r.data)).catch(() => {});
+  getThemes().then(r => w('themes', r.data)).catch(() => {});
+  getReferral().then(r => w('referral', r.data)).catch(() => {});
 }
 
 export default api;

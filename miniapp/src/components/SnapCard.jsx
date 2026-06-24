@@ -97,8 +97,10 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
       const detailStr = typeof detail === 'string'
         ? detail
         : detail ? JSON.stringify(detail) : err?.message || '';
-      track('add_word_failed', { reason: 'network_or_5xx', status: status || 0, source: 'snap_card' });
-      setError(`${t('snap.error')} [${status || 'net'}] ${detailStr}`.trim());
+      // Деталі — лише в analytics/console, не в UI: юзер не має бачити сирий
+      // backend-payload (напр. FastAPI-валідацію) у повідомленні про помилку.
+      track('add_word_failed', { reason: 'network_or_5xx', status: status || 0, detail: detailStr.slice(0, 120), source: 'snap_card' });
+      setError(t('snap.error'));
     } finally {
       setLoading(false);
     }

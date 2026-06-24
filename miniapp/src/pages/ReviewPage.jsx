@@ -222,9 +222,9 @@ function ReviewPage() {
           </div>
         </div>
 
-        {mode === 'cards' && <CardsMode current={current} onAnswer={advance} t={t} lang={lang} />}
-        {mode === 'quiz' && <QuizMode key={current.id} current={current} pool={pool.length ? pool : words} onAnswer={advance} t={t} lang={lang} />}
-        {mode === 'spelling' && <SpellingMode key={current.id} current={current} onAnswer={advance} t={t} lang={lang} />}
+        {current && mode === 'cards' && <CardsMode key={current.id} current={current} onAnswer={advance} t={t} lang={lang} />}
+        {current && mode === 'quiz' && <QuizMode key={current.id} current={current} pool={pool.length ? pool : words} onAnswer={advance} t={t} lang={lang} />}
+        {current && mode === 'spelling' && <SpellingMode key={current.id} current={current} onAnswer={advance} t={t} lang={lang} />}
       </div>
     </>
   );
@@ -320,7 +320,11 @@ function QuizMode({ current, pool, onAnswer, t, lang }) {
       [all[i], all[j]] = [all[j], all[i]];
     }
     return all;
-  }, [current.id, pool.length]);
+    // Freeze options per question (keyed remount handles new questions). Was
+    // also on pool.length → the async getWords() pool swap reshuffled the
+    // answers mid-question, moving the buttons under the user's finger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current.id]);
 
   const handle = (opt) => {
     if (picked) return;

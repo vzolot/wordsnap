@@ -126,8 +126,12 @@ function ProPageInner() {
       const link = r.data?.invoice_link;
       if (!link) throw new Error('No invoice link');
       if (tg?.openInvoice) {
+        // Кнопка лишається disabled, поки відкритий нативний invoice — скидаємо
+        // starsLoading у callback'у, не в finally, інакше повторний тап поки
+        // модалка відкрита створив би другий інвойс.
         tg.openInvoice(link, (status) => {
           track('stars_invoice_closed', { status, period });
+          setStarsLoading(false);
           if (status === 'paid') {
             setStarsMsg(t('pro.stars_success'));
             setStarsMsgClass('ok');
@@ -148,12 +152,12 @@ function ProPageInner() {
       } else {
         // Поза Telegram — нема openInvoice; рідкісний edge-case
         window.open(link, '_blank');
+        setStarsLoading(false);
       }
     } catch {
       track('stars_buy_failed', { period });
       setStarsMsg(t('pro.stars_failed'));
       setStarsMsgClass('err');
-    } finally {
       setStarsLoading(false);
     }
   };
