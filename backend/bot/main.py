@@ -190,8 +190,16 @@ async def cmd_start(message: Message):
         # Афіліат/tApps когорта онбординг англійською (міжнародна аудиторія),
         # решта — збереженою рідною мовою (дефолт uk).
         lang = "en" if is_international else (user.native_lang or "en")
-        # Single-message welcome (новий копірайт), потім питаємо рідну мову
-        await message.answer(bt("onboard.welcome", lang))
+        # White-label (тенант ≠ 1): вітаємо від імені бренду викладача, без
+        # згадок WordSnap. Для тенанта 1 — звичне WordSnap-вітання.
+        if tid != 1:
+            from core.bot_i18n import branded_welcome
+            from core.tenant_service import get_tenant_by_id
+            _tenant = await get_tenant_by_id(tid)
+            brand = _tenant.display_name if _tenant else "?"
+            await message.answer(branded_welcome(lang, brand))
+        else:
+            await message.answer(bt("onboard.welcome", lang))
         await message.answer(
             ask_native_lang_text(lang),
             reply_markup=native_lang_keyboard(),
