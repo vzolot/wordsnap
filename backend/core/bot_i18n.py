@@ -1399,6 +1399,24 @@ def t(key: str, lang: str = "en", **vars: Any) -> str:
     return s
 
 
+# White-label (M7): вітання учню від бренду викладача, БЕЗ згадок WordSnap.
+# {brand} = tenants.display_name. Використовується у cmd_start для тенантів ≠ 1.
+_BRANDED_WELCOME = {
+    "uk": "Привіт! 👋 Це <b>{brand}</b>.\n\nТут ти повторюєш слова від свого викладача й не даєш їм забутися.\n\nСпочатку — яка твоя рідна мова?",
+    "en": "Hi! 👋 This is <b>{brand}</b>.\n\nHere you review the words from your teacher and keep them from fading.\n\nFirst — what's your native language?",
+    "es": "¡Hola! 👋 Esto es <b>{brand}</b>.\n\nAquí repasas las palabras de tu profesor para no olvidarlas.\n\nPrimero — ¿cuál es tu idioma nativo?",
+    "pl": "Cześć! 👋 To <b>{brand}</b>.\n\nTutaj powtarzasz słowa od nauczyciela, żeby ich nie zapomnieć.\n\nNajpierw — jaki jest twój język ojczysty?",
+    "de": "Hi! 👋 Das ist <b>{brand}</b>.\n\nHier wiederholst du die Wörter deiner Lehrkraft, damit du sie nicht vergisst.\n\nZuerst: Was ist deine Muttersprache?",
+    "fr": "Salut ! 👋 C'est <b>{brand}</b>.\n\nIci tu révises les mots de ton enseignant pour ne pas les oublier.\n\nD'abord — quelle est ta langue maternelle ?",
+}
+
+
+def branded_welcome(lang: str, brand: str) -> str:
+    """Вітання учню white-label тенанта від імені бренду викладача."""
+    tmpl = _BRANDED_WELCOME.get(lang) or _BRANDED_WELCOME["en"]
+    return tmpl.replace("{brand}", brand)
+
+
 def help_text(lang: str = "en") -> str:
     return (
         f"{t('help.title', lang)}\n\n"
