@@ -2850,3 +2850,10 @@
   background: var(--violet-soft); color: var(--violet); font-weight: 700; font-size: 13px; cursor: pointer;
 }
 .tch-slot:disabled { opacity: 0.5; }
+
+/* ── M11: кнопка «створити з фото» ─────────────────────────────────────────── */
+.tch-photo-btn {
+  display: inline-block; padding: 9px 14px; border-radius: var(--r-md);
+  border: 1px dashed var(--violet); color: var(--violet); background: var(--violet-soft);
+  font-weight: 600; font-size: 13px; cursor: pointer; text-align: center;
+}

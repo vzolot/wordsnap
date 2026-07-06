@@ -126,6 +126,47 @@ async def teacher_create_deck(
     return {"ok": True, "deck_id": deck.id, "word_count": len(pairs)}
 
 
+class DeckFromPhotoRequest(BaseModel):
+    image_b64: str            # base64 без data-URL префіксу
+    image_mime: str = "image/jpeg"
+
+
+@router.post("/api/teacher/decks/from_photo")
+async def teacher_deck_from_photo(
+    data: DeckFromPhotoRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """M11: фото сторінки → пари «слово–переклад» (превʼю для редагування).
+    Рахує виклик у ai_snap_usage тенанта і поважає місячний ліміт. НЕ зберігає
+    колоду — повертає пари, які викладач редагує і зберігає через POST /decks."""
+    from core.openai_client import extract_word_pairs_from_image
+    from core.tenant_service import get_tenant_by_id, ai_snap_available, incr_ai_snap_usage
+
+    teacher = await _require_teacher(telegram_id, tenant_id)
+    if not _rl_allow(f"deckwrite:{tenant_id}:{telegram_id}", _DECK_WRITE_LIMIT, _DECK_WRITE_WINDOW):
+        raise HTTPException(status_code=429, detail="rate_limited")
+
+    tenant = await get_tenant_by_id(tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="tenant_not_found")
+    if not await ai_snap_available(tenant):
+        # Мʼяко: ліміт AI-снапу вичерпано цього місяця.
+        raise HTTPException(status_code=429, detail="ai_snap_limit_reached")
+
+    b64 = (data.image_b64 or "").strip()
+    if not b64:
+        raise HTTPException(status_code=400, detail="no_image")
+    pairs = await extract_word_pairs_from_image(
+        b64, target_lang=(teacher.target_lang or "en"),
+        native_lang=(teacher.native_lang or "uk"), image_mime=data.image_mime,
+    )
+    # Рахуємо виклик навіть якщо пар мало — це реальний OpenAI-запит.
+    await incr_ai_snap_usage(tenant_id)
+    analytics.capture(telegram_id, "teacher_deck_photo_extracted", {
+        "tenant_id": tenant_id, "pairs": len(pairs),
+    })
+    return {"ok": True, "pairs": pairs}
+
+
 @router.patch("/api/teacher/decks/{deck_id}")
 async def teacher_update_deck(
     deck_id: int, data: DeckPatchRequest,

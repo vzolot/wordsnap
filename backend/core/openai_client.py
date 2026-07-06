@@ -331,6 +331,80 @@ async def extract_words_from_image(
     return out
 
 
+# M11: витяг ПАР «слово–переклад» зі сторінки підручника/конспекту (для
+# викладача — «Створити колоду з фото»). На відміну від learner-снапу, тут
+# джерело — впорядкований словниковий список; хочемо саме пари.
+_PAIRS_SYSTEM = (
+    "You extract vocabulary pairs from a photo of a textbook page, vocabulary "
+    "list, or handwritten notes a language teacher took. Return word–translation "
+    "pairs. Rules:\n"
+    "  - Each pair: a word/short phrase in the TARGET language + its translation "
+    "in the NATIVE language.\n"
+    "  - If the page already shows both columns (word — translation), use them.\n"
+    "  - If only target-language words are shown, translate each into the native "
+    "language yourself.\n"
+    "  - Skip headers, page numbers, exercise instructions, examples/sentences.\n"
+    "  - Up to 40 pairs. Base form when reasonable.\n"
+    "  - Output JSON only: {\"pairs\": [{\"word\": \"...\", \"translation\": \"...\"}]}. "
+    "If nothing extractable, return {\"pairs\": []}."
+)
+
+
+async def extract_word_pairs_from_image(
+    image_b64: str,
+    target_lang: str,
+    native_lang: str = "uk",
+    image_mime: str = "image/jpeg",
+) -> list[dict]:
+    """Vision-екстракт пар «слово–переклад» зі сторінки. Повертає список
+    {"word","translation"} (до 40), очищений і дедуплікований по слову."""
+    try:
+        response = await _get_openai_client().chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": _PAIRS_SYSTEM},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": (
+                            f"Target language: {target_lang}. Native language: "
+                            f"{native_lang}. Extract vocabulary pairs from this page."
+                        )},
+                        {"type": "image_url", "image_url": {
+                            "url": f"data:{image_mime};base64,{image_b64}",
+                            "detail": "high",  # текст на сторінці — потрібна деталізація
+                        }},
+                    ],
+                },
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+            max_tokens=1500,
+        )
+        data = json.loads(response.choices[0].message.content or "{}")
+    except Exception as e:
+        logger.warning("vision pairs extract failed: %s", e)
+        return []
+
+    out: list[dict] = []
+    seen: set[str] = set()
+    for p in (data.get("pairs") or []):
+        if not isinstance(p, dict):
+            continue
+        w = str(p.get("word", "")).strip().strip("«».,!?;:\"'`")
+        tr = str(p.get("translation", "")).strip()
+        if not w or not tr or len(w) > 100 or len(tr) > 200:
+            continue
+        key = w.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({"word": w, "translation": tr})
+        if len(out) >= 40:
+            break
+    return out
+
+
 # Відомі Whisper-галюцинації для коротких/тихих аудіо — модель вкидає
 # music/intro/outro маркери замість «це тиша». Якщо transcript збігається з
 # одним з них, вважаємо аудіо нерозшифрованим.
