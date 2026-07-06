@@ -94,6 +94,19 @@ export const createTeacherDeck = (payload) => api.post('/api/teacher/decks', pay
 export const updateTeacherDeck = (deckId, patch) =>
   api.patch(`/api/teacher/decks/${deckId}`, patch);
 
+// ── Календар уроків (M9) ──────────────────────────────────────────────────
+// Викладач
+export const getAvailability = () => api.get('/api/teacher/availability');
+export const putAvailability = (slots) => api.put('/api/teacher/availability', { slots });
+export const setClosedDate = (day, closed) => api.post('/api/teacher/closed_date', { day, closed });
+export const getTeacherLessons = () => api.get('/api/teacher/lessons');
+export const teacherCancelLesson = (id) => api.post(`/api/teacher/lessons/${id}/cancel`);
+// Учень
+export const getCalendarSlots = () => api.get('/api/calendar/slots');
+export const getMyLessons = () => api.get('/api/calendar/my');
+export const bookLesson = (startsAtUtc) => api.post('/api/calendar/book', { starts_at_utc: startsAtUtc });
+export const cancelMyLesson = (id) => api.post(`/api/calendar/lessons/${id}/cancel`);
+
 /**
  * Stale-while-revalidate fetch.
  * - Якщо є cached дані не старші TTL — повертає одразу + фоновий refresh

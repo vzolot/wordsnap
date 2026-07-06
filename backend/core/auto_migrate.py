@@ -501,6 +501,86 @@ MIGRATIONS: list[tuple[str, str]] = [
     ("rls.decks",             "ALTER TABLE decks ENABLE ROW LEVEL SECURITY"),
     ("rls.deck_words",        "ALTER TABLE deck_words ENABLE ROW LEVEL SECURITY"),
     ("rls.deck_assignments",  "ALTER TABLE deck_assignments ENABLE ROW LEVEL SECURITY"),
+    # ════════════════════════════════════════════════════════════════════
+    # WHITE-LABEL M9 — календар уроків.
+    # ════════════════════════════════════════════════════════════════════
+    (
+        "tenants.lesson_config",
+        # Тривалість уроку (= тривалість слота) і дедлайн скасування — конфіг/тенант.
+        "ALTER TABLE tenants "
+        "ADD COLUMN IF NOT EXISTS lesson_duration_min INTEGER NOT NULL DEFAULT 60, "
+        "ADD COLUMN IF NOT EXISTS cancel_cutoff_hours INTEGER NOT NULL DEFAULT 12",
+    ),
+    (
+        "teacher_availability table",
+        # Тижневий шаблон доступності. weekday: 0=Пн..6=Нд; start_min/end_min —
+        # хвилини від опівночі у ЛОКАЛЬНІЙ таймзоні викладача (users.timezone).
+        """
+        CREATE TABLE IF NOT EXISTS teacher_availability (
+            id               BIGSERIAL PRIMARY KEY,
+            tenant_id        INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            teacher_user_id  BIGINT REFERENCES users(id) ON DELETE CASCADE,
+            weekday          SMALLINT NOT NULL,
+            start_min        SMALLINT NOT NULL,
+            end_min          SMALLINT NOT NULL,
+            created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+    ),
+    (
+        "teacher_availability.idx",
+        "CREATE INDEX IF NOT EXISTS idx_avail_tenant_teacher "
+        "ON teacher_availability(tenant_id, teacher_user_id)",
+    ),
+    (
+        "teacher_closed_dates table",
+        """
+        CREATE TABLE IF NOT EXISTS teacher_closed_dates (
+            id               BIGSERIAL PRIMARY KEY,
+            tenant_id        INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            teacher_user_id  BIGINT REFERENCES users(id) ON DELETE CASCADE,
+            day              DATE NOT NULL,
+            UNIQUE (tenant_id, teacher_user_id, day)
+        )
+        """,
+    ),
+    (
+        "lessons table",
+        """
+        CREATE TABLE IF NOT EXISTS lessons (
+            id                BIGSERIAL PRIMARY KEY,
+            tenant_id         INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            teacher_user_id   BIGINT REFERENCES users(id) ON DELETE SET NULL,
+            student_user_id   BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            starts_at_utc     TIMESTAMPTZ NOT NULL,
+            duration_min      SMALLINT NOT NULL DEFAULT 60,
+            status            VARCHAR(20) NOT NULL DEFAULT 'booked',
+            reminder_24_sent  BOOLEAN NOT NULL DEFAULT FALSE,
+            reminder_1_sent   BOOLEAN NOT NULL DEFAULT FALSE,
+            digest_sent       BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+    ),
+    (
+        "lessons.no_double_booking",
+        # Захист від подвійного бронювання: один активний ('booked') урок на
+        # слот викладача. Скасовані не блокують повторне бронювання.
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_lessons_teacher_slot "
+        "ON lessons(tenant_id, teacher_user_id, starts_at_utc) WHERE status = 'booked'",
+    ),
+    (
+        "lessons.student_idx",
+        "CREATE INDEX IF NOT EXISTS idx_lessons_student ON lessons(student_user_id, starts_at_utc)",
+    ),
+    (
+        "lessons.upcoming_idx",
+        "CREATE INDEX IF NOT EXISTS idx_lessons_upcoming "
+        "ON lessons(tenant_id, starts_at_utc) WHERE status = 'booked'",
+    ),
+    ("rls.teacher_availability", "ALTER TABLE teacher_availability ENABLE ROW LEVEL SECURITY"),
+    ("rls.teacher_closed_dates", "ALTER TABLE teacher_closed_dates ENABLE ROW LEVEL SECURITY"),
+    ("rls.lessons",              "ALTER TABLE lessons ENABLE ROW LEVEL SECURITY"),
 ]
 
 

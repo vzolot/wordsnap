@@ -37,6 +37,8 @@ async def test_tenant_isolation_end_to_end():
     from core.user_service import get_or_create_user, can_add_word
     from core.word_service import save_word, process_review
     from core.deck_service import get_visible_decks
+    from tests.conftest import bind_test_engine
+    bind_test_engine(core_db.SessionLocal)
     S = core_db.SessionLocal
 
     async with engine.begin() as conn:

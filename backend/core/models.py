@@ -361,6 +361,13 @@ class Tenant(Base):
     digest_lead_hours: Mapped[int] = mapped_column(
         Integer, nullable=False, default=3, server_default="3"
     )
+    # Календар (M9): тривалість уроку = тривалість слота; дедлайн скасування.
+    lesson_duration_min: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=60, server_default="60"
+    )
+    cancel_cutoff_hours: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=12, server_default="12"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -438,5 +445,71 @@ class DeckAssignment(Base):
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     assigned_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+# ─── Календар уроків (M9) ────────────────────────────────────────────────────
+
+class TeacherAvailability(Base):
+    """Тижневий шаблон доступності викладача. weekday 0=Пн..6=Нд; start_min/
+    end_min — хвилини від опівночі у ЛОКАЛЬНІЙ таймзоні викладача."""
+    __tablename__ = "teacher_availability"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    teacher_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    weekday: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_min: Mapped[int] = mapped_column(Integer, nullable=False)
+    end_min: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class TeacherClosedDate(Base):
+    """Конкретна закрита дата викладача (відпустка/вихідний)."""
+    __tablename__ = "teacher_closed_dates"
+    __table_args__ = (UniqueConstraint("tenant_id", "teacher_user_id", "day"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    teacher_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+
+
+class Lesson(Base):
+    """Заброньований урок. Час зберігається в UTC; показ — у локальному часі
+    кожного користувача (users.timezone)."""
+    __tablename__ = "lessons"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    teacher_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    student_user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    starts_at_utc: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    duration_min: Mapped[int] = mapped_column(Integer, nullable=False, default=60, server_default="60")
+    # 'booked' | 'cancelled' | 'completed'
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="booked", server_default="booked"
+    )
+    reminder_24_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    reminder_1_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    digest_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

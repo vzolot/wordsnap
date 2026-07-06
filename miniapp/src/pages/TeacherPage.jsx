@@ -3,7 +3,105 @@ import AppBar from '../components/AppBar';
 import {
   getTeacherDecks, getTeacherStudents, getTeacherDeck,
   createTeacherDeck, updateTeacherDeck, getTeacherStudentDetail,
+  getAvailability, putAvailability, getTeacherLessons, teacherCancelLesson,
 } from '../api/client';
+
+const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+const toHHMM = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+function fmtLesson(iso) {
+  const d = new Date(iso);
+  const wd = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][d.getDay()];
+  return `${wd} ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function CalendarManager() {
+  // ranges: { [weekday]: [{start,end}] }  (HH:MM рядки)
+  const [ranges, setRanges] = useState({});
+  const [tz, setTz] = useState('');
+  const [lessons, setLessons] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const load = useCallback(async () => {
+    const [a, l] = await Promise.all([getAvailability(), getTeacherLessons()]);
+    const r = {};
+    (a.data.availability || []).forEach((s) => {
+      (r[s.weekday] = r[s.weekday] || []).push({ start: toHHMM(s.start_min), end: toHHMM(s.end_min) });
+    });
+    setRanges(r);
+    setTz(a.data.timezone);
+    setLessons(l.data.lessons || []);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const addRange = (wd) => setRanges((p) => ({ ...p, [wd]: [...(p[wd] || []), { start: '10:00', end: '11:00' }] }));
+  const rmRange = (wd, i) => setRanges((p) => ({ ...p, [wd]: p[wd].filter((_, j) => j !== i) }));
+  const setField = (wd, i, k, v) => setRanges((p) => ({
+    ...p, [wd]: p[wd].map((r, j) => (j === i ? { ...r, [k]: v } : r)),
+  }));
+
+  const save = async () => {
+    setBusy(true); setMsg('');
+    const slots = [];
+    Object.entries(ranges).forEach(([wd, list]) => {
+      list.forEach((r) => {
+        const sm = toMin(r.start), em = toMin(r.end);
+        if (em > sm) slots.push({ weekday: Number(wd), start_min: sm, end_min: em });
+      });
+    });
+    try {
+      await putAvailability(slots);
+      setMsg('Розклад збережено ✅');
+    } catch { setMsg('Не вдалося зберегти.'); }
+    finally { setBusy(false); }
+  };
+
+  const cancelLesson = async (id) => {
+    setBusy(true);
+    try { await teacherCancelLesson(id); await load(); } finally { setBusy(false); }
+  };
+
+  return (
+    <>
+      <div className="tch-card">
+        <h3 className="tch-h3">Тижневий розклад доступності</h3>
+        <p className="tch-muted sm">Пояс: {tz || '—'} · тривалість слота = тривалість уроку.</p>
+        {WEEKDAYS.map((name, wd) => (
+          <div key={wd} className="tch-wdrow">
+            <div className="tch-wd">{name}</div>
+            <div className="tch-wdranges">
+              {(ranges[wd] || []).map((r, i) => (
+                <div key={i} className="tch-range">
+                  <input type="time" value={r.start} onChange={(e) => setField(wd, i, 'start', e.target.value)} />
+                  <span>–</span>
+                  <input type="time" value={r.end} onChange={(e) => setField(wd, i, 'end', e.target.value)} />
+                  <button className="tch-x" onClick={() => rmRange(wd, i)}>✕</button>
+                </div>
+              ))}
+              <button className="tch-addrange" onClick={() => addRange(wd)}>+ інтервал</button>
+            </div>
+          </div>
+        ))}
+        {msg && <p className="tch-ok">{msg}</p>}
+        <div className="tch-actions">
+          <button className="tch-btn" onClick={save} disabled={busy}>Зберегти розклад</button>
+        </div>
+      </div>
+
+      <div className="tch-card">
+        <h3 className="tch-h3">Заброньовані уроки</h3>
+        {lessons.length === 0 && <p className="tch-muted">Поки що немає бронювань.</p>}
+        {lessons.map((l) => (
+          <div key={l.id} className="tch-word">
+            <span>📅 <b>{fmtLesson(l.starts_at_utc)}</b> — {l.student_name || 'учень'}</span>
+            <button className="tch-btn ghost sm" onClick={() => cancelLesson(l.id)} disabled={busy}>Скасувати</button>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
 
 function relTime(iso) {
   if (!iso) return 'ніколи не заходив';
@@ -341,9 +439,12 @@ export default function TeacherPage() {
                   onClick={() => { setView('decks'); setMode('list'); }}>Колоди</button>
           <button className={`tch-pill ${view === 'students' ? 'on' : ''}`}
                   onClick={() => setView('students')}>Учні</button>
+          <button className={`tch-pill ${view === 'calendar' ? 'on' : ''}`}
+                  onClick={() => setView('calendar')}>Календар</button>
         </div>
 
         {view === 'students' && <StudentsList />}
+        {view === 'calendar' && <CalendarManager />}
 
         {view === 'decks' && mode === 'create' && (
           <CreateDeckForm
