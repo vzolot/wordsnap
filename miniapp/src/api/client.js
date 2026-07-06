@@ -103,6 +103,16 @@ export const assignHomework = (deckId, dueAtUtc, userIds = null) =>
   api.post(`/api/teacher/decks/${deckId}/homework`, { due_at_utc: dueAtUtc, user_ids: userIds });
 export const getHomework = () => api.get('/api/homework');
 
+// M14: режим школи.
+export const getSchoolInfo = () => api.get('/api/teacher/school');
+export const getTeachers = () => api.get('/api/teacher/teachers');
+export const addTeacher = (telegramId) => api.post('/api/teacher/teachers', { telegram_id: telegramId });
+export const setTeacherActive = (id, active) => api.post(`/api/teacher/teachers/${id}/active`, { active });
+export const getGroups = () => api.get('/api/teacher/groups');
+export const createGroup = (name) => api.post('/api/teacher/groups', { name });
+export const setGroupMembers = (groupId, userIds) =>
+  api.put(`/api/teacher/groups/${groupId}/members`, { user_ids: userIds });
+
 // ── Календар уроків (M9) ──────────────────────────────────────────────────
 // Викладач
 export const getAvailability = () => api.get('/api/teacher/availability');

@@ -42,12 +42,31 @@ async def _require_teacher(telegram_id: int, tenant_id: int) -> User:
     return user
 
 
+async def _require_owner(telegram_id: int, tenant_id: int) -> User:
+    user = await _require_teacher(telegram_id, tenant_id)
+    if user.role != "owner":
+        raise HTTPException(status_code=403, detail="not_an_owner")
+    return user
+
+
+async def _school_scope(teacher: User, tenant_id: int) -> tuple[list[int] | None, int | None]:
+    """(restrict_student_ids, deck_owner_id) для ізоляції в школі. owner і
+    solo-режим → (None, None) = бачить усе. Викладач у школі → лише свої."""
+    from core.group_service import is_school, student_ids_for_teacher
+    if teacher.role == "owner":
+        return None, None
+    if await is_school(tenant_id):
+        return await student_ids_for_teacher(tenant_id, teacher.id), teacher.id
+    return None, None
+
+
 class DeckCreateRequest(BaseModel):
     title: str
     target_lang: str | None = None
     text: str = ""                       # «слово - переклад» по рядку або CSV
     assign_to_all: bool = True
     assignee_user_ids: list[int] | None = None
+    group_id: int | None = None          # M14: адресувати групі (school-режим)
 
 
 class DeckPatchRequest(BaseModel):
@@ -58,17 +77,20 @@ class DeckPatchRequest(BaseModel):
 
 @router.get("/api/teacher/decks")
 async def teacher_list_decks(telegram_id: int = Query(...), tenant_id: int = Query(1)):
-    await _require_teacher(telegram_id, tenant_id)
-    return {"decks": await ds.list_teacher_decks(tenant_id)}
+    teacher = await _require_teacher(telegram_id, tenant_id)
+    _, deck_owner = await _school_scope(teacher, tenant_id)
+    return {"decks": await ds.list_teacher_decks(tenant_id, owner_user_id=deck_owner)}
 
 
 @router.get("/api/teacher/students")
 async def teacher_list_students(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     """Дашборд учнів з агрегатами (стрік, 7д повторень, останній візит, %
     вивчених, ризик). Неактивні зверху. Містить id+display_name — тому годиться
-    і як пікер адресатів у формі створення колоди."""
-    await _require_teacher(telegram_id, tenant_id)
-    return {"students": await tstats.students_overview(tenant_id)}
+    і як пікер адресатів у формі створення колоди. У школі викладач бачить лише
+    своїх учнів (owner — усіх)."""
+    teacher = await _require_teacher(telegram_id, tenant_id)
+    restrict, _ = await _school_scope(teacher, tenant_id)
+    return {"students": await tstats.students_overview(tenant_id, restrict_ids=restrict)}
 
 
 @router.get("/api/teacher/students/{student_id}")
@@ -115,6 +137,7 @@ async def teacher_create_deck(
         target_lang=(data.target_lang or teacher.target_lang),
         assign_to_all=bool(data.assign_to_all),
         assignee_user_ids=data.assignee_user_ids,
+        group_id=data.group_id,
     )
     analytics.capture(telegram_id, "teacher_deck_created", {
         "tenant_id": tenant_id,
@@ -237,3 +260,90 @@ async def teacher_update_deck(
         "removed": result.get("removed_words", 0),
     })
     return result
+
+
+# ─── Режим школи (M14): викладачі та групи ───────────────────────────────────
+
+class AddTeacherRequest(BaseModel):
+    telegram_id: int
+
+
+class TeacherActiveRequest(BaseModel):
+    active: bool
+
+
+class GroupCreateRequest(BaseModel):
+    name: str
+
+
+class GroupMembersRequest(BaseModel):
+    user_ids: list[int]
+
+
+@router.get("/api/teacher/school")
+async def school_info(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    """Чи це школа + роль поточного користувача (для UI owner/teacher)."""
+    from core.group_service import is_school
+    teacher = await _require_teacher(telegram_id, tenant_id)
+    return {"is_school": await is_school(tenant_id), "role": teacher.role}
+
+
+@router.get("/api/teacher/teachers")
+async def list_teachers(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    await _require_owner(telegram_id, tenant_id)
+    from core.group_service import list_teachers as _lt
+    return {"teachers": await _lt(tenant_id)}
+
+
+@router.post("/api/teacher/teachers")
+async def add_teacher(data: AddTeacherRequest, telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    await _require_owner(telegram_id, tenant_id)
+    from core.group_service import add_teacher as _at
+    r = await _at(tenant_id, data.telegram_id)
+    if not r["ok"]:
+        raise HTTPException(status_code=404, detail=r["error"])
+    return r
+
+
+@router.post("/api/teacher/teachers/{teacher_user_id}/active")
+async def set_teacher_active(
+    teacher_user_id: int, data: TeacherActiveRequest,
+    telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    await _require_owner(telegram_id, tenant_id)
+    from core.group_service import set_teacher_active as _sa
+    ok = await _sa(tenant_id, teacher_user_id, data.active)
+    if not ok:
+        raise HTTPException(status_code=404, detail="teacher_not_found")
+    return {"ok": True}
+
+
+@router.get("/api/teacher/groups")
+async def list_groups(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    teacher = await _require_teacher(telegram_id, tenant_id)
+    from core.group_service import list_groups as _lg
+    # owner бачить усі групи; викладач — лише свої.
+    scope = None if teacher.role == "owner" else teacher.id
+    return {"groups": await _lg(tenant_id, teacher_user_id=scope)}
+
+
+@router.post("/api/teacher/groups")
+async def create_group(data: GroupCreateRequest, telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    teacher = await _require_teacher(telegram_id, tenant_id)
+    from core.group_service import create_group as _cg
+    g = await _cg(tenant_id, data.name, teacher.id)
+    return {"ok": True, "group_id": g.id}
+
+
+@router.put("/api/teacher/groups/{group_id}/members")
+async def set_group_members(
+    group_id: int, data: GroupMembersRequest,
+    telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    teacher = await _require_teacher(telegram_id, tenant_id)
+    from core.group_service import set_group_members as _sm
+    scope = None if teacher.role == "owner" else teacher.id
+    n = await _sm(tenant_id, group_id, data.user_ids, teacher_user_id=scope)
+    if n < 0:
+        raise HTTPException(status_code=403, detail="not_your_group")
+    return {"ok": True, "members": n}

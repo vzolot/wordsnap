@@ -5,6 +5,8 @@ import {
   createTeacherDeck, updateTeacherDeck, getTeacherStudentDetail,
   getAvailability, putAvailability, getTeacherLessons, teacherCancelLesson,
   createDeckFromPhoto, assignHomework,
+  getSchoolInfo, getTeachers, addTeacher, setTeacherActive,
+  getGroups, createGroup, setGroupMembers,
 } from '../api/client';
 
 // Читає File як base64 без data-URL префіксу + повертає mime.
@@ -153,11 +155,16 @@ function StudentPicker({ students, selected, onToggle }) {
 function CreateDeckForm({ students, onCreated, onCancel }) {
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
-  const [assignAll, setAssignAll] = useState(true);
+  const [target, setTarget] = useState('all'); // all | selected | group
   const [selected, setSelected] = useState(new Set());
+  const [groups, setGroups] = useState([]);
+  const [groupId, setGroupId] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [photoBusy, setPhotoBusy] = useState(false);
+  const assignAll = target === 'all';
+
+  useEffect(() => { getGroups().then((r) => setGroups(r.data.groups || [])).catch(() => {}); }, []);
 
   const onPhoto = async (e) => {
     const file = e.target.files?.[0];
@@ -189,13 +196,15 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
     setErr('');
     if (!title.trim()) { setErr('Вкажіть назву колоди'); return; }
     if (!text.trim()) { setErr('Додайте слова: «слово - переклад» по рядку'); return; }
+    if (target === 'group' && !groupId) { setErr('Оберіть групу'); return; }
     setBusy(true);
     try {
       const r = await createTeacherDeck({
         title: title.trim(),
         text,
-        assign_to_all: assignAll,
-        assignee_user_ids: assignAll ? null : [...selected],
+        assign_to_all: target === 'all',
+        assignee_user_ids: target === 'selected' ? [...selected] : null,
+        group_id: target === 'group' ? Number(groupId) : null,
       });
       onCreated(r.data);
     } catch (e) {
@@ -229,17 +238,23 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
                onChange={onPhoto} disabled={photoBusy} hidden />
       </label>
       <div className="tch-toggle-row">
-        <button
-          className={`tch-pill ${assignAll ? 'on' : ''}`}
-          onClick={() => setAssignAll(true)}
-        >Всім учням</button>
-        <button
-          className={`tch-pill ${!assignAll ? 'on' : ''}`}
-          onClick={() => setAssignAll(false)}
-        >Обраним учням</button>
+        <button className={`tch-pill ${target === 'all' ? 'on' : ''}`}
+                onClick={() => setTarget('all')}>Всім</button>
+        <button className={`tch-pill ${target === 'selected' ? 'on' : ''}`}
+                onClick={() => setTarget('selected')}>Обраним</button>
+        {groups.length > 0 && (
+          <button className={`tch-pill ${target === 'group' ? 'on' : ''}`}
+                  onClick={() => setTarget('group')}>Групі</button>
+        )}
       </div>
-      {!assignAll && (
+      {target === 'selected' && (
         <StudentPicker students={students} selected={selected} onToggle={toggle} />
+      )}
+      {target === 'group' && (
+        <select className="tch-input" value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+          <option value="">— оберіть групу —</option>
+          {groups.map((g) => <option key={g.id} value={g.id}>{g.name} ({g.members})</option>)}
+        </select>
       )}
       {err && <p className="tch-err">{err}</p>}
       <div className="tch-actions">
@@ -457,6 +472,105 @@ function StudentsList() {
   );
 }
 
+function GroupEditor({ group, students, onDone }) {
+  const [sel, setSel] = useState(new Set());
+  const [busy, setBusy] = useState(false);
+  const toggle = (id) => setSel((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const save = async () => {
+    setBusy(true);
+    try { await setGroupMembers(group.id, [...sel]); onDone(); } finally { setBusy(false); }
+  };
+  return (
+    <div className="tch-card">
+      <h4 className="tch-h4">Учні групи «{group.name}»</h4>
+      <StudentPicker students={students} selected={sel} onToggle={toggle} />
+      <div className="tch-actions">
+        <button className="tch-btn ghost sm" onClick={onDone}>Назад</button>
+        <button className="tch-btn sm" onClick={save} disabled={busy}>Зберегти склад</button>
+      </div>
+    </div>
+  );
+}
+
+function SchoolManager() {
+  const [info, setInfo] = useState(null);
+  const [teachers, setTeachers] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [newTeacher, setNewTeacher] = useState('');
+  const [newGroup, setNewGroup] = useState('');
+  const [editGroup, setEditGroup] = useState(null);
+  const [msg, setMsg] = useState('');
+
+  const load = useCallback(async () => {
+    const inf = (await getSchoolInfo()).data;
+    setInfo(inf);
+    const [g, s] = await Promise.all([getGroups(), getTeacherStudents()]);
+    setGroups(g.data.groups || []);
+    setStudents(s.data.students || []);
+    if (inf.role === 'owner') setTeachers((await getTeachers()).data.teachers || []);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  if (!info) return <p className="tch-muted">Завантаження…</p>;
+  if (!info.is_school) return <div className="tch-card"><p className="tch-muted">
+    Це репетиторський тенант (не школа). Режим школи вмикає оператор.</p></div>;
+  if (editGroup) return <GroupEditor group={editGroup} students={students}
+    onDone={() => { setEditGroup(null); load(); }} />;
+
+  const addT = async () => {
+    setMsg('');
+    try { await addTeacher(Number(newTeacher)); setNewTeacher(''); await load(); setMsg('Викладача додано ✅'); }
+    catch (e) { setMsg(e?.response?.data?.detail === 'user_not_found' ? 'Спершу викладач має натиснути Start у боті.' : 'Помилка.'); }
+  };
+  const addG = async () => {
+    if (!newGroup.trim()) return;
+    await createGroup(newGroup.trim()); setNewGroup(''); await load();
+  };
+
+  return (
+    <>
+      {info.role === 'owner' && (
+        <div className="tch-card">
+          <h3 className="tch-h3">Викладачі</h3>
+          {teachers.map((t) => (
+            <div key={t.id} className="tch-word">
+              <span>{t.name} · {t.role === 'owner' ? 'власник' : (t.is_active ? 'активний' : 'вимкнено')}</span>
+              {t.role === 'teacher' && (
+                <button className="tch-btn ghost sm" onClick={async () => { await setTeacherActive(t.id, !t.is_active); load(); }}>
+                  {t.is_active ? 'Вимкнути' : 'Увімкнути'}
+                </button>
+              )}
+            </div>
+          ))}
+          <div className="tch-range" style={{ flexWrap: 'wrap', marginTop: 8 }}>
+            <input className="tch-input" style={{ flex: 1 }} placeholder="Telegram ID викладача"
+                   value={newTeacher} onChange={(e) => setNewTeacher(e.target.value)} />
+            <button className="tch-btn sm" onClick={addT}>Додати викладача</button>
+          </div>
+          {msg && <p className="tch-ok">{msg}</p>}
+        </div>
+      )}
+
+      <div className="tch-card">
+        <h3 className="tch-h3">Групи</h3>
+        {groups.length === 0 && <p className="tch-muted">Ще немає груп.</p>}
+        {groups.map((g) => (
+          <div key={g.id} className="tch-word">
+            <span>👥 <b>{g.name}</b> — {g.members} учнів</span>
+            <button className="tch-btn ghost sm" onClick={() => setEditGroup(g)}>Склад</button>
+          </div>
+        ))}
+        <div className="tch-range" style={{ flexWrap: 'wrap', marginTop: 8 }}>
+          <input className="tch-input" style={{ flex: 1 }} placeholder="Назва групи (напр. «Польська B1»)"
+                 value={newGroup} onChange={(e) => setNewGroup(e.target.value)} />
+          <button className="tch-btn sm" onClick={addG}>Створити групу</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function TeacherPage() {
   const [decks, setDecks] = useState(null);
   const [students, setStudents] = useState([]);
@@ -507,10 +621,13 @@ export default function TeacherPage() {
                   onClick={() => setView('students')}>Учні</button>
           <button className={`tch-pill ${view === 'calendar' ? 'on' : ''}`}
                   onClick={() => setView('calendar')}>Календар</button>
+          <button className={`tch-pill ${view === 'school' ? 'on' : ''}`}
+                  onClick={() => setView('school')}>Школа</button>
         </div>
 
         {view === 'students' && <StudentsList />}
         {view === 'calendar' && <CalendarManager />}
+        {view === 'school' && <SchoolManager />}
 
         {view === 'decks' && mode === 'create' && (
           <CreateDeckForm
