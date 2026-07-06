@@ -13,6 +13,7 @@ from core import analytics
 from core.db import SessionLocal
 from core.models import User
 from core import deck_service as ds
+from core import teacher_stats as tstats
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +58,23 @@ async def teacher_list_decks(telegram_id: int = Query(...), tenant_id: int = Que
 
 @router.get("/api/teacher/students")
 async def teacher_list_students(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    """Дашборд учнів з агрегатами (стрік, 7д повторень, останній візит, %
+    вивчених, ризик). Неактивні зверху. Містить id+display_name — тому годиться
+    і як пікер адресатів у формі створення колоди."""
     await _require_teacher(telegram_id, tenant_id)
-    return {"students": await ds.list_tenant_students(tenant_id)}
+    return {"students": await tstats.students_overview(tenant_id)}
+
+
+@router.get("/api/teacher/students/{student_id}")
+async def teacher_student_detail(
+    student_id: int, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """Детальний прогрес учня: активність 7/30д, прогрес по колодах, слабкі слова."""
+    await _require_teacher(telegram_id, tenant_id)
+    detail = await tstats.student_detail(tenant_id, student_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="student_not_found")
+    return detail
 
 
 @router.get("/api/teacher/decks/{deck_id}")

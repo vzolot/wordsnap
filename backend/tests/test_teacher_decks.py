@@ -48,6 +48,9 @@ async def test_deck_materialization_no_reset_and_isolation():
     teacher = await get_or_create_user(telegram_id=500, tenant_id=2)
     s1 = await get_or_create_user(telegram_id=501, tenant_id=2)
     s2 = await get_or_create_user(telegram_id=502, tenant_id=2)
+    async with core_db.SessionLocal() as s:
+        (await s.execute(select(User).where(User.id == teacher.id))).scalar_one().role = "teacher"
+        await s.commit()
 
     deck = await ds.create_deck(
         tenant_id=2, owner_user_id=teacher.id, title="D",
@@ -71,5 +74,28 @@ async def test_deck_materialization_no_reset_and_isolation():
                          pairs=ds.parse_word_pairs("secret - таємниця"),
                          target_lang="pl", assign_to_all=False, assignee_user_ids=[s1.id])
     assert await wc(s1.id) == 21 and await wc(s2.id) == 20
+
+    # ── M6: дашборд-агрегати (той самий engine/loop) ──
+    from datetime import datetime, timezone, timedelta
+    import core.teacher_stats as tstats
+    from core.models import Review
+    now = datetime.now(timezone.utc)
+    async with core_db.SessionLocal() as s:
+        w1 = (await s.execute(select(Word).where(Word.user_id == s1.id))).scalars().all()
+        w1[0].status = "mastered"
+        s.add(Review(user_id=s1.id, word_id=w1[0].id, tenant_id=2, result="knew", reviewed_at=now))
+        wbrow = (await s.execute(select(Word).where(Word.user_id == s2.id).limit(1))).scalars().all()[0]
+        s.add(Review(user_id=s2.id, word_id=wbrow.id, tenant_id=2, result="knew",
+                     reviewed_at=now - timedelta(days=10)))
+        await s.commit()
+
+    ov = await tstats.students_overview(2)
+    o1 = next(r for r in ov if r["id"] == s1.id)
+    o2 = next(r for r in ov if r["id"] == s2.id)
+    assert o1["at_risk"] is False and o1["deck_words_learned"] == 1
+    assert o2["at_risk"] is True and o2["days_since_visit"] == 10
+    assert ov[0]["id"] == s2.id  # inactive first
+    det = await tstats.student_detail(2, s1.id)
+    assert det["streak"] >= 1 and any(d["learned"] == 1 for d in det["decks"])
 
     await engine.dispose()
