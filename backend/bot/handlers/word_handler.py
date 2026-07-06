@@ -16,6 +16,7 @@ from core.openai_client import get_word_data
 from core.unsplash_client import search_image
 from core.user_service import get_or_create_user, can_add_word, increment_word_counter
 from core.word_service import word_exists, save_word
+from core.bot_registry import tenant_id_for_bot
 from core import analytics
 
 logger = logging.getLogger(__name__)
@@ -72,10 +73,12 @@ async def _typing_loop(bot, chat_id: int, stop_event: asyncio.Event):
 
 @router.message(Command("add"))
 async def cmd_add(message: Message):
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
     target_name = lang_name(user.target_lang or "en")
@@ -91,11 +94,13 @@ async def cmd_add(message: Message):
 async def handle_word(message: Message):
     word = message.text.strip()
 
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     # Спершу витягуємо юзера, бо для повідомлень помилок потрібна мова
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
 
@@ -169,6 +174,7 @@ async def handle_word(message: Message):
             target_lang=user.target_lang,
             ai_data=ai_data,
             image_url=image_url,
+            tenant_id=user.tenant_id,
         )
 
         if not success:
@@ -177,7 +183,7 @@ async def handle_word(message: Message):
             await message.answer(bt("word.save_failed", lang))
             return
 
-        await increment_word_counter(message.from_user.id)
+        await increment_word_counter(message.from_user.id, tenant_id=tid)
         analytics.capture(message.from_user.id, "word_added", {
             "target_lang": user.target_lang,
             "native_lang": user.native_lang,

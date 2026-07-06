@@ -33,6 +33,7 @@ from core.bot_i18n import help_text, premium_text, buy_text, t as bt
 from core.constants import MINI_APP_URL
 from core.languages import lang_flag, lang_name
 from core.auto_migrate import run_auto_migrations
+from core.bot_registry import tenant_id_for_bot
 from scheduler.reminder import reminder_loop
 from scheduler.streak_save import streak_save_loop
 from scheduler.reengage import reengage_loop
@@ -72,12 +73,14 @@ async def cmd_start(message: Message):
         if len(parts) > 1:
             payload = parts[1].strip()
 
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=tg_user.id,
         username=tg_user.username,
         first_name=tg_user.first_name,
         last_name=tg_user.last_name,
         language_code=tg_user.language_code,
+        tenant_id=tid,
     )
 
     # Affiliate/influencer flow: payload `aff_<slug>`. First-touch
@@ -386,10 +389,12 @@ async def on_successful_payment(message: Message):
 
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
     await message.answer(help_text(lang))
@@ -397,10 +402,12 @@ async def cmd_help(message: Message):
 
 @dp.message(Command("app"))
 async def cmd_app(message: Message):
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
@@ -414,10 +421,12 @@ async def cmd_app(message: Message):
 
 @dp.message(Command("settings"))
 async def cmd_settings(message: Message):
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -435,7 +444,8 @@ async def cmd_settings(message: Message):
 
 @dp.callback_query(F.data == "settings:language")
 async def settings_language(callback: CallbackQuery):
-    user = await get_or_create_user(telegram_id=callback.from_user.id)
+    tid = tenant_id_for_bot(callback.bot)  # тенант цього бота (мультитенантність)
+    user = await get_or_create_user(telegram_id=callback.from_user.id, tenant_id=tid)
     lang = user.native_lang or "en"
     await callback.message.edit_text(
         ask_native_lang_text(lang),
@@ -446,10 +456,12 @@ async def settings_language(callback: CallbackQuery):
 
 @dp.message(Command("stats"))
 async def cmd_stats(message: Message):
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
     status = await get_user_status(user, lang)
@@ -471,10 +483,12 @@ async def cmd_stats(message: Message):
 
 @dp.message(Command("premium"))
 async def cmd_premium(message: Message):
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
     await message.answer(premium_text(lang))
@@ -482,10 +496,12 @@ async def cmd_premium(message: Message):
 
 @dp.message(Command("buy"))
 async def cmd_buy(message: Message):
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
 
@@ -506,10 +522,12 @@ async def cmd_buy(message: Message):
 
 @dp.message(Command("subscription"))
 async def cmd_subscription(message: Message):
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
 
@@ -538,10 +556,12 @@ async def cmd_subscription(message: Message):
 
 @dp.message(Command("unsubscribe"))
 async def cmd_unsubscribe(message: Message):
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
 

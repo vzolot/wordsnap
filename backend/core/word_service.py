@@ -33,11 +33,16 @@ async def save_word(
     target_lang: str,
     ai_data: dict,
     image_url: str | None = None,
+    tenant_id: int = 1,
+    deck_id: int | None = None,
 ) -> bool:
     """
     Зберігає слово в БД з даними від AI і картинкою.
     Повертає True якщо успішно, False якщо помилка.
     Прибрано session.refresh() — економія часу.
+
+    tenant_id денормалізується на слові для скоупінгу (дефолт 1 = WordSnap).
+    deck_id заповнюється, якщо слово матеріалізоване з колоди викладача.
     """
     word_clean = word.lower().strip()
     next_review = datetime.now(timezone.utc) + timedelta(days=1)
@@ -46,6 +51,8 @@ async def save_word(
         async with SessionLocal() as session:
             new_word = Word(
                 user_id=user_id,
+                tenant_id=tenant_id,
+                deck_id=deck_id,
                 word=word_clean,
                 translation=ai_data.get("translation", ""),
                 part_of_speech=ai_data.get("part_of_speech"),
@@ -190,6 +197,7 @@ async def process_review(
         review_record = Review(
             word_id=word.id,
             user_id=word.user_id,
+            tenant_id=word.tenant_id,
             result=result,
             interval_before=prev_interval,
             interval_after=new_interval,

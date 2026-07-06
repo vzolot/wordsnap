@@ -13,6 +13,7 @@ from core.languages import lang_flag
 from core.srs import format_interval
 from core.user_service import get_or_create_user
 from core.word_service import get_word_by_id, get_words_due_review, process_review
+from core.bot_registry import tenant_id_for_bot
 from bot.keyboards.review_keyboards import review_answer_keyboard, show_translation_keyboard
 
 logger = logging.getLogger(__name__)
@@ -56,10 +57,12 @@ def format_review_revealed(word, native_lang: str = "en") -> str:
 
 @router.message(Command("review"))
 async def cmd_review(message: Message):
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
 
@@ -90,7 +93,8 @@ async def show_translation(callback: CallbackQuery):
     word_id = int(parts[1])
     source = parts[2] if len(parts) > 2 else "rev"
 
-    user = await get_or_create_user(telegram_id=callback.from_user.id)
+    tid = tenant_id_for_bot(callback.bot)  # тенант цього бота (мультитенантність)
+    user = await get_or_create_user(telegram_id=callback.from_user.id, tenant_id=tid)
     lang = user.native_lang or "en"
 
     word = await get_word_by_id(word_id)
@@ -107,7 +111,8 @@ async def show_translation(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("review:"))
 async def handle_review_answer(callback: CallbackQuery):
-    user = await get_or_create_user(telegram_id=callback.from_user.id)
+    tid = tenant_id_for_bot(callback.bot)  # тенант цього бота (мультитенантність)
+    user = await get_or_create_user(telegram_id=callback.from_user.id, tenant_id=tid)
     lang = user.native_lang or "en"
 
     parts = callback.data.split(":")

@@ -126,7 +126,7 @@ async def send_reengage_for_user(bot: Bot, user: User, days_since: int) -> bool:
                 "reengage send failed for user %s: %s", user.telegram_id, e
             )
             from core.user_service import disable_reminders_if_blocked
-            await disable_reminders_if_blocked(user.telegram_id, e)
+            await disable_reminders_if_blocked(user.telegram_id, e, tenant_id=user.tenant_id)
             return False
 
         await session.execute(
@@ -152,10 +152,13 @@ async def check_and_send_reengage(bot: Bot) -> None:
         if not candidates:
             return
 
+        from core.bot_registry import get_bot
         sent = 0
         for user, days_since in candidates:
             try:
-                if await send_reengage_for_user(bot, user, days_since):
+                # Пуш із бота власного тенанта юзера (фолбек — переданий, тенант 1).
+                user_bot = get_bot(user.tenant_id) or bot
+                if await send_reengage_for_user(user_bot, user, days_since):
                     sent += 1
                     await asyncio.sleep(0.05)
             except Exception as e:

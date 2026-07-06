@@ -22,6 +22,7 @@ from core.user_service import (
     update_user_languages,
 )
 from core.word_service import save_word, word_exists
+from core.bot_registry import tenant_id_for_bot
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,8 @@ def ask_native_lang_text(lang: str = "en") -> str:
 
 @router.message(Command("language"))
 async def cmd_language(message: Message):
-    user = await get_or_create_user(telegram_id=message.from_user.id)
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
+    user = await get_or_create_user(telegram_id=message.from_user.id, tenant_id=tid)
     lang = user.native_lang or "en"
     await message.answer(ask_native_lang_text(lang), reply_markup=native_lang_keyboard())
 
@@ -108,7 +110,8 @@ async def cmd_language(message: Message):
 @router.message(Command("demo"))
 async def cmd_demo(message: Message):
     """Показати демо-слово для поточних налаштувань (без зміни мов)."""
-    user = await get_or_create_user(telegram_id=message.from_user.id)
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
+    user = await get_or_create_user(telegram_id=message.from_user.id, tenant_id=tid)
     native = user.native_lang or "en"
     target = user.target_lang
     if not target:
@@ -172,10 +175,12 @@ async def handle_target_lang(callback: CallbackQuery):
         await callback.answer("?", show_alert=True)
         return
 
+    tid = tenant_id_for_bot(callback.bot)  # тенант цього бота (мультитенантність)
     await update_user_languages(
         telegram_id=callback.from_user.id,
         native_lang=native_code,
         target_lang=target_code,
+        tenant_id=tid,
     )
     from core import analytics
     analytics.capture(callback.from_user.id, "lang_selected", {
@@ -209,7 +214,8 @@ async def handle_city(callback: CallbackQuery):
         return
 
     _, native_code, target_code, city_id = parts
-    user = await get_or_create_user(telegram_id=callback.from_user.id)
+    tid = tenant_id_for_bot(callback.bot)  # тенант цього бота (мультитенантність)
+    user = await get_or_create_user(telegram_id=callback.from_user.id, tenant_id=tid)
 
     # Зберігаємо region (skip → None)
     if city_id != "skip":
@@ -218,7 +224,10 @@ async def handle_city(callback: CallbackQuery):
         from core.models import User
         async with SessionLocal() as session:
             await session.execute(
-                update(User).where(User.telegram_id == callback.from_user.id).values(region=city_id)
+                update(User).where(
+                    User.telegram_id == callback.from_user.id,
+                    User.tenant_id == tid,
+                ).values(region=city_id)
             )
             await session.commit()
     from core import analytics
@@ -278,7 +287,8 @@ async def _show_demo(callback: CallbackQuery, native_code: str, target_code: str
 @router.callback_query(F.data.startswith("demo_snap:"))
 async def handle_demo_snap(callback: CallbackQuery):
     target_code = callback.data.split(":")[1]
-    user = await get_or_create_user(telegram_id=callback.from_user.id)
+    tid = tenant_id_for_bot(callback.bot)  # тенант цього бота (мультитенантність)
+    user = await get_or_create_user(telegram_id=callback.from_user.id, tenant_id=tid)
     native = user.native_lang or "en"
 
     demo = get_demo_word(target_code, native)
@@ -298,12 +308,13 @@ async def handle_demo_snap(callback: CallbackQuery):
         target_lang=target_code,
         ai_data=demo,
         image_url=None,
+        tenant_id=user.tenant_id,
     )
     if not success:
         await callback.answer(bt("word.save_failed", native), show_alert=True)
         return
 
-    await increment_word_counter(callback.from_user.id)
+    await increment_word_counter(callback.from_user.id, tenant_id=tid)
     from core import analytics as _an
     _an.capture(callback.from_user.id, "word_added", {
         "target_lang": target_code,

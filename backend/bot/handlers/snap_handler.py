@@ -29,14 +29,15 @@ from core.openai_client import (
 from core.unsplash_client import search_image
 from core.user_service import can_add_word, get_or_create_user, increment_word_counter
 from core.word_service import save_word, word_exists
+from core.bot_registry import tenant_id_for_bot
 from bot.keyboards.snap_keyboards import snap_extract_keyboard
 
 logger = logging.getLogger(__name__)
 router = Router()
 
 
-async def _resolve_user_from(tg_user):
-    """Build/fetch wordsnap User з aiogram tg-user об'єкта.
+async def _resolve_user_from(tg_user, tenant_id: int = 1):
+    """Build/fetch wordsnap User з aiogram tg-user об'єкта (у межах тенанта).
 
     Важливо: у callback_query треба передавати `callback.from_user`, а НЕ
     `callback.message.from_user` — друге це сам бот (бо повідомлення
@@ -51,6 +52,7 @@ async def _resolve_user_from(tg_user):
         first_name=tg_user.first_name,
         last_name=tg_user.last_name,
         language_code=tg_user.language_code,
+        tenant_id=tenant_id,
     )
     return user, user.native_lang or "en"
 
@@ -58,7 +60,8 @@ async def _resolve_user_from(tg_user):
 @router.message(F.photo)
 async def handle_photo(message: Message) -> None:
     """Фото → vision-екстракт → клавіатура з кандидатами."""
-    user, lang = await _resolve_user_from(message.from_user)
+    # тенант цього бота (мультитенантність)
+    user, lang = await _resolve_user_from(message.from_user, tenant_id_for_bot(message.bot))
     if user is None:
         return
 
@@ -114,7 +117,8 @@ async def handle_photo(message: Message) -> None:
 @router.message(F.voice)
 async def handle_voice(message: Message) -> None:
     """Голосова → Whisper → екстракт → клавіатура з кандидатами."""
-    user, lang = await _resolve_user_from(message.from_user)
+    # тенант цього бота (мультитенантність)
+    user, lang = await _resolve_user_from(message.from_user, tenant_id_for_bot(message.bot))
     if user is None:
         return
 
@@ -191,7 +195,8 @@ async def cb_snap_add(callback: CallbackQuery) -> None:
 
     # `callback.from_user` — це людина, що натиснула. `callback.message.from_user`
     # був би сам бот — старий баг через який кнопка тихо нічого не робила.
-    user, lang = await _resolve_user_from(callback.from_user)
+    # тенант цього бота (мультитенантність)
+    user, lang = await _resolve_user_from(callback.from_user, tenant_id_for_bot(callback.bot))
     if user is None:
         await callback.answer()
         return
@@ -266,12 +271,13 @@ async def cb_snap_add(callback: CallbackQuery) -> None:
         target_lang=user.target_lang,
         ai_data=ai_data,
         image_url=image_url,
+        tenant_id=user.tenant_id,
     )
     if not saved:
         await callback.message.answer(bt("snap.save_failed", lang))
         return
 
-    await increment_word_counter(user.telegram_id)
+    await increment_word_counter(user.telegram_id, tenant_id=user.tenant_id)
     analytics.capture(callback.from_user.id, "word_added", {
         "target_lang": user.target_lang,
         "native_lang": user.native_lang,

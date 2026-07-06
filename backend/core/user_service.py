@@ -36,14 +36,24 @@ async def get_or_create_user(
     first_name: str | None = None,
     last_name: str | None = None,
     language_code: str | None = None,
+    tenant_id: int = 1,
 ) -> User:
-    """Отримує юзера або створює нового. Скидає денний лічильник якщо новий день."""
+    """Отримує юзера або створює нового У МЕЖАХ ТЕНАНТА. Скидає денний лічильник
+    якщо новий день.
+
+    Мультитенантність: ключ користувача — пара (telegram_id, tenant_id). Той
+    самий Telegram-акаунт у двох викладачів = два незалежні профілі. Дефолт
+    tenant_id=1 = базовий WordSnap (усі старі виклики без параметра лишаються
+    в тенанті 1 без змін)."""
     async with SessionLocal() as session:
         result = await session.execute(
-            select(User).where(User.telegram_id == telegram_id)
+            select(User).where(
+                User.telegram_id == telegram_id,
+                User.tenant_id == tenant_id,
+            )
         )
         user = result.scalar_one_or_none()
-        
+
         if user is None:
             from .referral import generate_code
             # tApps Center compliance: English as default; switch to user's
@@ -57,6 +67,7 @@ async def get_or_create_user(
             )
             user = User(
                 telegram_id=telegram_id,
+                tenant_id=tenant_id,
                 username=username,
                 first_name=first_name,
                 last_name=last_name,
@@ -64,7 +75,10 @@ async def get_or_create_user(
                 native_lang=initial_native_lang,
                 target_lang=None,
                 plan="free",
-                referral_code=generate_code(telegram_id),
+                # referral_code детермінований з telegram_id і UNIQUE — той
+                # самий акаунт у 2 тенантів дав би конфлікт. Реферали — фіча
+                # лише WordSnap (тенант 1); для white-label лишаємо NULL.
+                referral_code=generate_code(telegram_id) if tenant_id == 1 else None,
             )
             session.add(user)
             await session.commit()
@@ -111,6 +125,11 @@ async def can_add_word(user: User, lang: str | None = None) -> tuple[bool, str]:
     """
     from .bot_i18n import t as bt
     msg_lang = lang or user.native_lang or "en"
+
+    # White-label тенанти (не WordSnap): учні не платять оператору через додаток,
+    # білінг прихований — тож жодних лімітів/пейволу на додавання слів.
+    if (user.tenant_id or 1) != 1:
+        return True, ""
 
     if user.plan == "pro":
         if user.plan_expires_at and user.plan_expires_at > datetime.now(timezone.utc):
@@ -188,11 +207,14 @@ async def get_user_status(user: User, lang: str | None = None) -> dict:
     }
 
 
-async def increment_word_counter(telegram_id: int) -> None:
-    """Інкрементує лічильник слів за сьогодні"""
+async def increment_word_counter(telegram_id: int, tenant_id: int = 1) -> None:
+    """Інкрементує лічильник слів за сьогодні (у межах тенанта)."""
     async with SessionLocal() as session:
         result = await session.execute(
-            select(User).where(User.telegram_id == telegram_id)
+            select(User).where(
+                User.telegram_id == telegram_id,
+                User.tenant_id == tenant_id,
+            )
         )
         user = result.scalar_one_or_none()
         if user:
@@ -300,10 +322,12 @@ async def cancel_subscription(telegram_id: int) -> User | None:
         return user
 
 
-async def disable_reminders_if_blocked(telegram_id: int, exc: Exception) -> bool:
+async def disable_reminders_if_blocked(
+    telegram_id: int, exc: Exception, tenant_id: int = 1
+) -> bool:
     """Якщо помилка надсилання — це TelegramForbiddenError (юзер заблокував
-    бота), вимикаємо reminders_enabled, щоб шедулери не ретраїли його вічно
-    (кожен tick, нескінченно). Повертає True якщо вимкнули."""
+    бота), вимикаємо reminders_enabled для ЦЬОГО тенанта, щоб шедулери не
+    ретраїли його вічно. Повертає True якщо вимкнули."""
     try:
         from aiogram.exceptions import TelegramForbiddenError
     except Exception:
@@ -312,9 +336,10 @@ async def disable_reminders_if_blocked(telegram_id: int, exc: Exception) -> bool
         return False
     async with SessionLocal() as session:
         await session.execute(
-            update(User).where(User.telegram_id == telegram_id).values(
-                reminders_enabled=False
-            )
+            update(User).where(
+                User.telegram_id == telegram_id,
+                User.tenant_id == tenant_id,
+            ).values(reminders_enabled=False)
         )
         await session.commit()
     logger.info(f"Disabled reminders for {telegram_id} (bot blocked)")
@@ -325,11 +350,15 @@ async def update_user_languages(
     telegram_id: int,
     native_lang: str,
     target_lang: str,
+    tenant_id: int = 1,
 ) -> None:
-    """Зберігає вибір рідної та цільової мови."""
+    """Зберігає вибір рідної та цільової мови (у межах тенанта)."""
     async with SessionLocal() as session:
         result = await session.execute(
-            select(User).where(User.telegram_id == telegram_id)
+            select(User).where(
+                User.telegram_id == telegram_id,
+                User.tenant_id == tenant_id,
+            )
         )
         user = result.scalar_one_or_none()
         if user:

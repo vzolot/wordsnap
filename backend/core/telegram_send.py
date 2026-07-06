@@ -11,16 +11,32 @@ import aiohttp
 logger = logging.getLogger(__name__)
 
 
+def _token_for_tenant(tenant_id: int) -> str | None:
+    """Токен бота відповідного тенанта — щоб повідомлення йшло з ПРАВИЛЬНОГО
+    бренду. Для тенанта 1 (або невідомого) — env TELEGRAM_BOT_TOKEN. Токени
+    ботів тенантів беремо з реєстру (наповнюється на старті в тому ж процесі)."""
+    if tenant_id and tenant_id != 1:
+        try:
+            from core.bot_registry import get_bot
+            b = get_bot(tenant_id)
+            if b:
+                return b.token
+        except Exception:
+            pass
+    return os.getenv("TELEGRAM_BOT_TOKEN")
+
+
 async def send_message(
     chat_id: int,
     text: str,
     parse_mode: str = "HTML",
     reply_markup: dict | None = None,
+    tenant_id: int = 1,
 ) -> bool:
-    """Надсилає повідомлення через Bot API. Повертає True при успіху."""
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    """Надсилає повідомлення через Bot API з бота тенанта. Повертає True при успіху."""
+    token = _token_for_tenant(tenant_id)
     if not token:
-        logger.warning("TELEGRAM_BOT_TOKEN missing — skipping send_message")
+        logger.warning("no bot token for tenant %s — skipping send_message", tenant_id)
         return False
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
@@ -47,11 +63,13 @@ async def send_document(
     filename: str,
     caption: str | None = None,
     mime_type: str = "application/octet-stream",
+    tenant_id: int = 1,
 ) -> bool:
-    """Надсилає файл у бот-чат через Telegram Bot API (multipart/form-data)."""
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    """Надсилає файл у бот-чат через Telegram Bot API (multipart/form-data)
+    з бота відповідного тенанта."""
+    token = _token_for_tenant(tenant_id)
     if not token:
-        logger.warning("TELEGRAM_BOT_TOKEN missing — skipping send_document")
+        logger.warning("no bot token for tenant %s — skipping send_document", tenant_id)
         return False
 
     url = f"https://api.telegram.org/bot{token}/sendDocument"

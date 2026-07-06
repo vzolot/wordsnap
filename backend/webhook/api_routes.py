@@ -54,9 +54,14 @@ def _serialize_word(w: Word) -> dict:
     }
 
 
-async def _get_user(session, telegram_id: int) -> User | None:
+async def _get_user(session, telegram_id: int, tenant_id: int = 1) -> User | None:
+    """Резолвить юзера СТРОГО в межах тенанта. tenant_id надходить із
+    initData-middleware (довірений), тож клієнт не може дістати чужий тенант."""
     return (await session.execute(
-        select(User).where(User.telegram_id == telegram_id)
+        select(User).where(
+            User.telegram_id == telegram_id,
+            User.tenant_id == tenant_id,
+        )
     )).scalar_one_or_none()
 
 
@@ -80,9 +85,9 @@ async def tenant_config(tenant_id: int = Query(1)):
 
 
 @router.get("/api/words")
-async def get_words(telegram_id: int = Query(...)):
+async def get_words(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             return []
         result = await session.execute(
@@ -94,6 +99,7 @@ async def get_words(telegram_id: int = Query(...)):
 @router.patch("/api/words/{word_id}")
 async def update_word(
     word_id: int, payload: WordUpdateRequest, telegram_id: int = Query(...),
+    tenant_id: int = Query(1),
 ):
     """Редагування перекладу. Дозволяємо юзеру замінити AI-варіант на свій
     (часто діаспора має родинні/регіональні переклади). SRS-стан не чіпаємо."""
@@ -105,7 +111,7 @@ async def update_word(
 
     from sqlalchemy import update as sa_update
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         word = (await session.execute(
@@ -133,11 +139,11 @@ async def update_word(
 
 
 @router.delete("/api/words/{word_id}")
-async def delete_word(word_id: int, telegram_id: int = Query(...)):
+async def delete_word(word_id: int, telegram_id: int = Query(...), tenant_id: int = Query(1)):
     """Видаляє слово (тільки якщо воно належить юзеру). Reviews видаляються
     каскадом через FK ondelete=CASCADE."""
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         word = (await session.execute(
@@ -185,9 +191,9 @@ async def _total_spent(session, user_id: int) -> float:
 
 
 @router.get("/api/stats")
-async def get_stats(telegram_id: int = Query(...)):
+async def get_stats(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             beginner = current_tier(0)
             nxt = next_tier(0)
@@ -353,9 +359,9 @@ async def get_stats(telegram_id: int = Query(...)):
 
 
 @router.get("/api/review")
-async def get_review_words(telegram_id: int = Query(...)):
+async def get_review_words(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             return []
         now = datetime.now(timezone.utc)
@@ -368,7 +374,9 @@ async def get_review_words(telegram_id: int = Query(...)):
 
 
 @router.post("/api/review")
-async def submit_review(data: ReviewRequest, telegram_id: int = Query(...)):
+async def submit_review(
+    data: ReviewRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
     from core.word_service import process_review
     from core.bot_i18n import tier_up_text
     from core.telegram_send import send_message
@@ -380,7 +388,7 @@ async def submit_review(data: ReviewRequest, telegram_id: int = Query(...)):
     # тут уже перевірений (initData middleware), тому resolve'имо user.id і
     # передаємо у process_review як гейт.
     async with SessionLocal() as _s:
-        _caller = await _get_user(_s, telegram_id)
+        _caller = await _get_user(_s, telegram_id, tenant_id)
         if not _caller:
             raise HTTPException(status_code=404, detail="User not found")
         caller_user_id = _caller.id
@@ -402,7 +410,7 @@ async def submit_review(data: ReviewRequest, telegram_id: int = Query(...)):
     from core.streaks import calculate_streak, reviewed_today
     MILESTONES = {3, 7, 14, 30, 60, 100}
     async with SessionLocal() as session:
-        user_for_streak = await _get_user(session, telegram_id)
+        user_for_streak = await _get_user(session, telegram_id, tenant_id)
         if user_for_streak:
             today_count = await reviewed_today(session, user_for_streak.id)
             if today_count == 1:
@@ -420,11 +428,14 @@ async def submit_review(data: ReviewRequest, telegram_id: int = Query(...)):
             "reward_key": tier_up[2],
         })
         async with SessionLocal() as session:
-            user = await _get_user(session, telegram_id)
+            user = await _get_user(session, telegram_id, tenant_id)
         lang = (user.native_lang if user else None) or "uk"
         threshold, tier_key, reward_key = tier_up
         try:
-            await send_message(telegram_id, tier_up_text(lang, threshold, tier_key, reward_key))
+            await send_message(
+                telegram_id, tier_up_text(lang, threshold, tier_key, reward_key),
+                tenant_id=tenant_id,
+            )
         except Exception as e:
             logger.warning(f"tier-up send failed: {e}")
 
@@ -439,7 +450,9 @@ async def submit_review(data: ReviewRequest, telegram_id: int = Query(...)):
 
 
 @router.post("/api/words")
-async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
+async def add_word_endpoint(
+    data: WordRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
     """Додає нове слово через міні-апп — той самий флоу, що й у боті."""
     from core.user_service import get_or_create_user, can_add_word, increment_word_counter
     from core.word_service import word_exists, save_word
@@ -452,7 +465,7 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
     if len(word) < 2 or len(word) > 100:
         raise HTTPException(status_code=400, detail="Word must be 2–100 characters")
 
-    user = await get_or_create_user(telegram_id=telegram_id)
+    user = await get_or_create_user(telegram_id=telegram_id, tenant_id=tenant_id)
     if not user.target_lang:
         return {"error": "setup_required"}
 
@@ -501,12 +514,12 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
 
     success = await save_word(
         user_id=user.id, word=word, target_lang=user.target_lang,
-        ai_data=ai_data, image_url=image_url,
+        ai_data=ai_data, image_url=image_url, tenant_id=user.tenant_id,
     )
     if not success:
         raise HTTPException(status_code=500, detail="Failed to save word")
 
-    await increment_word_counter(telegram_id)
+    await increment_word_counter(telegram_id, tenant_id=user.tenant_id)
 
     async with SessionLocal() as session:
         saved = (await session.execute(
@@ -533,7 +546,9 @@ async def add_word_endpoint(data: WordRequest, telegram_id: int = Query(...)):
 
 
 @router.post("/api/words/bulk")
-async def add_words_bulk_endpoint(data: WordsBulkRequest, telegram_id: int = Query(...)):
+async def add_words_bulk_endpoint(
+    data: WordsBulkRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
     """Додає одразу пачку слів (з набору пісні/теми) одним кліком.
 
     Поважає ліміт: рахуємо бюджет (`daily_limit - used`) наперед і беремо лише
@@ -558,13 +573,16 @@ async def add_words_bulk_endpoint(data: WordsBulkRequest, telegram_id: int = Que
     if len(words) > 60:
         words = words[:60]  # safety cap
 
-    user = await get_or_create_user(telegram_id=telegram_id)
+    user = await get_or_create_user(telegram_id=telegram_id, tenant_id=tenant_id)
     if not user.target_lang:
         return {"error": "setup_required"}
 
     # Бюджет: скільки ще можна додати (daily_limit вже у тижневих одиницях для free)
     status = await get_user_status(user, user.native_lang)
     budget = max(0, int(status["daily_limit"]) - int(status["used_today"]))
+    # White-label: без лімітів (білінг прихований) — беремо всі валідні слова.
+    if (user.tenant_id or 1) != 1:
+        budget = len(words)
 
     # Дублікати — паралельні перевірки існування
     exist_flags = await _aio.gather(*[
@@ -597,7 +615,7 @@ async def add_words_bulk_endpoint(data: WordsBulkRequest, telegram_id: int = Que
                     image_url = await img_task
                     ok = await save_word(
                         user_id=user.id, word=w, target_lang=user.target_lang,
-                        ai_data=ai_data, image_url=image_url,
+                        ai_data=ai_data, image_url=image_url, tenant_id=user.tenant_id,
                     )
                     (added if ok else failed).append(w)
                 except Exception as e:
@@ -639,12 +657,12 @@ async def add_words_bulk_endpoint(data: WordsBulkRequest, telegram_id: int = Que
 
 
 @router.get("/api/songs")
-async def list_song_packs(telegram_id: int = Query(...)):
+async def list_song_packs(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     """Повертає набори слів з пісень для target_lang юзера."""
     from core.song_packs import get_packs
 
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         target = (user.target_lang if user else None) or "en"
 
     packs = get_packs(target)
@@ -652,12 +670,12 @@ async def list_song_packs(telegram_id: int = Query(...)):
 
 
 @router.get("/api/themes")
-async def list_theme_packs(telegram_id: int = Query(...)):
+async def list_theme_packs(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     """Тематичні набори життєвої лексики для target_lang."""
     from core.theme_packs import get_theme_packs
 
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         target = (user.target_lang if user else None) or "en"
 
     packs = get_theme_packs(target)
@@ -668,6 +686,7 @@ async def list_theme_packs(telegram_id: int = Query(...)):
 async def export_words(
     telegram_id: int = Query(...),
     format: str = Query("csv"),
+    tenant_id: int = Query(1),
 ):
     """Експорт всіх слів юзера. CSV — для всіх, APKG — лише Pro.
 
@@ -683,7 +702,7 @@ async def export_words(
         raise HTTPException(status_code=400, detail="format must be csv or apkg")
 
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -717,6 +736,7 @@ async def export_words(
         filename=filename,
         caption=caption,
         mime_type=mime,
+        tenant_id=user.tenant_id,
     )
     if not sent:
         raise HTTPException(status_code=502, detail="Failed to send document")
@@ -738,7 +758,9 @@ class SettingsRequest(BaseModel):
 
 
 @router.patch("/api/user/settings")
-async def update_user_settings(data: SettingsRequest, telegram_id: int = Query(...)):
+async def update_user_settings(
+    data: SettingsRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
     """Часткове оновлення налаштувань юзера. Тільки задані поля міняються."""
     from sqlalchemy import update as sa_update
 
@@ -776,7 +798,7 @@ async def update_user_settings(data: SettingsRequest, telegram_id: int = Query(.
         raise HTTPException(status_code=400, detail="Nothing to update")
 
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         await session.execute(
@@ -791,7 +813,7 @@ async def update_user_settings(data: SettingsRequest, telegram_id: int = Query(.
 
 
 @router.get("/api/referral")
-async def get_referral(telegram_id: int = Query(...)):
+async def get_referral(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     """Повертає реферальний код юзера, посилання та лічильник.
 
     Лінк формату `t.me/<bot>/app?startapp=ref_<code>` — direct mini-app entry
@@ -802,8 +824,13 @@ async def get_referral(telegram_id: int = Query(...)):
     from core.constants import bot_username
     from core.referral import REFERRAL_BONUS_DAYS, ensure_code
 
+    # Реферали — фіча лише WordSnap (тенант 1). Для white-label повертаємо
+    # порожньо, щоб фронтовий prefetch не падав і код не генерувався.
+    if tenant_id != 1:
+        return {"code": None, "link": None, "referrals_count": 0, "bonus_days": 0}
+
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
     code = await ensure_code(user)
@@ -821,7 +848,7 @@ class ApplyReferralRequest(BaseModel):
 
 @router.post("/api/apply_referral")
 async def apply_referral_endpoint(
-    data: ApplyReferralRequest, telegram_id: int = Query(...),
+    data: ApplyReferralRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
 ):
     """Apply a referral when invitee enters via mini-app deeplink.
 
@@ -836,8 +863,12 @@ async def apply_referral_endpoint(
         apply_referral,
     )
 
+    # Реферали — лише WordSnap (тенант 1).
+    if tenant_id != 1:
+        return {"applied": False, "reason": "not_supported_for_tenant"}
+
     async with SessionLocal() as session:
-        invitee = await _get_user(session, telegram_id)
+        invitee = await _get_user(session, telegram_id, tenant_id)
         if not invitee:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -874,31 +905,36 @@ async def apply_referral_endpoint(
 
 
 @router.get("/api/leaderboard")
-async def leaderboard(telegram_id: int = Query(...)):
-    """Топ-50 за total_xp серед тих хто вчить ту саму мову.
-    Повертає рядки + ранг самого юзера (якщо поза топом — окремо)."""
+async def leaderboard(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    """Топ-50 за total_xp серед тих хто вчить ту саму мову В МЕЖАХ ТЕНАНТА.
+    Повертає рядки + ранг самого юзера (якщо поза топом — окремо).
+
+    Ізоляція: рейтинг рахується лише всередині тенанта — учень WordSnap не
+    зʼявляється у борді викладача і навпаки."""
     from sqlalchemy import func as sa_func
 
     async with SessionLocal() as session:
-        me = await _get_user(session, telegram_id)
+        me = await _get_user(session, telegram_id, tenant_id)
         if not me or not me.target_lang:
             return {"top": [], "self_rank": None, "target_lang": None}
 
         target = me.target_lang
         rows = (await session.execute(
             select(User).where(
+                User.tenant_id == tenant_id,
                 User.target_lang == target,
                 User.total_xp > 0,
                 User.show_on_leaderboard == True,  # noqa: E712
             ).order_by(User.total_xp.desc(), User.created_at.asc()).limit(50)
         )).scalars().all()
 
-        # Ранг = кількість юзерів того ж target_lang з більшою кількістю XP + 1.
-        # Тільки якщо у юзера є хоч одне XP І він opted-in.
+        # Ранг = кількість юзерів того ж target_lang (у тенанті) з більшою
+        # кількістю XP + 1. Тільки якщо у юзера є хоч одне XP І він opted-in.
         my_rank = None
         if (me.total_xp or 0) > 0 and me.show_on_leaderboard:
             higher = (await session.execute(
                 select(sa_func.count(User.id)).where(
+                    User.tenant_id == tenant_id,
                     User.target_lang == target,
                     User.total_xp > me.total_xp,
                     User.show_on_leaderboard == True,  # noqa: E712
@@ -1292,7 +1328,7 @@ async def create_stars_invoice(
 
 
 @router.post("/api/cancel_subscription")
-async def cancel_subscription_endpoint(telegram_id: int = Query(...)):
+async def cancel_subscription_endpoint(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     """Скасовує авто-продовження підписки. Pro лишається активним до кінця
     оплаченого періоду (`plan_expires_at`), нових списань не буде.
 
@@ -1305,7 +1341,7 @@ async def cancel_subscription_endpoint(telegram_id: int = Query(...)):
     from core.wayforpay_client import cancel_regular_payment
 
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         order_ref = user.subscription_order_ref
@@ -1344,7 +1380,7 @@ class SaveSurveyRequest(BaseModel):
 
 @router.post("/api/onboarding/save_survey")
 async def save_survey_endpoint(
-    data: SaveSurveyRequest, telegram_id: int = Query(...),
+    data: SaveSurveyRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
 ):
     """Persist on-landing survey results when ad-cohort entered the mini-app
     directly (without going through bot /start). Parses composite payload via
@@ -1364,7 +1400,7 @@ async def save_survey_endpoint(
     payload_mot = parsed["motivation"]
 
     async with SessionLocal() as session:
-        user = await _get_user(session, telegram_id)
+        user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
