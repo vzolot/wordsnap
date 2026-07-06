@@ -661,6 +661,11 @@ MIGRATIONS: list[tuple[str, str]] = [
     ),
     ("rls.groups",        "ALTER TABLE groups ENABLE ROW LEVEL SECURITY"),
     ("rls.group_members", "ALTER TABLE group_members ENABLE ROW LEVEL SECURITY"),
+    # ── M15: місячний PDF-звіт (опція на тенанта) ─────────────────────────
+    (
+        "tenants.monthly_report_enabled",
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS monthly_report_enabled BOOLEAN NOT NULL DEFAULT FALSE",
+    ),
 ]
 
 
