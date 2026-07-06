@@ -427,3 +427,20 @@ group_id → матеріалізація членам групи).
 is_school=true`, 2 викладачі (role=teacher), 2 групи, кілька учнів, колоди на групу,
 активний лідерборд. Потребує реальний бот BotFather — автоматизувати не можна (як M3.5).
 Кроки — у `docs/operator_new_tenant_ua.md` (+ school-специфіка).
+
+---
+
+## Фінальний тестовий прохід ✅
+Додано repo-тести (gated на TEST_DATABASE_URL) для відкладених milestone-ів:
+- `test_school.py` (M14) — ізоляція між викладачами, групи, груповий таргет колоди,
+  owner-бачить-усе, деактивація викладача.
+- `test_homework.py` (M13) — статуси assigned/in_progress/done/overdue.
+- `test_leaderboard.py` (M16) — ранжування, анти-накрутка (distinct word-day), self-rank.
+- `test_churn.py` (M12) — вибір неактивних + анти-спам cooldown.
+Разом **134 тести PASSED**. Міграції: 101 ідемпотентних, 0 fail. Фронт `npm run build` OK.
+M11 (vision) і M15 (PDF) перевірено окремо (генерація PDF валідна; vision потребує OpenAI).
+
+## Підсумок
+**Реалізовано M1–M17** (M18 — оператор-run). 17 PR у стеку (#1–#16 на GitHub;
+деякі milestone-и об'єднані). WordSnap лишається тенантом 1 без змін. Зливати PR
+по черзі; `pg_dump` перед першим мержем у main (Railway автодеплой).
