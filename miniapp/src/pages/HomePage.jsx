@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStats, getReviewWords, getWords, readCache, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
+import { useTenant } from '../contexts/TenantContext';
 import AppBar from '../components/AppBar';
 import DayCompletionModal from '../components/DayCompletionModal';
 import SnapCard from '../components/SnapCard';
@@ -25,6 +26,7 @@ function HomePage() {
   });
   const navigate = useNavigate();
   const { t, plural } = useT();
+  const { isDefaultTenant } = useTenant(); // білінг/ліміти — лише WordSnap (тенант 1)
   const tg = window.Telegram?.WebApp;
   const userName = tg?.initDataUnsafe?.user?.first_name || '';
 
@@ -56,7 +58,9 @@ function HomePage() {
   const prevUsedRef = useRef(null);
 
   useEffect(() => {
-    if (!stats || dailyLimit <= 0) return;
+    // Модалка «денний ліміт досягнуто» — тільки для WordSnap (у white-label
+    // лімітів немає, оплати немає). Для тенантів-викладачів не тригеримо.
+    if (!stats || dailyLimit <= 0 || !isDefaultTenant) return;
     const prev = prevUsedRef.current;
     prevUsedRef.current = usedToday;
     if (prev === null) return; // перший рендер після завантаження stats — не тригеримо

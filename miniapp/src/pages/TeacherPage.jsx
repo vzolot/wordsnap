@@ -597,6 +597,9 @@ export default function TeacherPage() {
   const [editId, setEditId] = useState(null);
   const [forbidden, setForbidden] = useState(false);
   const [view, setView] = useState('decks'); // decks | students
+  const [isSchool, setIsSchool] = useState(false);
+
+  useEffect(() => { getSchoolInfo().then((r) => setIsSchool(!!r.data.is_school)).catch(() => {}); }, []);
 
   const load = useCallback(async () => {
     try {
@@ -640,8 +643,10 @@ export default function TeacherPage() {
                   onClick={() => setView('students')}>Учні</button>
           <button className={`tch-pill ${view === 'calendar' ? 'on' : ''}`}
                   onClick={() => setView('calendar')}>Календар</button>
-          <button className={`tch-pill ${view === 'school' ? 'on' : ''}`}
-                  onClick={() => setView('school')}>Школа</button>
+          {isSchool && (
+            <button className={`tch-pill ${view === 'school' ? 'on' : ''}`}
+                    onClick={() => setView('school')}>Школа</button>
+          )}
         </div>
 
         {view === 'students' && <StudentsList />}

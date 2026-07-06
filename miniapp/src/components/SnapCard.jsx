@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { addWord, clearCache, readCache, writeCache } from '../api/client';
 import { pollImage } from '../utils/pollImage';
 import { useT } from '../contexts/LangContext';
+import { useTenant } from '../contexts/TenantContext';
 import { track } from '../utils/analytics';
 import WordResult from './WordResult';
 
 function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
   const { t } = useT();
+  const { isDefaultTenant } = useTenant(); // лічильник ліміту — лише WordSnap
   const navigate = useNavigate();
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -116,7 +118,7 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
     <div className="snap-card">
       <div className="snap-head">
         <span className="snap-title">📸 {t('snap.title')}</span>
-        {dailyLimit > 0 && (
+        {isDefaultTenant && dailyLimit > 0 && (
           <span className="snap-counter">{t('snap.added_n', { used: usedToday, limit: dailyLimit })}</span>
         )}
       </div>
