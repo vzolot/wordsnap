@@ -389,6 +389,29 @@ async def get_review_words(telegram_id: int = Query(...), tenant_id: int = Query
         return [_serialize_word(w) for w in result.scalars().all()]
 
 
+@router.get("/api/review/weak")
+async def get_weak_review_words(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    """Слабкі слова учня (найбільша частка помилок) — для кнопки «Повторити
+    слабкі слова» з передурочного дайджесту (M10). Серіалізуються як звичайні
+    review-слова."""
+    from core.teacher_stats import weak_word_ids
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id, tenant_id)
+        if not user:
+            return []
+    ids = await weak_word_ids(user.id)
+    if not ids:
+        return []
+    async with SessionLocal() as session:
+        rows = (await session.execute(
+            select(Word).where(Word.id.in_(ids), Word.user_id == user.id)
+        )).scalars().all()
+    # порядок за ранжуванням слабкості
+    order = {wid: i for i, wid in enumerate(ids)}
+    rows.sort(key=lambda w: order.get(w.id, 999))
+    return [_serialize_word(w) for w in rows]
+
+
 @router.post("/api/review")
 async def submit_review(
     data: ReviewRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),

@@ -40,6 +40,7 @@ from scheduler.reengage import reengage_loop
 from scheduler.image_backfill import image_backfill_loop
 from scheduler.admin_report import admin_report_loop
 from scheduler.lesson_reminder import lesson_reminder_loop
+from scheduler.lesson_digest import lesson_digest_loop
 from webhook.server import app as webhook_app
 from core.user_service import (
     get_or_create_user,
@@ -771,6 +772,7 @@ async def main():
         image_backfill_loop(bot),
         admin_report_loop(bot),
         lesson_reminder_loop(bot),
+        lesson_digest_loop(bot),
         server.serve(),
     )
 
