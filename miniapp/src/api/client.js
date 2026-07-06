@@ -55,6 +55,8 @@ export const getTenantConfig = () => api.get('/api/tenant/config');
 export const getWords = () => api.get('/api/words');
 export const getStats = () => api.get('/api/stats');
 export const getReviewWords = () => api.get('/api/review');
+// Слабкі слова учня — для кнопки «Повторити слабкі слова» з дайджесту (M10).
+export const getWeakReviewWords = () => api.get('/api/review/weak');
 export const submitReview = (wordId, quality, mode = 'cards') =>
   api.post('/api/review', { word_id: wordId, quality, mode });
 export const addWord = (word) => api.post('/api/words', { word });

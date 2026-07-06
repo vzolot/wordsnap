@@ -82,6 +82,19 @@ function RouteAnalytics() {
   return null;
 }
 
+// Deep-link (M10): передурочний дайджест шле кнопку web_app з `?src=weak`.
+// Ловимо один раз при старті і ведемо у режим тренування по слабких словах.
+function DeepLinkHandler() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    try {
+      const src = new URLSearchParams(window.location.search).get('src');
+      if (src === 'weak') navigate('/review?src=weak', { replace: true });
+    } catch { /* noop */ }
+  }, [navigate]);
+  return null;
+}
+
 // Standards/Best Practices: native Telegram BackButton на підсторінках.
 // Показуємо на не-home роутах, ховаємо на home. onClick → history back.
 // Замінює in-page «← Back» текстові кнопки у нативний жест.
@@ -314,6 +327,7 @@ function App() {
         {showWelcome && <WelcomeStories onClose={() => setShowWelcome(false)} />}
         <BrowserRouter>
           <RouteAnalytics />
+          <DeepLinkHandler />
           <TelegramBackButton />
           <div className="app">
             <DebugBanner />

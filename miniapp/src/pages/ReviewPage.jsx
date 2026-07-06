@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getReviewWords, getWords, readCache, submitReview, writeCache } from '../api/client';
+import { getReviewWords, getWeakReviewWords, getWords, readCache, submitReview, writeCache } from '../api/client';
 import { useT } from '../contexts/LangContext';
 import { track } from '../utils/analytics';
 import { optimizeImage } from '../utils/optimizeImage';
@@ -58,8 +58,11 @@ function ReviewPage() {
     setSearchParams({ mode: m });
   };
 
+  // src=weak → тренування по слабких словах (з передурочного дайджесту, M10).
+  const src = searchParams.get('src');
   useEffect(() => {
-    getReviewWords().then(r => {
+    const loader = src === 'weak' ? getWeakReviewWords : getReviewWords;
+    loader().then(r => {
       setWords(r.data || []);
       setLoading(false);
     }).catch(() => setLoading(false));
