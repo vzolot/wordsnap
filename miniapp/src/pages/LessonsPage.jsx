@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import AppBar from '../components/AppBar';
 import {
   getCalendarSlots, getMyLessons, bookLesson, cancelMyLesson, getHomework,
+  getWeeklyLeaderboard,
 } from '../api/client';
 
 const HW_LABEL = {
@@ -27,16 +28,20 @@ export default function LessonsPage() {
   const [slots, setSlots] = useState(null);
   const [mine, setMine] = useState([]);
   const [homework, setHomework] = useState([]);
+  const [rank, setRank] = useState(null);
   const [hasTeacher, setHasTeacher] = useState(true);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
-    const [sl, my, hw] = await Promise.all([getCalendarSlots(), getMyLessons(), getHomework()]);
+    const [sl, my, hw, lb] = await Promise.all([
+      getCalendarSlots(), getMyLessons(), getHomework(), getWeeklyLeaderboard(),
+    ]);
     setSlots(sl.data.slots || []);
     setHasTeacher(sl.data.has_teacher !== false);
     setMine(my.data.lessons || []);
     setHomework(hw.data.homework || []);
+    setRank(lb.data);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -79,6 +84,14 @@ export default function LessonsPage() {
       <div className="tch-wrap">
         <h2 className="tch-title">Уроки</h2>
         {msg && <p className="tch-ok">{msg}</p>}
+
+        {rank && rank.self_rank && (
+          <div className="tch-card">
+            <h3 className="tch-h3">🏆 Рейтинг тижня</h3>
+            <p className="tch-muted">Твоє місце: <b style={{ color: 'var(--violet)' }}>
+              #{rank.self_rank}</b> з {rank.total}</p>
+          </div>
+        )}
 
         {homework.length > 0 && (
           <div className="tch-card">
