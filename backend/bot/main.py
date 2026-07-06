@@ -660,8 +660,45 @@ async def main():
         from core.sentry_init import capture_exception
         capture_exception(e, {"phase": "startup_migrations"})
 
-    await bot.delete_webhook(drop_pending_updates=True)
+    # ── Мультибот (white-label): головний бот = тенант 1, плюс боти тенантів ──
+    from core.bot_registry import register as register_bot, make_bot
+    from core.tenant_service import (
+        sync_default_tenant, get_active_tenants, DEFAULT_TENANT_ID,
+    )
+
+    # Тенант 1 має отримати bot_token/bot_id з env — потрібно для резолву
+    # initData головного бота (M3) і для того, щоб полінг підхопив і його.
     try:
+        await sync_default_tenant()
+    except Exception as e:
+        logger.warning(f"sync_default_tenant failed: {e}")
+
+    # Головний бот (той самий токен/сесія — НЕ створюємо другу сесію на нього).
+    register_bot(DEFAULT_TENANT_ID, bot)
+    tenant_bots = [bot]
+    try:
+        for tenant in await get_active_tenants():
+            if tenant.id == DEFAULT_TENANT_ID or not tenant.bot_token:
+                continue
+            tbot = make_bot(tenant.bot_token)
+            register_bot(tenant.id, tbot)
+            tenant_bots.append(tbot)
+            logger.info(
+                f"🤖 Tenant bot up: {tenant.slug} (id={tenant.id}, bot_id={tenant.bot_id})"
+            )
+    except Exception as e:
+        logger.error(f"Failed loading tenant bots: {e}", exc_info=True)
+
+    # Telegram забороняє getUpdates при активному вебхуку — знімаємо на кожному.
+    for b in tenant_bots:
+        try:
+            await b.delete_webhook(drop_pending_updates=True)
+        except Exception as e:
+            logger.warning(f"delete_webhook failed for bot {b.id}: {e}")
+
+    try:
+        # Наразі бренд-команди/опис ставимо лише головному боту. Команди й
+        # брендинг ботів тенантів — окремо (M5/M7), бо мова/бренд відрізняються.
         await setup_bot_commands()
     except Exception as e:
         logger.warning(f"Failed to set bot commands: {e}")
@@ -698,7 +735,7 @@ async def main():
     # recToken'ом → подвійне списання. Код крона лишається у репі на випадок
     # повернення до self-managed моделі.
     await asyncio.gather(
-        dp.start_polling(bot),
+        dp.start_polling(*tenant_bots),
         reminder_loop(bot),
         streak_save_loop(bot),
         reengage_loop(bot),
