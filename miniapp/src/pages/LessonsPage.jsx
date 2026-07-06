@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import AppBar from '../components/AppBar';
 import {
-  getCalendarSlots, getMyLessons, bookLesson, cancelMyLesson,
+  getCalendarSlots, getMyLessons, bookLesson, cancelMyLesson, getHomework,
 } from '../api/client';
+
+const HW_LABEL = {
+  done: '✅ виконано', overdue: '⛔ прострочено',
+  in_progress: '… у процесі', assigned: '▫️ не почато',
+};
 
 const WD = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
@@ -21,15 +26,17 @@ function fmtFull(iso) {
 export default function LessonsPage() {
   const [slots, setSlots] = useState(null);
   const [mine, setMine] = useState([]);
+  const [homework, setHomework] = useState([]);
   const [hasTeacher, setHasTeacher] = useState(true);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
-    const [sl, my] = await Promise.all([getCalendarSlots(), getMyLessons()]);
+    const [sl, my, hw] = await Promise.all([getCalendarSlots(), getMyLessons(), getHomework()]);
     setSlots(sl.data.slots || []);
     setHasTeacher(sl.data.has_teacher !== false);
     setMine(my.data.lessons || []);
+    setHomework(hw.data.homework || []);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -72,6 +79,18 @@ export default function LessonsPage() {
       <div className="tch-wrap">
         <h2 className="tch-title">Уроки</h2>
         {msg && <p className="tch-ok">{msg}</p>}
+
+        {homework.length > 0 && (
+          <div className="tch-card">
+            <h3 className="tch-h3">Домашнє завдання</h3>
+            {homework.map((h) => (
+              <div key={h.id} className="tch-word">
+                <span>📝 <b>{h.title}</b> — до {fmtDay(h.due_at_utc)}</span>
+                <span className={`tch-hw ${h.status}`}>{HW_LABEL[h.status]} ({h.passed}/{h.total})</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {mine.length > 0 && (
           <div className="tch-card">

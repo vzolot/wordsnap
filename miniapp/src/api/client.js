@@ -98,6 +98,10 @@ export const updateTeacherDeck = (deckId, patch) =>
 // M11: фото сторінки → пари «слово–переклад» (превʼю для редагування).
 export const createDeckFromPhoto = (imageB64, imageMime) =>
   api.post('/api/teacher/decks/from_photo', { image_b64: imageB64, image_mime: imageMime });
+// M13: домашнє завдання з дедлайном.
+export const assignHomework = (deckId, dueAtUtc, userIds = null) =>
+  api.post(`/api/teacher/decks/${deckId}/homework`, { due_at_utc: dueAtUtc, user_ids: userIds });
+export const getHomework = () => api.get('/api/homework');
 
 // ── Календар уроків (M9) ──────────────────────────────────────────────────
 // Викладач

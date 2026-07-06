@@ -389,6 +389,17 @@ async def get_review_words(telegram_id: int = Query(...), tenant_id: int = Query
         return [_serialize_word(w) for w in result.scalars().all()]
 
 
+@router.get("/api/homework")
+async def get_homework(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    """M13: домашні завдання учня (колода + дедлайн + статус)."""
+    from core.homework_service import list_for_student
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id, tenant_id)
+        if not user:
+            return {"homework": []}
+    return {"homework": await list_for_student(tenant_id, user.id)}
+
+
 @router.get("/api/review/weak")
 async def get_weak_review_words(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     """Слабкі слова учня (найбільша частка помилок) — для кнопки «Повторити

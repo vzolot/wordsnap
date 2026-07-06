@@ -2857,3 +2857,10 @@
   border: 1px dashed var(--violet); color: var(--violet); background: var(--violet-soft);
   font-weight: 600; font-size: 13px; cursor: pointer; text-align: center;
 }
+
+/* ── M13: домашнє завдання ─────────────────────────────────────────────────── */
+.tch-hw { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.tch-hw.done { color: #16a34a; }
+.tch-hw.overdue { color: var(--coral); }
+.tch-hw.in_progress { color: var(--amber); }
+.tch-hw.assigned { color: var(--text-2); }

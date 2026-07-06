@@ -126,6 +126,36 @@ async def teacher_create_deck(
     return {"ok": True, "deck_id": deck.id, "word_count": len(pairs)}
 
 
+class HomeworkRequest(BaseModel):
+    due_at_utc: str                    # ISO час дедлайну
+    user_ids: list[int] | None = None  # None → усі адресати колоди
+
+
+@router.post("/api/teacher/decks/{deck_id}/homework")
+async def teacher_assign_homework(
+    deck_id: int, data: HomeworkRequest,
+    telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """M13: призначити ДЗ «пройти колоду до дати» адресатам колоди."""
+    from datetime import datetime, timezone
+    from core import homework_service as hw
+    await _require_teacher(telegram_id, tenant_id)
+    try:
+        due = datetime.fromisoformat(data.due_at_utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="bad_due")
+    if due.tzinfo is None:
+        due = due.replace(tzinfo=timezone.utc)
+    try:
+        n = await hw.assign_homework(tenant_id, deck_id, due, data.user_ids)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="deck_not_found")
+    analytics.capture(telegram_id, "teacher_homework_assigned", {
+        "tenant_id": tenant_id, "deck_id": deck_id, "students": n,
+    })
+    return {"ok": True, "assigned": n}
+
+
 class DeckFromPhotoRequest(BaseModel):
     image_b64: str            # base64 без data-URL префіксу
     image_mime: str = "image/jpeg"
