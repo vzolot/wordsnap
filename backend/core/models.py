@@ -103,6 +103,9 @@ class User(Base):
     affiliate_slug: Mapped[str | None] = mapped_column(String(40))
     affiliate_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # M12: анти-спам для алерту ризику відтоку (макс 1 на 7 днів на учня).
+    last_churn_alert_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     # Referrals: унікальний код для запрошень + хто запросив + лічильник
     referral_code: Mapped[str | None] = mapped_column(String(16))
     referred_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"))
@@ -368,6 +371,10 @@ class Tenant(Base):
     cancel_cutoff_hours: Mapped[int] = mapped_column(
         Integer, nullable=False, default=12, server_default="12"
     )
+    # M12: поріг днів бездіяльності для алерту ризику відтоку (конфіг/тенант).
+    churn_alert_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=5, server_default="5"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -510,6 +517,32 @@ class Lesson(Base):
     reminder_24_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     reminder_1_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     digest_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Homework(Base):
+    """Домашнє завдання (M13): пройти колоду до дедлайну. status: assigned /
+    in_progress / done / overdue. Одне ДЗ на (deck_id, user_id)."""
+    __tablename__ = "homework"
+    __table_args__ = (UniqueConstraint("deck_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    deck_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("decks.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    due_at_utc: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="assigned", server_default="assigned"
+    )
+    reminder_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
