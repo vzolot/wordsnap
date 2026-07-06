@@ -83,12 +83,58 @@ async def _process(bot: Bot, field: str, within: timedelta, label: str) -> int:
     return sent
 
 
+async def _process_homework(bot: Bot) -> int:
+    """M13: за 24 год до дедлайну ДЗ нагадуємо учню (якщо ще не done)."""
+    from core.models import Homework, Deck
+    from core.homework_service import _progress
+    now = datetime.now(timezone.utc)
+    horizon = now + timedelta(hours=24)
+    async with SessionLocal() as s:
+        rows = (await s.execute(
+            select(Homework, Deck.title).join(Deck, Deck.id == Homework.deck_id).where(
+                Homework.reminder_sent.is_(False),
+                Homework.due_at_utc > now,
+                Homework.due_at_utc <= horizon,
+            )
+        )).all()
+        if not rows:
+            return 0
+        uids = {hw.user_id for hw, _ in rows}
+        users = {u.id: u for u in (await s.execute(
+            select(User).where(User.id.in_(uids))
+        )).scalars().all()}
+    sent_ids = []
+    for hw, title in rows:
+        async with SessionLocal() as s:
+            passed, total = await _progress(s, hw.deck_id, hw.user_id)
+        if total and passed >= total:
+            sent_ids.append(hw.id)  # вже виконано — не нагадуємо, але гасимо прапор
+            continue
+        user = users.get(hw.user_id)
+        if user:
+            when = _fmt(hw.due_at_utc, user.timezone)
+            tenant_bot = get_bot(hw.tenant_id)
+            await _send(tenant_bot, bot, user.telegram_id,
+                        f"📝 Домашнє завдання: пройди колоду <b>{title}</b> до <b>{when}</b> "
+                        f"({passed}/{total} готово)")
+        sent_ids.append(hw.id)
+        await asyncio.sleep(0.03)
+    if sent_ids:
+        async with SessionLocal() as s:
+            await s.execute(
+                sa_update(Homework).where(Homework.id.in_(sent_ids)).values(reminder_sent=True)
+            )
+            await s.commit()
+    return len([i for i in sent_ids])
+
+
 async def check_lesson_reminders(bot: Bot) -> None:
     try:
         n24 = await _process(bot, "reminder_24_sent", timedelta(hours=24), "завтра")
         n1 = await _process(bot, "reminder_1_sent", timedelta(hours=1), "за годину")
-        if n24 or n1:
-            logger.info(f"📅 Lesson reminders: {n24}×24h, {n1}×1h")
+        nhw = await _process_homework(bot)
+        if n24 or n1 or nhw:
+            logger.info(f"📅 Reminders: {n24}×24h lesson, {n1}×1h lesson, {nhw} homework")
     except Exception as e:
         logger.error(f"lesson reminder job error: {e}", exc_info=True)
 

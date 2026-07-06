@@ -34,13 +34,20 @@ def _fmt(dt_utc: datetime, tz_name: str) -> str:
     return f"{wd} {dt.strftime('%d.%m %H:%M')}"
 
 
-def _teacher_text(student_name: str, when: str, det: dict) -> str:
+def _teacher_text(student_name: str, when: str, det: dict, homework: list | None = None) -> str:
     lines = [
         f"📋 <b>Скоро урок</b> — {when}",
         f"Учень: <b>{student_name}</b>",
         "",
         f"🔥 Стрік: {det['streak']} дн · повторень за 7 дн: {det['reviews_7d']}",
     ]
+    if homework:
+        lines.append("")
+        lines.append("<b>Домашнє завдання:</b>")
+        _label = {"done": "✅ виконано", "overdue": "⛔ прострочено",
+                  "in_progress": "… у процесі", "assigned": "▫️ не почато"}
+        for h in homework[:5]:
+            lines.append(f"• {h['title']}: {_label.get(h['status'], h['status'])} ({h['passed']}/{h['total']})")
     if det.get("decks"):
         lines.append("")
         lines.append("<b>Прогрес по колодах:</b>")
@@ -126,8 +133,10 @@ async def check_digests(bot: Bot) -> None:
             if teacher:
                 when_t = _fmt(l.starts_at_utc, teacher.timezone)
                 sname = student.first_name or "учень"
+                from core.homework_service import student_homework_summary
+                hw = await student_homework_summary(l.tenant_id, student.id)
                 await _send_teacher(tenant_bot, teacher.telegram_id,
-                                    _teacher_text(sname, when_t, det or {}))
+                                    _teacher_text(sname, when_t, det or {}, hw))
             when_s = _fmt(l.starts_at_utc, student.timezone)
             await _send_student(tenant_bot, student.telegram_id, when_s, has_weak)
             due_ids.append(l.id)

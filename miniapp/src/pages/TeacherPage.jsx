@@ -4,7 +4,7 @@ import {
   getTeacherDecks, getTeacherStudents, getTeacherDeck,
   createTeacherDeck, updateTeacherDeck, getTeacherStudentDetail,
   getAvailability, putAvailability, getTeacherLessons, teacherCancelLesson,
-  createDeckFromPhoto,
+  createDeckFromPhoto, assignHomework,
 } from '../api/client';
 
 // Читає File як base64 без data-URL префіксу + повертає mime.
@@ -320,6 +320,32 @@ function EditDeck({ deckId, students, onClose }) {
         </button>
       </div>
       <p className="tch-muted sm">Нові слова підхопляться в учнів без скидання вивченого.</p>
+
+      <h4 className="tch-h4">Домашнє завдання (дедлайн)</h4>
+      <DeadlineAssign deckId={deckId} />
+    </div>
+  );
+}
+
+function DeadlineAssign({ deckId }) {
+  const [due, setDue] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const assign = async () => {
+    if (!due) { setMsg('Оберіть дату дедлайну.'); return; }
+    setBusy(true); setMsg('');
+    try {
+      const iso = new Date(due).toISOString();
+      const r = await assignHomework(deckId, iso);
+      setMsg(`Дедлайн призначено ${r.data.assigned} учням ✅`);
+    } catch { setMsg('Не вдалося призначити.'); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="tch-range" style={{ flexWrap: 'wrap' }}>
+      <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+      <button className="tch-btn sm" onClick={assign} disabled={busy}>Призначити всім</button>
+      {msg && <p className="tch-ok" style={{ width: '100%' }}>{msg}</p>}
     </div>
   );
 }
