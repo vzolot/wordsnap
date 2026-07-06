@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useT } from '../contexts/LangContext';
+import { readCache } from '../api/client';
 import './NavBar.css';
 
 const Icon = ({ d }) => (
@@ -15,24 +16,34 @@ const ICONS = {
   book:   'M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 1 4 17.5zM4 17.5A2.5 2.5 0 0 1 6.5 20H20',
   review: 'M21 12a9 9 0 1 1-3.5-7.1M21 4v5h-5',
   stats:  'M3 21h18M5 21V10M11 21V4M17 21v-7',
+  teacher: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5',
 };
 
 function NavBar() {
   const { t } = useT();
+  // Роль читаємо з кешу stats — вкладка «Викладач» лише для teacher/owner.
+  const role = readCache('stats', { ignoreTtl: true })?.role;
+  const isTeacher = role === 'teacher' || role === 'owner';
   const items = [
-    { to: '/',       key: 'nav.home',   icon: ICONS.home },
-    { to: '/songs',  key: 'nav.songs',  icon: ICONS.songs },
-    { to: '/themes', key: 'nav.themes', icon: ICONS.themes },
-    { to: '/words',  key: 'nav.words',  icon: ICONS.book },
-    { to: '/stats',  key: 'nav.stats',  icon: ICONS.stats },
+    { to: '/',       key: 'nav.home',   icon: ICONS.home,  label: null },
+    { to: '/songs',  key: 'nav.songs',  icon: ICONS.songs, label: null },
+    { to: '/themes', key: 'nav.themes', icon: ICONS.themes, label: null },
+    { to: '/words',  key: 'nav.words',  icon: ICONS.book,  label: null },
+    { to: '/stats',  key: 'nav.stats',  icon: ICONS.stats, label: null },
   ];
+  if (isTeacher) {
+    // Для викладача прибираємо «Пісні» (вторинне) і додаємо «Викладач»,
+    // щоб не перевантажувати таб-бар (макс ~5-6 іконок).
+    items.splice(1, 1);
+    items.push({ to: '/teacher', key: null, icon: ICONS.teacher, label: 'Викладач' });
+  }
 
   return (
     <nav className="navbar">
       {items.map(it => (
         <NavLink key={it.to} to={it.to} end={it.to === '/'} className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
           <Icon d={it.icon} />
-          <span className="nav-label">{t(it.key)}</span>
+          <span className="nav-label">{it.label || t(it.key)}</span>
         </NavLink>
       ))}
     </nav>

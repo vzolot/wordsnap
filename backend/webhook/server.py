@@ -10,6 +10,7 @@ from sqlalchemy import text
 from core.db import engine
 from core.tg_auth import resolve_init_data
 from webhook.api_routes import router as api_router
+from webhook.teacher_routes import router as teacher_router
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+app.include_router(teacher_router)
 
 
 @app.api_route("/health", methods=["GET", "HEAD"])

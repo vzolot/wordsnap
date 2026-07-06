@@ -2746,3 +2746,68 @@
 
 [data-theme="dark"] .speak-btn { color: #C4A8FF; }
 
+
+/* ── Режим викладача (white-label M5) ─────────────────────────────────────── */
+.tch-wrap { padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 12px; }
+.tch-top { display: flex; align-items: center; justify-content: space-between; }
+.tch-title { font-size: 20px; font-weight: 800; color: var(--text-1); margin: 4px 0; }
+.tch-h3 { font-size: 16px; font-weight: 700; color: var(--text-1); margin: 0 0 8px; }
+.tch-h4 { font-size: 14px; font-weight: 700; color: var(--text-1); margin: 12px 0 6px; }
+.tch-muted { color: var(--text-2); font-size: 13px; }
+.tch-muted.sm { font-size: 12px; margin-top: 8px; }
+.tch-err { color: var(--coral); font-size: 13px; margin: 6px 0 0; }
+.tch-ok  { color: #16a34a; font-size: 13px; margin: 6px 0 0; }
+
+.tch-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 16px; box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.tch-input, .tch-textarea {
+  width: 100%; box-sizing: border-box; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--bg); color: var(--text-1); font-size: 14px;
+  font-family: inherit;
+}
+.tch-textarea { resize: vertical; line-height: 1.4; }
+.tch-input:focus, .tch-textarea:focus { outline: 2px solid var(--violet); border-color: transparent; }
+
+.tch-toggle-row { display: flex; gap: 8px; }
+.tch-pill {
+  flex: 1; padding: 9px 12px; border-radius: var(--r-f); font-weight: 600;
+  font-size: 13px; border: 1px solid var(--border); background: var(--bg-pill);
+  color: var(--text-2); cursor: pointer;
+}
+.tch-pill.on { background: var(--gradient); color: #fff; border-color: transparent; }
+
+.tch-students { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
+.tch-student { display: flex; align-items: center; gap: 8px; padding: 7px 4px; font-size: 14px; color: var(--text-1); }
+.tch-student input { width: 18px; height: 18px; accent-color: var(--violet); }
+
+.tch-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.tch-btn {
+  padding: 10px 16px; border-radius: var(--r-f); font-weight: 700; font-size: 14px;
+  background: var(--gradient); color: #fff; border: none; cursor: pointer;
+}
+.tch-btn.ghost { background: var(--bg-pill); color: var(--text-1); }
+.tch-btn.sm { padding: 6px 12px; font-size: 13px; }
+.tch-btn:disabled { opacity: 0.6; }
+
+.tch-deck {
+  width: 100%; text-align: left; display: flex; align-items: center; gap: 10px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-lg);
+  padding: 14px 16px; cursor: pointer; box-shadow: var(--shadow-sm);
+}
+.tch-deck-main { flex: 1; }
+.tch-deck-title { font-weight: 700; color: var(--text-1); font-size: 15px; }
+.tch-deck-sub { color: var(--text-2); font-size: 12px; margin-top: 2px; }
+.tch-deck-edit { color: var(--violet); font-size: 13px; font-weight: 600; }
+
+.tch-edit-head { display: flex; align-items: center; justify-content: space-between; }
+.tch-wordlist { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; margin: 4px 0; }
+.tch-word {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; background: var(--bg-pill); border-radius: var(--r-md); font-size: 14px; color: var(--text-1);
+}
+.tch-x { border: none; background: transparent; color: var(--text-2); font-size: 15px; cursor: pointer; padding: 2px 6px; }
+.tch-x:hover { color: var(--coral); }

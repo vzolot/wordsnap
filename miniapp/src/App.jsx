@@ -20,6 +20,7 @@ const SongsPage  = lazy(() => import('./pages/SongsPage'));
 const ThemesPage = lazy(() => import('./pages/ThemesPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
+const TeacherPage = lazy(() => import('./pages/TeacherPage'));
 
 function applyTheme(scheme) {
   const dark = scheme === 'dark';
@@ -63,6 +64,7 @@ function AppRoutes() {
       <Route path="/themes" element={<ThemesPage />} />
       <Route path="/stats" element={<StatsPage />} />
       {billingEnabled && <Route path="/pro" element={<ProPage />} />}
+      <Route path="/teacher" element={<TeacherPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
       <Route path="*" element={<Navigate to="/" />} />
