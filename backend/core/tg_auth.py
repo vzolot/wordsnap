@@ -21,20 +21,13 @@ from urllib.parse import parse_qsl
 logger = logging.getLogger(__name__)
 
 
-def verify_init_data(init_data: str, max_age_seconds: int | None = None) -> int | None:
-    """Повертає telegram user id якщо підпис initData валідний, інакше None.
-
-    `max_age_seconds`: якщо задано — відхиляє надто старий `auth_date`. За
-    замовчуванням None (не обмежуємо), щоб не розлогінювати юзерів із довгою
-    сесією — підпис сам по собі доводить автентичність.
-    """
-    if not init_data:
+def _verify_with_token(
+    init_data: str, token: str, max_age_seconds: int | None = None
+) -> int | None:
+    """Перевіряє підпис initData конкретним токеном бота. Повертає telegram
+    user id, якщо підпис валідний саме цим токеном, інакше None."""
+    if not init_data or not token:
         return None
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    if not token:
-        logger.error("verify_init_data: TELEGRAM_BOT_TOKEN not set")
-        return None
-
     try:
         # keep_blank_values — щоб не загубити порожні поля при побудові
         # data-check-string; parse_qsl одразу percent-decode'ить значення,
@@ -71,3 +64,51 @@ def verify_init_data(init_data: str, max_age_seconds: int | None = None) -> int 
         return int(user["id"])
     except (ValueError, KeyError, TypeError, json.JSONDecodeError):
         return None
+
+
+def verify_init_data(init_data: str, max_age_seconds: int | None = None) -> int | None:
+    """Backward-compat: перевіряє initData токеном головного бота (env
+    TELEGRAM_BOT_TOKEN = тенант 1). Повертає telegram user id або None.
+    Для мультитенантного резолву — resolve_init_data() нижче."""
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not token:
+        logger.error("verify_init_data: TELEGRAM_BOT_TOKEN not set")
+        return None
+    return _verify_with_token(init_data, token, max_age_seconds)
+
+
+def resolve_init_data(
+    init_data: str, max_age_seconds: int | None = None
+) -> tuple[int, int] | None:
+    """Мультитенантний резолв. Перевіряє підпис initData проти токена КОЖНОГО
+    зареєстрованого бота тенанта; той, що збігся, визначає тенант. Повертає
+    (tenant_id, telegram_user_id) або None.
+
+    Безпека: tenant_id НЕ приходить від клієнта — він випливає з того, чиїм
+    токеном підписано initData. Підробити чужий підпис без токена неможливо.
+    """
+    if not init_data:
+        return None
+
+    # Реєстр ботів наповнюється на старті (bot/main.py) у тому ж процесі, що й
+    # FastAPI. Тенант 1 зареєстрований першим → найшвидший шлях для основного
+    # трафіку. Імпорт лінивий — уникаємо циклічної залежності.
+    try:
+        from core.bot_registry import all_bots, tenant_id_for_bot
+        bots = all_bots()
+    except Exception:
+        bots = []
+
+    for bot in bots:
+        uid = _verify_with_token(init_data, bot.token, max_age_seconds)
+        if uid is not None:
+            return (tenant_id_for_bot(bot), uid)
+
+    # Фолбек: реєстр порожній (напр. процес без піднятих ботів) — пробуємо
+    # env-токен головного бота як тенант 1.
+    env_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if env_token:
+        uid = _verify_with_token(init_data, env_token, max_age_seconds)
+        if uid is not None:
+            return (1, uid)
+    return None

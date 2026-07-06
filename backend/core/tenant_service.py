@@ -8,15 +8,21 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import datetime, timezone
 
 from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from .db import SessionLocal
-from .models import Tenant
+from .models import AiSnapUsage, Tenant
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_TENANT_ID = 1
+
+
+def _current_month() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m")
 
 
 def parse_bot_id(token: str) -> int | None:
@@ -90,6 +96,62 @@ async def get_tenant_by_slug(slug: str) -> Tenant | None:
         return (await session.execute(
             select(Tenant).where(Tenant.slug == slug)
         )).scalar_one_or_none()
+
+
+async def get_ai_snap_count(tenant_id: int, month: str | None = None) -> int:
+    """Скільки AI-снапів витрачено тенантом за місяць (дефолт — поточний)."""
+    month = month or _current_month()
+    async with SessionLocal() as session:
+        row = (await session.execute(
+            select(AiSnapUsage.count).where(
+                AiSnapUsage.tenant_id == tenant_id,
+                AiSnapUsage.month == month,
+            )
+        )).scalar_one_or_none()
+        return int(row or 0)
+
+
+async def ai_snap_available(tenant: Tenant) -> bool:
+    """True якщо тенант ще може робити AI-снап цього місяця. ліміт NULL =
+    без обмежень (тенант id=1). Інакше — count < limit."""
+    if tenant.ai_snap_monthly_limit is None:
+        return True
+    used = await get_ai_snap_count(tenant.id)
+    return used < tenant.ai_snap_monthly_limit
+
+
+async def incr_ai_snap_usage(tenant_id: int, n: int = 1) -> int:
+    """Атомарно інкрементує лічильник AI-снапів тенанта за поточний місяць
+    (upsert). Повертає нове значення count. Викликати ПІСЛЯ реального виклику
+    OpenAI vision (фото/войс снап)."""
+    month = _current_month()
+    async with SessionLocal() as session:
+        stmt = (
+            pg_insert(AiSnapUsage)
+            .values(tenant_id=tenant_id, month=month, count=n)
+            .on_conflict_do_update(
+                index_elements=["tenant_id", "month"],
+                set_={"count": AiSnapUsage.count + n},
+            )
+            .returning(AiSnapUsage.count)
+        )
+        new_count = (await session.execute(stmt)).scalar_one()
+        await session.commit()
+        return int(new_count)
+
+
+def config_payload(tenant: Tenant, ai_available: bool) -> dict:
+    """Публічний конфіг бренду для Mini App. bot_token НЕ включаємо (секрет)."""
+    return {
+        "tenant_id": tenant.id,
+        "slug": tenant.slug,
+        "display_name": tenant.display_name,
+        "logo_url": tenant.logo_url,
+        "color_primary": tenant.color_primary,
+        "color_accent": tenant.color_accent,
+        "ai_snap_available": ai_available,
+        "billing_ui_enabled": tenant.billing_ui_enabled,
+    }
 
 
 async def create_tenant(
