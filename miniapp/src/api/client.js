@@ -95,6 +95,9 @@ export const getTeacherDeck = (deckId) => api.get(`/api/teacher/decks/${deckId}`
 export const createTeacherDeck = (payload) => api.post('/api/teacher/decks', payload);
 export const updateTeacherDeck = (deckId, patch) =>
   api.patch(`/api/teacher/decks/${deckId}`, patch);
+// M11: фото сторінки → пари «слово–переклад» (превʼю для редагування).
+export const createDeckFromPhoto = (imageB64, imageMime) =>
+  api.post('/api/teacher/decks/from_photo', { image_b64: imageB64, image_mime: imageMime });
 
 // ── Календар уроків (M9) ──────────────────────────────────────────────────
 // Викладач

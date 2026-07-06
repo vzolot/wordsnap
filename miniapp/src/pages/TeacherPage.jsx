@@ -4,7 +4,21 @@ import {
   getTeacherDecks, getTeacherStudents, getTeacherDeck,
   createTeacherDeck, updateTeacherDeck, getTeacherStudentDetail,
   getAvailability, putAvailability, getTeacherLessons, teacherCancelLesson,
+  createDeckFromPhoto,
 } from '../api/client';
+
+// Читає File як base64 без data-URL префіксу + повертає mime.
+function fileToB64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result);
+      resolve({ b64: s.slice(s.indexOf(',') + 1), mime: file.type || 'image/jpeg' });
+    };
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
@@ -143,6 +157,27 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
   const [selected, setSelected] = useState(new Set());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  const onPhoto = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setErr(''); setPhotoBusy(true);
+    try {
+      const { b64, mime } = await fileToB64(file);
+      const r = await createDeckFromPhoto(b64, mime);
+      const pairs = r.data.pairs || [];
+      if (pairs.length === 0) { setErr('Не вдалося розпізнати слова на фото.'); return; }
+      const lines = pairs.map((p) => `${p.word} - ${p.translation}`).join('\n');
+      setText((prev) => (prev.trim() ? prev.trim() + '\n' : '') + lines);
+    } catch (ex) {
+      const d = ex?.response?.data?.detail;
+      setErr(d === 'ai_snap_limit_reached'
+        ? 'Ліміт розпізнавання фото на цей місяць вичерпано. Доступно з наступного місяця.'
+        : 'Не вдалося обробити фото.');
+    } finally { setPhotoBusy(false); }
+  };
 
   const toggle = (id) => setSelected((prev) => {
     const n = new Set(prev);
@@ -188,6 +223,11 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
+      <label className="tch-photo-btn">
+        {photoBusy ? '📷 Розпізнаю…' : '📷 Створити з фото'}
+        <input type="file" accept="image/*" capture="environment"
+               onChange={onPhoto} disabled={photoBusy} hidden />
+      </label>
       <div className="tch-toggle-row">
         <button
           className={`tch-pill ${assignAll ? 'on' : ''}`}
