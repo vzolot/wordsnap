@@ -84,12 +84,24 @@ async def tenant_config(tenant_id: int = Query(1)):
     return config_payload(tenant, ai_avail)
 
 
+async def _sync_decks(user) -> None:
+    """Лениво матеріалізує призначені колоди в words учня (нові/новопризначені
+    колоди підхоплюються при завантаженні). Не валимо ендпоінт при збої."""
+    try:
+        from core.deck_service import sync_decks_for_user
+        await sync_decks_for_user(user.id, user.tenant_id)
+    except Exception as e:
+        logger.warning(f"deck sync failed for user {user.id}: {e}")
+
+
 @router.get("/api/words")
 async def get_words(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     async with SessionLocal() as session:
         user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             return []
+    await _sync_decks(user)
+    async with SessionLocal() as session:
         result = await session.execute(
             select(Word).where(Word.user_id == user.id).order_by(Word.created_at.desc())
         )
@@ -214,6 +226,7 @@ async def get_stats(telegram_id: int = Query(...), tenant_id: int = Query(1)):
                 "used_today": 0, "daily_limit": 10,
                 "native_lang": "uk", "target_lang": None,
                 "lang_explicit": False,
+                "role": "student",
                 "is_trial": True,
             }
 
@@ -347,6 +360,7 @@ async def get_stats(telegram_id: int = Query(...), tenant_id: int = Query(1)):
             "native_lang": user.native_lang,
             "lang_explicit": user.lang_explicit,
             "target_lang": user.target_lang,
+            "role": user.role,  # 'student' | 'teacher' | 'owner' → вкладка «Викладач»
             "reminders_enabled": user.reminders_enabled,
             "timezone": user.timezone,
             "avatar_emoji": user.avatar_emoji,
@@ -364,6 +378,8 @@ async def get_review_words(telegram_id: int = Query(...), tenant_id: int = Query
         user = await _get_user(session, telegram_id, tenant_id)
         if not user:
             return []
+    await _sync_decks(user)
+    async with SessionLocal() as session:
         now = datetime.now(timezone.utc)
         result = await session.execute(
             select(Word).where(

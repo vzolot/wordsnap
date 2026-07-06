@@ -85,6 +85,14 @@ export const saveSurvey = (payload) =>
 export const getLeaderboard = () => api.get('/api/leaderboard');
 export const updateSettings = (patch) => api.patch('/api/user/settings', patch);
 
+// ── Режим викладача (white-label M5) ──────────────────────────────────────
+export const getTeacherDecks = () => api.get('/api/teacher/decks');
+export const getTeacherStudents = () => api.get('/api/teacher/students');
+export const getTeacherDeck = (deckId) => api.get(`/api/teacher/decks/${deckId}`);
+export const createTeacherDeck = (payload) => api.post('/api/teacher/decks', payload);
+export const updateTeacherDeck = (deckId, patch) =>
+  api.patch(`/api/teacher/decks/${deckId}`, patch);
+
 /**
  * Stale-while-revalidate fetch.
  * - Якщо є cached дані не старші TTL — повертає одразу + фоновий refresh
