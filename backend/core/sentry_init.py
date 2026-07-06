@@ -43,7 +43,7 @@ def init_sentry() -> None:
 
 
 def _filter_event(event, hint):
-    """Прибираємо шум — handled exceptions, які не потребують tracking."""
+    """Прибираємо шум + вирізаємо чутливі дані перед відправкою у Sentry."""
     # Telegram «message is not modified» — нормально для edit_text
     exc = hint.get("exc_info")
     if exc:
@@ -52,6 +52,24 @@ def _filter_event(event, hint):
             return None
         if "MESSAGE_NOT_MODIFIED" in msg:
             return None
+
+    # Скрабимо чутливі заголовки/дані. X-Telegram-Init-Data містить підписані
+    # user-дані (PII) — не тримаємо у Sentry. bot_token тенантів у запити не
+    # потрапляє взагалі, але про всяк випадок фільтруємо все, що схоже на токен.
+    try:
+        req = event.get("request") or {}
+        headers = req.get("headers")
+        if isinstance(headers, dict):
+            for k in list(headers.keys()):
+                lk = k.lower()
+                if lk in ("x-telegram-init-data", "authorization", "cookie"):
+                    headers[k] = "[scrubbed]"
+        # query_string може містити telegram_id — не критично, але приберемо hash
+        qs = req.get("query_string")
+        if isinstance(qs, str) and "hash=" in qs:
+            req["query_string"] = "[scrubbed]"
+    except Exception:
+        pass
     return event
 
 

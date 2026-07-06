@@ -26,4 +26,12 @@ export function initSentry() {
   }
 }
 
+// White-label (M8): тег тенанта для сегментації помилок по бренду. Без токенів/PII.
+export function setSentryTenant(tenantId, slug) {
+  try {
+    Sentry.setTag('tenant_id', tenantId);
+    if (slug) Sentry.setTag('tenant', slug);
+  } catch { /* noop */ }
+}
+
 export const SentryErrorBoundary = Sentry.ErrorBoundary;
