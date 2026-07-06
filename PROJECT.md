@@ -30,7 +30,7 @@ Three review modes feed the same SM-2 scheduler:
 
 | Layer | Provider | Auto-deploy | Notes |
 |---|---|---|---|
-| Backend (FastAPI + aiogram bot + scheduler) | **Railway** | Yes, on `git push origin main` | One Worker service: API + bot polling + 6 schedulers (reminder, streak-save, recurring-charges, image-backfill, admin-report, **re-engage**) |
+| Backend (FastAPI + aiogram bot + scheduler) | **Railway** | Yes, on `git push origin main` | One Worker service: API + bot polling (multi-bot as of white-label, see §7) + schedulers (reminder, streak-save, recurring-charges, image-backfill, admin-report, re-engage, **lesson-reminder, lesson-digest, churn-alert, monthly-report**) |
 | Mini-app (Vite SPA) | **Vercel** | Yes, on `git push origin main` | Project root: `miniapp/`. Service Worker caches hashed assets. |
 | Database | **Supabase Postgres** | — | Row-Level Security enabled on all tables; backend connects as superuser, public REST API returns 401. |
 | AI | OpenAI `gpt-4o-mini` | — | Backed by `ai_cache` table — 90%+ hit rate after warm-up. ~$0.0005 per cold call. |
@@ -50,6 +50,17 @@ Three review modes feed the same SM-2 scheduler:
 **Known carry-over items:**
 - Free-tier daily limit is 0 (post-trial blocks adds entirely) — by design, but creates `paywall_hit` spike. Watch the funnel.
 - Sentry / PostHog keys must be set in Railway and Vercel envs (already done).
+
+### Changelog — 2026-07-06 (White-Label multi-tenant platform, M1–M17)
+
+Built the white-label platform — WordSnap becomes a multi-tenant base on which
+branded Mini Apps for language teachers run (each teacher = a tenant with own
+bot, brand, decks, students; data fully isolated by `tenant_id`). **WordSnap
+itself is tenant id=1 and is unchanged** — every new column defaults to 1, all
+existing 124 logic tests still pass, no behaviour change for current users.
+Delivered as **17 stacked PRs (#1–#17)** on `github.com/vzolot/wordsnap`, **not
+yet merged/deployed**. Full detail in **§7** below and `docs/whitelabel.md`
+(blow-by-blow log per milestone). 134 tests pass; 101 idempotent migrations.
 
 ### Changelog — 2026-06-24 (TON removal + security/correctness hardening)
 
@@ -516,8 +527,15 @@ backend/
 ├── webhook/          FastAPI routes (/api/*, /healthz, /pay, /api/wayforpay/callback)
 ├── core/             services (openai_client, unsplash_client, srs, rewards,
 │                     streaks, referral, avatars, analytics, auto_migrate, ...)
-├── scheduler/        4 background loops (reminder, streak_save, recurring_charges, image_backfill)
-└── tests/            pytest smoke (i18n, languages, onboarding, rewards, srs)
+├── scheduler/        background loops (reminder, streak_save, recurring_charges,
+│                     image_backfill, admin_report, reengage + white-label:
+│                     lesson_reminder, lesson_digest, churn_alert, monthly_report)
+└── tests/            pytest smoke (i18n, languages, onboarding, rewards, srs) +
+                      white-label DB tests (see §7.6; gated on TEST_DATABASE_URL)
+
+  (White-label multi-tenant additions — tenant_service, bot_registry, deck/
+   teacher_stats/calendar/homework/group/leaderboard services, teacher_routes,
+   calendar_routes, pdf_report, add_tenant.py — are catalogued in §7.6.)
 
 miniapp/
 ├── public/           sw.js, onboarding/slide_*.png, icons.svg
@@ -572,7 +590,158 @@ Cluster of small bugs the user caught in the same review session, none individua
 
 ---
 
-## 7. Where this document lives
+## 7. White-Label — multi-tenant platform for language teachers
+
+**Status (2026-07-06):** M1–M17 implemented (M18 = operator-run). 17 stacked PRs
+`#1–#17` on `github.com/vzolot/wordsnap` (branch chain
+`whitelabel/m1-schema ← … ← whitelabel/final-tests`). **Not yet merged or
+deployed.** 134 tests pass, 101 idempotent migrations. Blow-by-blow log per
+milestone lives in **`docs/whitelabel.md`**; onboarding runbooks in
+`docs/operator_new_tenant_ua.md` + `docs/teacher_welcome_ua.md`.
+
+### 7.1 What it is
+WordSnap becomes a **multi-tenant base**. Each language teacher = a **tenant**:
+own Telegram bot, own brand (name/logo/colours), own decks and own students.
+Tenants' data is fully isolated by `tenant_id`. **WordSnap itself is tenant
+id=1, unchanged** — billing/prices/trial/AI-snap-unlimited stay only on tenant 1;
+every new column defaults to 1 so existing code and users are untouched.
+"Two additional projects" (per the operator) = two branded tenants on the same
+codebase/deploy/DB — no repo forks, no separate services.
+
+### 7.2 Architecture decisions (non-negotiable, and where the TZ was wrong)
+- **One codebase, one deploy, one DB.** No per-teacher copies.
+- **Isolation via `tenant_id`** on every user-data table; every query filters it.
+- **One BotFather bot = one tenant.** Operator creates the bot (teacher sends
+  only name + logo). Ownership stays with the operator (BotFather transfer later
+  on request). BotFather cap ≈ 20 bots/account → second account when scaling.
+- **Same Vercel Mini App serves everyone.** Tenant is resolved on the backend
+  from the signed `initData` (which bot signed it); the client never sends
+  `tenant_id`.
+- **Student in two teachers = two independent profiles.** Uniqueness is
+  `(telegram_id, tenant_id)`, not `telegram_id` alone.
+- **Billing UI hidden for all tenants except id=1.** White-label students never
+  see prices; the teacher pays the operator directly, outside the app. AI-snap
+  isn't disabled for white-label tenants — it's **rate-limited**
+  (`tenants.ai_snap_monthly_limit`, default 30/mo; NULL = unlimited for id=1).
+
+The spec (`~/Downloads/TZ_WordSnap_WhiteLabel_v1.md`) assumed a few things the
+codebase contradicts; we adapted to reality:
+
+| TZ assumed | Reality | What we did |
+|---|---|---|
+| Postgres on Railway | Postgres on **Supabase** (RLS on) | RLS enabled on all new tables |
+| Migrations via Alembic | Idempotent SQL in `core/auto_migrate.py` | New schema goes there |
+| Bot on webhooks `/webhook/{id}` | Bot on **long-polling** (`dp.start_polling`) | **Multi-bot polling** (`dp.start_polling(*bots)`, one shared dispatcher) — agreed with operator; no risky webhook migration of the live bot. New tenant is picked up on a Railway **Redeploy**. |
+| A `decks` table exists | Words are per-user with SRS state on the row | Introduced decks as a **template** (`deck_words`); on assignment they **materialize** into per-student `words` rows (reuses all existing SRS/review/reminder machinery). |
+
+### 7.3 Data model (new)
+- `tenants` — brand/bot/config. id=1 = `wordsnap` (billing_ui on, ai-snap
+  unlimited). `bot_token` is a **secret** (RLS + never logged / never returned by
+  API / scrubbed from Sentry). `bot_id` (numeric prefix of the token) resolves
+  the tenant from initData. Also holds per-tenant config: `ai_snap_monthly_limit`,
+  `billing_ui_enabled`, `digest_lead_hours`, `lesson_duration_min`,
+  `cancel_cutoff_hours`, `churn_alert_days`, `is_school`, `monthly_report_enabled`.
+- `ai_snap_usage (tenant_id, month, count)` — monthly AI-snap counter.
+- `decks` (template: `owner_user_id`, `assign_to_all`, `group_id`, `tenant_id`) +
+  `deck_words` (word/translation pairs) + `deck_assignments` (personal targeting).
+- `teacher_availability`, `teacher_closed_dates`, `lessons` (calendar, M9).
+- `homework` (M13). `groups` + `group_members` (school mode, M14).
+- Existing tables gained `tenant_id` (users/words/reviews; `DEFAULT 1`), users
+  gained `role` (`student`/`teacher`/`owner`), `words` gained `deck_id`.
+  `users` unique is now `(telegram_id, tenant_id)`.
+
+### 7.4 Milestones (all shipped M1–M17; M18 operator-run)
+- **M1 schema** — tenants + isolation columns; idempotent, backward-compatible.
+- **M2 multi-bot** — `core/tenant_service.py`, `core/bot_registry.py` (tenant↔Bot,
+  bot.id→tenant), `scripts/add_tenant.py` (operator CLI; validates via getMe,
+  prints Mini App URL, never prints the token).
+- **M3 tenant resolution + branding** — `tg_auth.resolve_init_data` (verify
+  signature against each registered bot token → the match identifies the tenant;
+  can't be spoofed). `GET /api/tenant/config`. Frontend `TenantContext` applies
+  brand colours (CSS vars) + logo/name; `/pro` route and Pro CTA hidden for
+  white-label.
+- **M4 scoping + isolation** — every service/API/handler/scheduler is
+  tenant-aware; `deck_service.get_visible_decks`; white-label students have **no
+  word limits**; reminders sent from **each user's own tenant bot**; admin report
+  scoped to tenant 1. `tests/test_isolation.py`.
+- **M5 teacher deck CRUD** — `deck_service.py` (tolerant `слово - переклад` / CSV
+  parser, create/add/assign, materialize without resetting learned progress, lazy
+  sync). `webhook/teacher_routes.py` (`_require_teacher` 403 gate).
+  `pages/TeacherPage.jsx`; NavBar "Викладач" tab (role from `/api/stats`).
+- **M6 progress dashboard** — `teacher_stats.py` bulk aggregates (streak, 7d
+  reviews, %learned, at-risk; per-student detail: activity, per-deck progress,
+  top-10 weak words). No N+1 → <1s on 100 students.
+- **M7 onboarding** — `docs/operator_new_tenant_ua.md` + `docs/teacher_welcome_ua.md`;
+  `bot_i18n.branded_welcome` (student /start welcome from the teacher's brand, no
+  WordSnap mention).
+- **M8 Sentry + defence** — `tenant_id` Sentry tag; initData/token scrubbing;
+  `core/rate_limit.py` on deck uploads.
+- **M9 lesson calendar** — `calendar_service.py` (weekly availability in teacher
+  tz, `free_slots` UTC/DST-correct via ZoneInfo, booking with partial-unique
+  anti-double-booking, cancel with student cutoff). `calendar_routes.py`;
+  `scheduler/lesson_reminder.py` (24h+1h). `LessonsPage.jsx` + "Календар" tab.
+- **M10 pre-lesson digest** — `scheduler/lesson_digest.py` reuses M6 aggregates;
+  student gets a web_app button → weak-word training (`/api/review/weak`,
+  `?src=weak` deep-link).
+- **M11 photo→deck** — `openai_client.extract_word_pairs_from_image`;
+  `/api/teacher/decks/from_photo` (ai-snap limit + count).
+- **M12 churn alerts** — `scheduler/churn_alert.py` (inactive ≥ N days, anti-spam
+  cooldown, "at risk" badge in M6).
+- **M13 homework+deadline** — `homework_service.py` (dynamic status
+  assigned/in_progress/done/overdue), 24h reminder, shown in the M10 digest.
+- **M14 school mode** — `group_service.py` (owner adds/deactivates teachers,
+  groups + membership), teacher-level isolation via `_school_scope` (a teacher
+  sees only their groups' students/decks; owner sees all), deck→group targeting.
+  "Школа" tab.
+- **M15 monthly PDF** — `pdf_report.py` (reportlab, branded, no WordSnap);
+  `scheduler/monthly_report.py` (1st of month → PDF per student → teacher as a
+  Telegram file). `tenants.monthly_report_enabled`.
+- **M16 group leaderboard** — `leaderboard_service.py` (ISO-week ranking; past
+  weeks recomputable from review history; anti-cheat = distinct word-day). Teacher
+  top-3 + shareable congrat message.
+- **M17 TTS** — already existed (`SpeakButton` / `utils/speak.js` browser
+  `speechSynthesis`, pl/de/en+) in cards/quiz/word-list/detail. Server-TTS+cache
+  is an optional quality upgrade, deferred.
+- **M18 demo school** — operator-run (needs a real BotFather bot; can't automate).
+
+### 7.5 Security rules (must hold)
+1. `tenant_id` is **never** taken from the client — only from validated
+   initData / webhook. 2. initData is validated with the tenant's own bot_token.
+3. `bot_token` is never logged, returned by API, or sent to Sentry.
+4. Teacher endpoints check `role in (teacher, owner)` **and** tenant match;
+   school mode adds per-teacher scoping.
+
+### 7.6 New code map (additions to §6)
+`backend/core/`: `tenant_service`, `bot_registry`, `deck_service`,
+`teacher_stats`, `calendar_service`, `homework_service`, `group_service`,
+`leaderboard_service`, `pdf_report`, `rate_limit`.
+`backend/webhook/`: `teacher_routes`, `calendar_routes`.
+`backend/scheduler/`: `lesson_reminder`, `lesson_digest`, `churn_alert`,
+`monthly_report`. `backend/scripts/add_tenant.py`.
+`miniapp/src/`: `contexts/TenantContext.jsx`, `pages/TeacherPage.jsx`,
+`pages/LessonsPage.jsx`. `backend/tests/`: `conftest.py` (`bind_test_engine`
+fixes cross-loop DB tests — call after importing services), `test_isolation`,
+`test_teacher_decks`, `test_school`, `test_homework`, `test_leaderboard`,
+`test_churn`, `test_branded_welcome`, `test_rate_limit`.
+
+### 7.7 Deploy & onboarding
+Merge the 17 PRs in order 1→17 (GitHub auto-retargets each base to `main` as the
+parent merges). **`pg_dump` before the first merge hits `main`** (Railway
+auto-deploys; M1 carries the migrations). To add a teacher: BotFather bot →
+`python -m scripts.add_tenant …` → Railway **Redeploy** → `UPDATE users SET
+role='teacher'` → smoke test. Full checklist: `docs/operator_new_tenant_ua.md`.
+
+### 7.8 Known follow-ups (final pass / later)
+- Per-teacher calendar routing in **school** mode (solo works; school currently
+  resolves the first teacher for booking).
+- A few hard-coded hex colours in `App.css` don't pick up the brand override.
+- Server-side TTS + audio cache (M17 optional upgrade).
+- M11 vision extraction has no automated test (needs OpenAI); PDF verified by
+  generating a valid file.
+
+---
+
+## 8. Where this document lives
 
 **Path:** `/Users/zvuid/Documents/projects/wordsnap/PROJECT.md`
 (Repo root, alongside `backend/`, `miniapp/`, `scripts/`.)
@@ -584,5 +753,6 @@ Keep this file updated when:
 - A paid-ads campaign goes live / is killed / scales (update §5 — campaign id, budget, gate outcomes)
 - Brand colors / fonts evolve
 - A scheduler is added or removed
+- A white-label milestone ships / a tenant is onboarded / a PR merges (update §7 + `docs/whitelabel.md`)
 
 If a section starts to drift from reality (e.g. a feature gets removed but the doc still mentions it), prefer deletion over a "deprecated" note — code is source of truth.
