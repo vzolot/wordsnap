@@ -269,6 +269,238 @@ MIGRATIONS: list[tuple[str, str]] = [
         "users.lang_explicit",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS lang_explicit BOOLEAN NOT NULL DEFAULT FALSE",
     ),
+    # ════════════════════════════════════════════════════════════════════
+    # WHITE-LABEL M1 — мультитенантна схема. Все ідемпотентне і безпечне для
+    # прод-бази: усі нові колонки з DEFAULT 1, тому старий код, що вставляє
+    # users/words/reviews без tenant_id, продовжує працювати (запис їде у
+    # тенант 1 = базовий WordSnap). DEFAULT приберемо пізніше (M4), коли весь
+    # код стане tenant-aware.
+    # ════════════════════════════════════════════════════════════════════
+    (
+        "tenants table",
+        """
+        CREATE TABLE IF NOT EXISTS tenants (
+            id                     SERIAL PRIMARY KEY,
+            slug                   VARCHAR(60) UNIQUE NOT NULL,
+            display_name           TEXT NOT NULL,
+            bot_token              TEXT,
+            bot_id                 BIGINT UNIQUE,
+            logo_url               TEXT,
+            color_primary          VARCHAR(9) NOT NULL DEFAULT '#7C3AED',
+            color_accent           VARCHAR(9) NOT NULL DEFAULT '#EC4899',
+            owner_telegram_id      BIGINT,
+            plan                   VARCHAR(20) NOT NULL DEFAULT 'trial',
+            ai_snap_monthly_limit  INTEGER DEFAULT 30,
+            billing_ui_enabled     BOOLEAN NOT NULL DEFAULT FALSE,
+            digest_lead_hours      INTEGER NOT NULL DEFAULT 3,
+            created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+    ),
+    (
+        "tenants.seed_default",
+        # Базовий WordSnap-тенант. billing_ui увімкнено, AI-снап без ліміту
+        # (NULL). bot_id/bot_token заповнюються на старті з TELEGRAM_BOT_TOKEN
+        # (див. sync_default_tenant у M2/M3), тут не чіпаємо.
+        """
+        INSERT INTO tenants (id, slug, display_name, color_primary, color_accent,
+                             plan, ai_snap_monthly_limit, billing_ui_enabled)
+        VALUES (1, 'wordsnap', 'WordSnap', '#7C3AED', '#EC4899',
+                'active', NULL, TRUE)
+        ON CONFLICT (id) DO NOTHING
+        """,
+    ),
+    (
+        "tenants.seq_bump",
+        # id=1 вставлено явно — рухаємо sequence, щоб наступний тенант отримав
+        # id=2, а не спробував 1 і впав на PK-конфлікті.
+        "SELECT setval(pg_get_serial_sequence('tenants','id'), "
+        "GREATEST((SELECT COALESCE(MAX(id),1) FROM tenants), 1))",
+    ),
+    # ── users: tenant_id + role ───────────────────────────────────────────
+    (
+        "users.tenant_id",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id INTEGER NOT NULL DEFAULT 1",
+    ),
+    (
+        "users.role",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'student'",
+    ),
+    (
+        "users.tenant_id_fk",
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint WHERE conname = 'users_tenant_id_fkey'
+            ) THEN
+                ALTER TABLE users ADD CONSTRAINT users_tenant_id_fkey
+                    FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+            END IF;
+        END $$;
+        """,
+    ),
+    (
+        "users.drop_telegram_unique",
+        # Знімаємо будь-який single-column UNIQUE на telegram_id (авто-ім'я
+        # users_telegram_id_key, але шукаємо надійно за колонками), щоб той
+        # самий учень міг існувати у кількох тенантів. Композитний unique нижче.
+        """
+        DO $$
+        DECLARE r record;
+        BEGIN
+            FOR r IN
+                SELECT con.conname
+                FROM pg_constraint con
+                JOIN pg_class rel ON rel.oid = con.conrelid
+                WHERE rel.relname = 'users' AND con.contype = 'u'
+                  AND con.conkey = ARRAY[
+                      (SELECT attnum FROM pg_attribute
+                       WHERE attrelid = rel.oid AND attname = 'telegram_id')
+                  ]
+            LOOP
+                EXECUTE 'ALTER TABLE users DROP CONSTRAINT ' || quote_ident(r.conname);
+            END LOOP;
+        END $$;
+        """,
+    ),
+    (
+        "users.telegram_tenant_unique",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_users_telegram_tenant "
+        "ON users(telegram_id, tenant_id)",
+    ),
+    (
+        "users.tenant_idx",
+        "CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id)",
+    ),
+    # ── decks / deck_words / deck_assignments ─────────────────────────────
+    (
+        "decks table",
+        """
+        CREATE TABLE IF NOT EXISTS decks (
+            id             BIGSERIAL PRIMARY KEY,
+            tenant_id      INTEGER NOT NULL DEFAULT 1 REFERENCES tenants(id) ON DELETE CASCADE,
+            owner_user_id  BIGINT REFERENCES users(id) ON DELETE SET NULL,
+            title          TEXT NOT NULL,
+            target_lang    VARCHAR(5),
+            assign_to_all  BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+    ),
+    (
+        "decks.tenant_idx",
+        "CREATE INDEX IF NOT EXISTS idx_decks_tenant ON decks(tenant_id)",
+    ),
+    (
+        "deck_words table",
+        """
+        CREATE TABLE IF NOT EXISTS deck_words (
+            id           BIGSERIAL PRIMARY KEY,
+            deck_id      BIGINT NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+            word         VARCHAR(255) NOT NULL,
+            translation  TEXT NOT NULL,
+            target_lang  VARCHAR(5),
+            position     INTEGER NOT NULL DEFAULT 0,
+            created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE (deck_id, word)
+        )
+        """,
+    ),
+    (
+        "deck_words.deck_idx",
+        "CREATE INDEX IF NOT EXISTS idx_deck_words_deck ON deck_words(deck_id)",
+    ),
+    (
+        "deck_assignments table",
+        """
+        CREATE TABLE IF NOT EXISTS deck_assignments (
+            id           BIGSERIAL PRIMARY KEY,
+            deck_id      BIGINT NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+            user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            assigned_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE (deck_id, user_id)
+        )
+        """,
+    ),
+    (
+        "deck_assignments.user_idx",
+        "CREATE INDEX IF NOT EXISTS idx_deck_assignments_user ON deck_assignments(user_id)",
+    ),
+    # ── words: tenant_id + deck_id ────────────────────────────────────────
+    (
+        "words.tenant_id",
+        "ALTER TABLE words ADD COLUMN IF NOT EXISTS tenant_id INTEGER NOT NULL DEFAULT 1",
+    ),
+    (
+        "words.deck_id",
+        "ALTER TABLE words ADD COLUMN IF NOT EXISTS deck_id BIGINT",
+    ),
+    (
+        "words.tenant_deck_fk",
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'words_tenant_id_fkey') THEN
+                ALTER TABLE words ADD CONSTRAINT words_tenant_id_fkey
+                    FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'words_deck_id_fkey') THEN
+                ALTER TABLE words ADD CONSTRAINT words_deck_id_fkey
+                    FOREIGN KEY (deck_id) REFERENCES decks(id) ON DELETE SET NULL;
+            END IF;
+        END $$;
+        """,
+    ),
+    (
+        "words.tenant_idx",
+        "CREATE INDEX IF NOT EXISTS idx_words_tenant ON words(tenant_id)",
+    ),
+    (
+        "words.deck_idx",
+        "CREATE INDEX IF NOT EXISTS idx_words_deck ON words(deck_id)",
+    ),
+    # ── reviews: tenant_id ────────────────────────────────────────────────
+    (
+        "reviews.tenant_id",
+        "ALTER TABLE reviews ADD COLUMN IF NOT EXISTS tenant_id INTEGER NOT NULL DEFAULT 1",
+    ),
+    (
+        "reviews.tenant_fk",
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'reviews_tenant_id_fkey') THEN
+                ALTER TABLE reviews ADD CONSTRAINT reviews_tenant_id_fkey
+                    FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+            END IF;
+        END $$;
+        """,
+    ),
+    (
+        "reviews.tenant_idx",
+        "CREATE INDEX IF NOT EXISTS idx_reviews_tenant ON reviews(tenant_id)",
+    ),
+    # ── ai_snap_usage ─────────────────────────────────────────────────────
+    (
+        "ai_snap_usage table",
+        """
+        CREATE TABLE IF NOT EXISTS ai_snap_usage (
+            id         BIGSERIAL PRIMARY KEY,
+            tenant_id  INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            month      VARCHAR(7) NOT NULL,
+            count      INTEGER NOT NULL DEFAULT 0,
+            UNIQUE (tenant_id, month)
+        )
+        """,
+    ),
+    # ── RLS на нових таблицях (як решта — прикриваємо Supabase PostgREST) ──
+    ("rls.tenants",           "ALTER TABLE tenants ENABLE ROW LEVEL SECURITY"),
+    ("rls.ai_snap_usage",     "ALTER TABLE ai_snap_usage ENABLE ROW LEVEL SECURITY"),
+    ("rls.decks",             "ALTER TABLE decks ENABLE ROW LEVEL SECURITY"),
+    ("rls.deck_words",        "ALTER TABLE deck_words ENABLE ROW LEVEL SECURITY"),
+    ("rls.deck_assignments",  "ALTER TABLE deck_assignments ENABLE ROW LEVEL SECURITY"),
 ]
 
 

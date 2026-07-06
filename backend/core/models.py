@@ -14,9 +14,25 @@ from .db import Base
 class User(Base):
     """Користувач Telegram бота"""
     __tablename__ = "users"
+    # Учень може існувати в кількох тенантів під тим самим telegram_id —
+    # унікальність саме по парі, не по telegram_id окремо.
+    __table_args__ = (UniqueConstraint("telegram_id", "tenant_id"),)
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
+    # Multi-tenancy: кожен користувач належить рівно одному тенанту. Учень у
+    # двох викладачів = два незалежні рядки (унікальність (telegram_id,
+    # tenant_id), НЕ лише telegram_id). Дефолт 1 = базовий WordSnap-тенант,
+    # щоб усі старі записи автоматично лишились у ньому.
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tenants.id"), nullable=False,
+        default=1, server_default="1",
+    )
+    # 'student' | 'teacher' | 'owner'. Викладач тенанта бачить вкладку
+    # «Викладач» у Mini App. owner (M14) — власник тенанта-школи.
+    role: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="student", server_default="student",
+    )
+    telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     username: Mapped[str | None] = mapped_column(String(100))
     first_name: Mapped[str | None] = mapped_column(String(100))
     last_name: Mapped[str | None] = mapped_column(String(100))
@@ -131,6 +147,17 @@ class Word(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
+    # Денормалізований tenant_id для швидкого скоупінгу без join через users.
+    # Дефолт 1 = базовий тенант (усі старі слова).
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tenants.id"), nullable=False,
+        default=1, server_default="1",
+    )
+    # Якщо слово матеріалізоване з колоди викладача — посилання на неї.
+    # NULL = звичайне особисте слово учня (класичний WordSnap-флоу).
+    deck_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("decks.id", ondelete="SET NULL"), nullable=True,
+    )
 
     # Контент
     word: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -170,6 +197,10 @@ class Review(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     word_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("words.id", ondelete="CASCADE"))
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tenants.id"), nullable=False,
+        default=1, server_default="1",
+    )
     result: Mapped[str] = mapped_column(String(20), nullable=False)
     interval_before: Mapped[float | None] = mapped_column(Float)
     interval_after: Mapped[float | None] = mapped_column(Float)
@@ -286,5 +317,126 @@ class Lead(Base):
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+# ─── White-label мультитенантність ──────────────────────────────────────────
+
+class Tenant(Base):
+    """Один тенант = один бренд викладача = один Telegram-бот. Дані тенантів
+    повністю ізольовані через tenant_id у кожній таблиці з даними користувачів.
+    Тенант id=1 — базовий WordSnap (billing-UI увімкнено, AI-снап без ліміту)."""
+    __tablename__ = "tenants"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(60), unique=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(Text, nullable=False)
+    # bot_token — секрет. НІКОЛИ не логувати, не віддавати в API, не слати в Sentry.
+    bot_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Числова частина токена до ':' — для резолву тенанта з initData (bot_id).
+    bot_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, nullable=True)
+    logo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    color_primary: Mapped[str] = mapped_column(
+        String(9), nullable=False, default="#7C3AED", server_default="#7C3AED"
+    )
+    color_accent: Mapped[str] = mapped_column(
+        String(9), nullable=False, default="#EC4899", server_default="#EC4899"
+    )
+    owner_telegram_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # 'trial' | 'active' | 'paused'. (M14 додасть 'solo' / 'school' для типу.)
+    plan: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="trial", server_default="trial"
+    )
+    # Місячний ліміт AI-снапів (керування витратами OpenAI). NULL = без ліміту
+    # (тенант id=1). Дефолт 30/міс для white-label.
+    ai_snap_monthly_limit: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, default=30, server_default="30"
+    )
+    # Чи показувати учням екрани підписки/оплати. True лише для id=1.
+    billing_ui_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # Передурочний дайджест (M10): за скільки годин до уроку слати. Конфіг/тенант.
+    digest_lead_hours: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=3, server_default="3"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class AiSnapUsage(Base):
+    """Лічильник AI-снапів на тенант за місяць — для контролю
+    ai_snap_monthly_limit. Один рядок на (tenant_id, month='YYYY-MM')."""
+    __tablename__ = "ai_snap_usage"
+    __table_args__ = (UniqueConstraint("tenant_id", "month"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    month: Mapped[str] = mapped_column(String(7), nullable=False)  # 'YYYY-MM'
+    count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+
+class Deck(Base):
+    """Колода викладача (шаблон). Слова-шаблони живуть у deck_words; учням
+    вони матеріалізуються у words при призначенні (зберігаючи SRS-механіку).
+    assign_to_all=true → всі учні тенанта; false → лише через deck_assignments."""
+    __tablename__ = "decks"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False,
+        default=1, server_default="1",
+    )
+    owner_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    target_lang: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    assign_to_all: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class DeckWord(Base):
+    """Слово-шаблон у колоді викладача (не має SRS-стану — це вихідний список)."""
+    __tablename__ = "deck_words"
+    __table_args__ = (UniqueConstraint("deck_id", "word"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    deck_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("decks.id", ondelete="CASCADE"), nullable=False
+    )
+    word: Mapped[str] = mapped_column(String(255), nullable=False)
+    translation: Mapped[str] = mapped_column(Text, nullable=False)
+    target_lang: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class DeckAssignment(Base):
+    """Персональне призначення колоди учню (для assign_to_all=false)."""
+    __tablename__ = "deck_assignments"
+    __table_args__ = (UniqueConstraint("deck_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    deck_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("decks.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    assigned_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
