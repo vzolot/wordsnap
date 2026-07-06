@@ -347,3 +347,24 @@ async def set_group_members(
     if n < 0:
         raise HTTPException(status_code=403, detail="not_your_group")
     return {"ok": True, "members": n}
+
+
+@router.get("/api/teacher/leaderboard")
+async def teacher_leaderboard(
+    telegram_id: int = Query(...), tenant_id: int = Query(1),
+    group_id: int | None = Query(None),
+):
+    """M16: тижневий топ учнів (групи/тенанта) + готове повідомлення-привітання
+    для пересилання в чат групи."""
+    from core.leaderboard_service import group_leaderboard
+    await _require_teacher(telegram_id, tenant_id)
+    lb = await group_leaderboard(tenant_id, group_id)
+    top3 = lb["rows"][:3]
+    if top3:
+        medals = ["🥇", "🥈", "🥉"]
+        lines = [f"{medals[i]} {r['name']} — {r['reviews']} повторень" for i, r in enumerate(top3)]
+        congrat = "🏆 <b>Топ тижня!</b>\n\n" + "\n".join(lines) + "\n\nВітаємо і тримаємо темп! 💪"
+    else:
+        congrat = None
+    return {"top": lb["rows"], "top3": top3, "congrat_message": congrat,
+            "week_start": lb["week_start"]}

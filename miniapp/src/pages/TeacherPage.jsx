@@ -6,8 +6,26 @@ import {
   getAvailability, putAvailability, getTeacherLessons, teacherCancelLesson,
   createDeckFromPhoto, assignHomework,
   getSchoolInfo, getTeachers, addTeacher, setTeacherActive,
-  getGroups, createGroup, setGroupMembers,
+  getGroups, createGroup, setGroupMembers, getTeacherLeaderboard,
 } from '../api/client';
+
+function TopWeek() {
+  const [data, setData] = useState(null);
+  useEffect(() => { getTeacherLeaderboard().then((r) => setData(r.data)).catch(() => setData({ top3: [] })); }, []);
+  if (!data || !data.top3 || data.top3.length === 0) return null;
+  const medals = ['🥇', '🥈', '🥉'];
+  return (
+    <div className="tch-card">
+      <h3 className="tch-h3">🏆 Топ тижня</h3>
+      {data.top3.map((r, i) => (
+        <div key={r.user_id} className="tch-word">
+          <span>{medals[i]} <b>{r.name}</b></span>
+          <span className="tch-muted">{r.reviews} повторень</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // Читає File як base64 без data-URL префіксу + повертає mime.
 function fileToB64(file) {
@@ -455,6 +473,7 @@ function StudentsList() {
 
   return (
     <>
+      <TopWeek />
       {students.map((s) => (
         <button key={s.id} className="tch-deck" onClick={() => setSel(s.id)}>
           <div className="tch-deck-main">

@@ -389,6 +389,27 @@ async def get_review_words(telegram_id: int = Query(...), tenant_id: int = Query
         return [_serialize_word(w) for w in result.scalars().all()]
 
 
+@router.get("/api/leaderboard/weekly")
+async def weekly_leaderboard(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    """M16: тижневий рейтинг у групі учня (або всіх учнів тенанта) з його місцем."""
+    from core.leaderboard_service import group_leaderboard
+    from core.models import GroupMember
+    async with SessionLocal() as session:
+        user = await _get_user(session, telegram_id, tenant_id)
+        if not user:
+            return {"top": [], "self_rank": None}
+        group_id = (await session.execute(
+            select(GroupMember.group_id).where(GroupMember.user_id == user.id).limit(1)
+        )).scalar_one_or_none()
+    lb = await group_leaderboard(tenant_id, group_id)
+    return {
+        "top": lb["rows"],
+        "self_rank": lb["all_ranks"].get(user.id),
+        "total": lb["total"],
+        "week_start": lb["week_start"],
+    }
+
+
 @router.get("/api/homework")
 async def get_homework(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     """M13: домашні завдання учня (колода + дедлайн + статус)."""

@@ -85,6 +85,10 @@ export const applyReferral = (code) => api.post('/api/apply_referral', { code })
 export const saveSurvey = (payload) =>
   api.post('/api/onboarding/save_survey', { payload });
 export const getLeaderboard = () => api.get('/api/leaderboard');
+// M16: тижневий груповий лідерборд.
+export const getWeeklyLeaderboard = () => api.get('/api/leaderboard/weekly');
+export const getTeacherLeaderboard = (groupId = null) =>
+  api.get('/api/teacher/leaderboard', { params: groupId ? { group_id: groupId } : {} });
 export const updateSettings = (patch) => api.patch('/api/user/settings', patch);
 
 // ── Режим викладача (white-label M5) ──────────────────────────────────────
