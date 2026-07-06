@@ -708,6 +708,7 @@ async def main():
     # Головний бот (той самий токен/сесія — НЕ створюємо другу сесію на нього).
     register_bot(DEFAULT_TENANT_ID, bot)
     tenant_bots = [bot]
+    tenant_bot_pairs = []  # [(tenant, bot)] для брендового меню тенантів
     try:
         for tenant in await get_active_tenants():
             if tenant.id == DEFAULT_TENANT_ID or not tenant.bot_token:
@@ -715,6 +716,7 @@ async def main():
             tbot = make_bot(tenant.bot_token)
             register_bot(tenant.id, tbot)
             tenant_bots.append(tbot)
+            tenant_bot_pairs.append((tenant, tbot))
             logger.info(
                 f"🤖 Tenant bot up: {tenant.slug} (id={tenant.id}, bot_id={tenant.bot_id})"
             )
@@ -727,6 +729,16 @@ async def main():
             await b.delete_webhook(drop_pending_updates=True)
         except Exception as e:
             logger.warning(f"delete_webhook failed for bot {b.id}: {e}")
+
+    # Брендоване меню команд / опис / кнопка-меню для КОЖНОГО бота тенанта
+    # (без згадок WordSnap, без білінг-команд). Оператору не треба робити це
+    # вручну в BotFather — кнопка-меню сама відкриває Mini App.
+    from core.bot_menu import setup_tenant_bot
+    for tenant, tbot in tenant_bot_pairs:
+        try:
+            await setup_tenant_bot(tbot, tenant)
+        except Exception as e:
+            logger.warning(f"tenant bot menu setup failed for {tenant.slug}: {e}")
 
     try:
         # Наразі бренд-команди/опис ставимо лише головному боту. Команди й
