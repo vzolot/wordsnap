@@ -581,6 +581,37 @@ MIGRATIONS: list[tuple[str, str]] = [
     ("rls.teacher_availability", "ALTER TABLE teacher_availability ENABLE ROW LEVEL SECURITY"),
     ("rls.teacher_closed_dates", "ALTER TABLE teacher_closed_dates ENABLE ROW LEVEL SECURITY"),
     ("rls.lessons",              "ALTER TABLE lessons ENABLE ROW LEVEL SECURITY"),
+    # ── M12: алерти ризику відтоку ────────────────────────────────────────
+    (
+        "tenants.churn_alert_days",
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS churn_alert_days INTEGER NOT NULL DEFAULT 5",
+    ),
+    (
+        "users.last_churn_alert_at",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_churn_alert_at TIMESTAMPTZ",
+    ),
+    # ── M13: домашнє завдання з дедлайном ─────────────────────────────────
+    (
+        "homework table",
+        """
+        CREATE TABLE IF NOT EXISTS homework (
+            id           BIGSERIAL PRIMARY KEY,
+            tenant_id    INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            deck_id      BIGINT NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+            user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            due_at_utc   TIMESTAMPTZ NOT NULL,
+            status       VARCHAR(20) NOT NULL DEFAULT 'assigned',
+            reminder_sent BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE (deck_id, user_id)
+        )
+        """,
+    ),
+    (
+        "homework.idx",
+        "CREATE INDEX IF NOT EXISTS idx_homework_user ON homework(user_id, status)",
+    ),
+    ("rls.homework", "ALTER TABLE homework ENABLE ROW LEVEL SECURITY"),
 ]
 
 
