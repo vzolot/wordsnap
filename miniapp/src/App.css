@@ -2811,3 +2811,23 @@
 }
 .tch-x { border: none; background: transparent; color: var(--text-2); font-size: 15px; cursor: pointer; padding: 2px 6px; }
 .tch-x:hover { color: var(--coral); }
+
+/* ── Дашборд викладача (M6) ────────────────────────────────────────────────── */
+.tch-risk {
+  margin-left: 8px; font-size: 10px; font-weight: 700; color: #fff;
+  background: var(--coral); padding: 2px 7px; border-radius: var(--r-f); vertical-align: middle;
+}
+.tch-metrics { display: flex; gap: 8px; }
+.tch-metric {
+  flex: 1; background: var(--bg-pill); border-radius: var(--r-md); padding: 10px; text-align: center;
+}
+.tch-metric b { display: block; font-size: 20px; color: var(--text-1); }
+.tch-metric span { font-size: 11px; color: var(--text-2); }
+.tch-spark { display: flex; align-items: flex-end; gap: 2px; height: 48px; padding: 4px 0; }
+.tch-spark-bar { flex: 1; background: var(--violet); border-radius: 2px 2px 0 0; min-height: 3px; opacity: 0.85; }
+.tch-deckprog { margin: 8px 0; }
+.tch-deckprog-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-1); margin-bottom: 4px; }
+.tch-bar { display: flex; height: 8px; border-radius: var(--r-f); overflow: hidden; background: var(--bg-pill); }
+.tch-bar-learned { background: #16a34a; }
+.tch-bar-prog { background: var(--amber); }
+.tch-weak { font-size: 12px; color: var(--coral); font-weight: 600; white-space: nowrap; }

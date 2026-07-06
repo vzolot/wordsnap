@@ -2,8 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import AppBar from '../components/AppBar';
 import {
   getTeacherDecks, getTeacherStudents, getTeacherDeck,
-  createTeacherDeck, updateTeacherDeck,
+  createTeacherDeck, updateTeacherDeck, getTeacherStudentDetail,
 } from '../api/client';
+
+function relTime(iso) {
+  if (!iso) return 'ніколи не заходив';
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days <= 0) return 'сьогодні';
+  if (days === 1) return 'вчора';
+  if (days < 7) return `${days} дн. тому`;
+  if (days < 30) return `${Math.floor(days / 7)} тижн. тому`;
+  return `${Math.floor(days / 30)} міс. тому`;
+}
 
 // Режим викладача (white-label M5). Текст українською — аудиторія викладачів
 // україномовна діаспора (узгоджено з ТЗ; повний i18n — за потреби пізніше).
@@ -176,12 +186,120 @@ function EditDeck({ deckId, students, onClose }) {
   );
 }
 
+function StudentDetail({ studentId, onClose }) {
+  const [d, setD] = useState(null);
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    getTeacherStudentDetail(studentId).then((r) => setD(r.data)).catch(() => setErr(true));
+  }, [studentId]);
+
+  if (err) return <div className="tch-card"><p className="tch-muted">Не вдалося завантажити.</p></div>;
+  if (!d) return <div className="tch-card"><p className="tch-muted">Завантаження…</p></div>;
+
+  // Мінібар активності за 30 днів
+  const today = new Date();
+  const bars = [];
+  let maxN = 1;
+  for (let i = 29; i >= 0; i--) {
+    const dt = new Date(today.getTime() - i * 86400000);
+    const key = dt.toISOString().slice(0, 10);
+    const n = d.activity[key] || 0;
+    if (n > maxN) maxN = n;
+    bars.push({ key, n });
+  }
+
+  return (
+    <div className="tch-card">
+      <div className="tch-edit-head">
+        <h3 className="tch-h3">{d.display_name}</h3>
+        <button className="tch-btn ghost sm" onClick={onClose}>← Назад</button>
+      </div>
+      <div className="tch-metrics">
+        <div className="tch-metric"><b>{d.streak}</b><span>днів поспіль</span></div>
+        <div className="tch-metric"><b>{d.reviews_7d}</b><span>за 7 днів</span></div>
+        <div className="tch-metric"><b>{d.reviews_30d}</b><span>за 30 днів</span></div>
+      </div>
+
+      <h4 className="tch-h4">Активність (30 днів)</h4>
+      <div className="tch-spark">
+        {bars.map((b) => (
+          <div key={b.key} className="tch-spark-bar"
+               style={{ height: `${Math.max(3, Math.round(100 * b.n / maxN))}%` }}
+               title={`${b.key}: ${b.n}`} />
+        ))}
+      </div>
+
+      <h4 className="tch-h4">Прогрес по колодах</h4>
+      {d.decks.length === 0 && <p className="tch-muted">Немає призначених колод.</p>}
+      {d.decks.map((dk) => {
+        const total = dk.learned + dk.in_progress + dk.not_started || 1;
+        return (
+          <div key={dk.deck_id} className="tch-deckprog">
+            <div className="tch-deckprog-top">
+              <span>{dk.title}</span>
+              <span className="tch-muted">{dk.learned}/{total}</span>
+            </div>
+            <div className="tch-bar">
+              <div className="tch-bar-learned" style={{ width: `${100 * dk.learned / total}%` }} />
+              <div className="tch-bar-prog" style={{ width: `${100 * dk.in_progress / total}%` }} />
+            </div>
+          </div>
+        );
+      })}
+
+      <h4 className="tch-h4">Слабкі слова</h4>
+      {d.weak_words.length === 0 && <p className="tch-muted">Замало даних або немає помилок.</p>}
+      {d.weak_words.map((w) => (
+        <div key={w.word_id} className="tch-word">
+          <span><b>{w.word}</b> — {w.translation}</span>
+          <span className="tch-weak">{Math.round(w.error_rate * 100)}% помилок</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StudentsList() {
+  const [students, setStudents] = useState(null);
+  const [sel, setSel] = useState(null);
+
+  useEffect(() => {
+    getTeacherStudents().then((r) => setStudents(r.data.students || [])).catch(() => setStudents([]));
+  }, []);
+
+  if (sel != null) return <StudentDetail studentId={sel} onClose={() => setSel(null)} />;
+  if (students === null) return <p className="tch-muted">Завантаження…</p>;
+  if (students.length === 0) return (
+    <div className="tch-card"><p className="tch-muted">
+      Ще немає учнів. Поділіться посиланням на бота.</p></div>
+  );
+
+  return (
+    <>
+      {students.map((s) => (
+        <button key={s.id} className="tch-deck" onClick={() => setSel(s.id)}>
+          <div className="tch-deck-main">
+            <div className="tch-deck-title">
+              {s.display_name}{s.at_risk && <span className="tch-risk">в ризику</span>}
+            </div>
+            <div className="tch-deck-sub">
+              🔥 {s.streak} · {s.reviews_7d} за 7д · {s.learned_pct}% вивчено · {relTime(s.last_visit)}
+            </div>
+          </div>
+          <span className="tch-deck-edit">›</span>
+        </button>
+      ))}
+    </>
+  );
+}
+
 export default function TeacherPage() {
   const [decks, setDecks] = useState(null);
   const [students, setStudents] = useState([]);
   const [mode, setMode] = useState('list'); // list | create | edit
   const [editId, setEditId] = useState(null);
   const [forbidden, setForbidden] = useState(false);
+  const [view, setView] = useState('decks'); // decks | students
 
   const load = useCallback(async () => {
     try {
@@ -213,12 +331,21 @@ export default function TeacherPage() {
       <div className="tch-wrap">
         <div className="tch-top">
           <h2 className="tch-title">Викладач</h2>
-          {mode === 'list' && (
+          {view === 'decks' && mode === 'list' && (
             <button className="tch-btn" onClick={() => setMode('create')}>+ Колода</button>
           )}
         </div>
 
-        {mode === 'create' && (
+        <div className="tch-toggle-row">
+          <button className={`tch-pill ${view === 'decks' ? 'on' : ''}`}
+                  onClick={() => { setView('decks'); setMode('list'); }}>Колоди</button>
+          <button className={`tch-pill ${view === 'students' ? 'on' : ''}`}
+                  onClick={() => setView('students')}>Учні</button>
+        </div>
+
+        {view === 'students' && <StudentsList />}
+
+        {view === 'decks' && mode === 'create' && (
           <CreateDeckForm
             students={students}
             onCreated={() => { setMode('list'); load(); }}
@@ -226,7 +353,7 @@ export default function TeacherPage() {
           />
         )}
 
-        {mode === 'edit' && editId != null && (
+        {view === 'decks' && mode === 'edit' && editId != null && (
           <EditDeck
             deckId={editId}
             students={students}
@@ -234,7 +361,7 @@ export default function TeacherPage() {
           />
         )}
 
-        {mode === 'list' && (
+        {view === 'decks' && mode === 'list' && (
           <>
             {decks === null && <p className="tch-muted">Завантаження…</p>}
             {decks && decks.length === 0 && (

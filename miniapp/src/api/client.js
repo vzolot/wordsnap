@@ -88,6 +88,7 @@ export const updateSettings = (patch) => api.patch('/api/user/settings', patch);
 // ── Режим викладача (white-label M5) ──────────────────────────────────────
 export const getTeacherDecks = () => api.get('/api/teacher/decks');
 export const getTeacherStudents = () => api.get('/api/teacher/students');
+export const getTeacherStudentDetail = (id) => api.get(`/api/teacher/students/${id}`);
 export const getTeacherDeck = (deckId) => api.get(`/api/teacher/decks/${deckId}`);
 export const createTeacherDeck = (payload) => api.post('/api/teacher/decks', payload);
 export const updateTeacherDeck = (deckId, patch) =>
