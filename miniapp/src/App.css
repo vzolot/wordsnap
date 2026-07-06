@@ -300,7 +300,10 @@
   font-weight: 900;
   font-size: 16px;
   flex-shrink: 0;
+  overflow: hidden;
 }
+/* White-label лого-картинка бренду — заповнює 32×32 чіп, обрізаючись по кутах. */
+.app-bar-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .app-bar-titles { line-height: 1; }
 .app-bar-title { font-size: 14px; font-weight: 700; color: var(--text-1); }
 .app-bar-sub   { font-size: 11px; color: var(--text-2); margin-top: 2px; }

@@ -5,6 +5,7 @@ import NavBar from './components/NavBar';
 import DebugBanner from './components/DebugBanner';
 import WelcomeStories, { shouldShowWelcome } from './components/WelcomeStories';
 import { LangProvider } from './contexts/LangContext';
+import { TenantProvider, useTenant } from './contexts/TenantContext';
 import { applyReferral, getTelegramUserId, prefetchAll, saveSurvey } from './api/client';
 import { initAnalytics, track } from './utils/analytics';
 import { getAttribution } from './utils/attribution';
@@ -47,6 +48,27 @@ function getInitialTheme() {
 const RouteFallback = () => (
   <div className="page"><div className="center-loader"><span className="spinner" /></div></div>
 );
+
+// Роути. /pro (білінг/підписка) існує ЛИШЕ для тенанта з billing_ui_enabled
+// (WordSnap, id=1). Для white-label тенантів маршрут відсутній → будь-який
+// перехід на /pro редіректить на home, і жодних цін учні не бачать.
+function AppRoutes() {
+  const { billingEnabled } = useTenant();
+  return (
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/words" element={<WordsPage />} />
+      <Route path="/review" element={<ReviewPage />} />
+      <Route path="/songs" element={<SongsPage />} />
+      <Route path="/themes" element={<ThemesPage />} />
+      <Route path="/stats" element={<StatsPage />} />
+      {billingEnabled && <Route path="/pro" element={<ProPage />} />}
+      <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/leaderboard" element={<LeaderboardPage />} />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
+  );
+}
 
 function RouteAnalytics() {
   const location = useLocation();
@@ -283,31 +305,22 @@ function App() {
   }, []);
 
   return (
-    <LangProvider>
-      {showWelcome && <WelcomeStories onClose={() => setShowWelcome(false)} />}
-      <BrowserRouter>
-        <RouteAnalytics />
-        <TelegramBackButton />
-        <div className="app">
-          <DebugBanner />
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/words" element={<WordsPage />} />
-              <Route path="/review" element={<ReviewPage />} />
-              <Route path="/songs" element={<SongsPage />} />
-              <Route path="/themes" element={<ThemesPage />} />
-              <Route path="/stats" element={<StatsPage />} />
-              <Route path="/pro" element={<ProPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/leaderboard" element={<LeaderboardPage />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </Suspense>
-          <NavBar />
-        </div>
-      </BrowserRouter>
-    </LangProvider>
+    <TenantProvider>
+      <LangProvider>
+        {showWelcome && <WelcomeStories onClose={() => setShowWelcome(false)} />}
+        <BrowserRouter>
+          <RouteAnalytics />
+          <TelegramBackButton />
+          <div className="app">
+            <DebugBanner />
+            <Suspense fallback={<RouteFallback />}>
+              <AppRoutes />
+            </Suspense>
+            <NavBar />
+          </div>
+        </BrowserRouter>
+      </LangProvider>
+    </TenantProvider>
   );
 }
 

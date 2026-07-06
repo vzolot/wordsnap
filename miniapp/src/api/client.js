@@ -48,6 +48,10 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// White-label: бренд/конфіг тенанта (назва, лого, кольори, billing-UI прапор,
+// доступність AI-снапу). tenant_id виводиться бекендом з підпису initData —
+// клієнт його не передає й не може підмінити.
+export const getTenantConfig = () => api.get('/api/tenant/config');
 export const getWords = () => api.get('/api/words');
 export const getStats = () => api.get('/api/stats');
 export const getReviewWords = () => api.get('/api/review');

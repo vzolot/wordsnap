@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useT } from '../contexts/LangContext';
+import { useTenant } from '../contexts/TenantContext';
 import ThemeToggle from './ThemeToggle';
 import { readCache } from '../api/client';
 
@@ -12,13 +13,23 @@ import { readCache } from '../api/client';
 // when they already compute it for their own logic (HomePage / StatsPage).
 function AppBar({ showProLink = true, isPro: isProProp = null }) {
   const { t } = useT();
+  const { display_name, logo_url, billingEnabled } = useTenant();
   const cached = readCache('stats', { ignoreTtl: true });
   const isPro = isProProp !== null ? isProProp : (cached?.plan === 'pro');
+  // Логотип: картинка бренду якщо є, інакше перша літера назви (WordSnap → «W»).
+  const initial = (display_name || 'W').trim().charAt(0).toUpperCase();
+  // Pro-CTA показуємо лише для тенанта з увімкненим білінгом (WordSnap).
+  // Для white-label — жодних згадок Pro/цін.
+  const showPro = showProLink && billingEnabled;
   return (
     <header className="app-bar">
-      <div className="app-bar-logo">W</div>
+      <div className="app-bar-logo">
+        {logo_url
+          ? <img src={logo_url} alt="" className="app-bar-logo-img" />
+          : initial}
+      </div>
       <div className="app-bar-titles">
-        <div className="app-bar-title">WordSnap</div>
+        <div className="app-bar-title">{display_name || 'WordSnap'}</div>
         <div className="app-bar-sub">{t('app.subtitle')}</div>
       </div>
       <div className="app-bar-actions">
@@ -29,7 +40,7 @@ function AppBar({ showProLink = true, isPro: isProProp = null }) {
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </Link>
-        {showProLink && (
+        {showPro && (
           isPro ? (
             <Link to="/pro" className="pro-active-badge">✨ PRO</Link>
           ) : (

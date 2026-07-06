@@ -60,6 +60,25 @@ async def _get_user(session, telegram_id: int) -> User | None:
     )).scalar_one_or_none()
 
 
+@router.get("/api/tenant/config")
+async def tenant_config(tenant_id: int = Query(1)):
+    """Публічний конфіг бренду тенанта для Mini App. tenant_id тут довірений —
+    його підставляє initData-middleware з підпису бота (клієнт не контролює).
+    Повертає бренд (назва/лого/кольори), доступність AI-снапу цього місяця і
+    прапор billing-UI. bot_token НІКОЛИ не віддається."""
+    from core.tenant_service import (
+        get_tenant_by_id, ai_snap_available, config_payload,
+    )
+    tenant = await get_tenant_by_id(tenant_id)
+    if tenant is None:
+        # Фолбек до базового тенанта — Mini App завжди має бренд.
+        tenant = await get_tenant_by_id(1)
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="tenant_not_found")
+    ai_avail = await ai_snap_available(tenant)
+    return config_payload(tenant, ai_avail)
+
+
 @router.get("/api/words")
 async def get_words(telegram_id: int = Query(...)):
     async with SessionLocal() as session:
