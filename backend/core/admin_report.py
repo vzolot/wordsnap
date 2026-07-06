@@ -11,7 +11,7 @@ from html import escape
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 
 from .db import SessionLocal
 from .models import PaymentHistory, Review, User, Word
@@ -97,8 +97,14 @@ async def _gather_metrics(p: dict) -> dict:
         # Real users only — `users.is_test_account=TRUE` is the founder/internal
         # testers. Used as a subquery filter on every Review/Word/PaymentHistory
         # query (via user_id IN real_users) and as a WHERE on User queries.
-        real_users = select(User.id).where(User.is_test_account.is_(False))
-        real_user_filter = User.is_test_account.is_(False)
+        # tenant_id == 1 → звіт оператора рахує ЛИШЕ WordSnap. Дані white-label
+        # тенантів (демо/викладачі) не забруднюють продуктову аналітику WordSnap;
+        # у кожного тенанта своя статистика (дашборд викладача — M6). Один рядок
+        # тут скоупить усі похідні Review/Word/Payment-запити (user_id IN real_users).
+        real_users = select(User.id).where(
+            User.is_test_account.is_(False), User.tenant_id == 1
+        )
+        real_user_filter = and_(User.is_test_account.is_(False), User.tenant_id == 1)
 
         # Users — point-in-time totals + period-bounded counts
         total_users = (await s.execute(

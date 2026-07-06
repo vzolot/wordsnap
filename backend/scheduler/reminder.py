@@ -186,7 +186,7 @@ async def send_daily_push_for_user(bot: Bot, user: User, *, force: bool = False)
     except Exception as e:
         logger.warning(f"daily_push bot.send_message failed for {user.telegram_id}: {e}")
         from core.user_service import disable_reminders_if_blocked
-        await disable_reminders_if_blocked(user.telegram_id, e)
+        await disable_reminders_if_blocked(user.telegram_id, e, tenant_id=user.tenant_id)
         return "send_failed"
 
     analytics.capture(user.telegram_id, "daily_push_sent", {
@@ -221,10 +221,14 @@ async def check_and_send_daily_pushes(bot: Bot) -> None:
                 select(User).where(User.reminders_enabled == True)  # noqa: E712
             )).scalars().all())
 
+        from core.bot_registry import get_bot
         sent = 0
         for user in users:
             try:
-                status = await send_daily_push_for_user(bot, user)
+                # Нагадування має йти з бота ВЛАСНОГО тенанта юзера (бренд
+                # викладача), не з головного. Фолбек на переданий bot (тенант 1).
+                user_bot = get_bot(user.tenant_id) or bot
+                status = await send_daily_push_for_user(user_bot, user)
                 if status == "sent":
                     sent += 1
                     await asyncio.sleep(0.05)

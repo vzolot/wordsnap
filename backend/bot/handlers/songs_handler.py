@@ -22,6 +22,7 @@ from core.user_service import (
     can_add_word, get_or_create_user, increment_word_counter,
 )
 from core.word_service import save_word, word_exists
+from core.bot_registry import tenant_id_for_bot
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -79,10 +80,12 @@ def words_keyboard(pack_id: str, words: list, lang: str) -> InlineKeyboardMarkup
 
 @router.message(Command("songs"))
 async def cmd_songs(message: Message):
+    tid = tenant_id_for_bot(message.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
     target = user.target_lang
@@ -100,7 +103,8 @@ async def cmd_songs(message: Message):
 
 @router.callback_query(F.data == "songs:list")
 async def show_songs_list(callback: CallbackQuery):
-    user = await get_or_create_user(telegram_id=callback.from_user.id)
+    tid = tenant_id_for_bot(callback.bot)  # тенант цього бота (мультитенантність)
+    user = await get_or_create_user(telegram_id=callback.from_user.id, tenant_id=tid)
     lang = user.native_lang or "en"
     target = user.target_lang or "en"
     packs = get_packs(target)
@@ -114,7 +118,8 @@ async def show_songs_list(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("songpack:"))
 async def show_pack(callback: CallbackQuery):
     pack_id = callback.data.split(":", 1)[1]
-    user = await get_or_create_user(telegram_id=callback.from_user.id)
+    tid = tenant_id_for_bot(callback.bot)  # тенант цього бота (мультитенантність)
+    user = await get_or_create_user(telegram_id=callback.from_user.id, tenant_id=tid)
     lang = user.native_lang or "en"
     target = user.target_lang or "en"
 
@@ -139,10 +144,12 @@ async def add_word_from_pack(callback: CallbackQuery):
         return
     pack_id, word_short = parts[1], parts[2]
 
+    tid = tenant_id_for_bot(callback.bot)  # тенант цього бота (мультитенантність)
     user = await get_or_create_user(
         telegram_id=callback.from_user.id,
         username=callback.from_user.username,
         first_name=callback.from_user.first_name,
+        tenant_id=tid,
     )
     lang = user.native_lang or "en"
     target = user.target_lang or "en"
@@ -188,13 +195,13 @@ async def add_word_from_pack(callback: CallbackQuery):
 
     success = await save_word(
         user_id=user.id, word=word, target_lang=target,
-        ai_data=ai_data, image_url=image_url,
+        ai_data=ai_data, image_url=image_url, tenant_id=user.tenant_id,
     )
     if not success:
         await callback.message.answer(f"❌ {word}: save error")
         return
 
-    await increment_word_counter(user.telegram_id)
+    await increment_word_counter(user.telegram_id, tenant_id=user.tenant_id)
     from core import analytics as _an
     _an.capture(user.telegram_id, "word_added", {
         "target_lang": target,

@@ -69,7 +69,10 @@ async def check_and_send_streak_saves(bot: Bot) -> None:
                         f"{bt('streak_save.title', lang)}\n\n"
                         f"{bt('streak_save.body', lang).format(streak=streak)}"
                     )
-                    await bot.send_message(chat_id=user.telegram_id, text=text)
+                    # Пуш із бота власного тенанта юзера (фолбек — тенант 1).
+                    from core.bot_registry import get_bot
+                    user_bot = get_bot(user.tenant_id) or bot
+                    await user_bot.send_message(chat_id=user.telegram_id, text=text)
                     await session.execute(
                         update(User).where(User.id == user.id).values(
                             last_streak_save_date=today_local
@@ -83,7 +86,7 @@ async def check_and_send_streak_saves(bot: Bot) -> None:
                         f"streak_save send failed for user {user.telegram_id}: {e}"
                     )
                     from core.user_service import disable_reminders_if_blocked
-                    await disable_reminders_if_blocked(user.telegram_id, e)
+                    await disable_reminders_if_blocked(user.telegram_id, e, tenant_id=user.tenant_id)
 
             if sent:
                 logger.info(f"🔥 Sent {sent} streak-save pushes")
