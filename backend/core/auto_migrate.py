@@ -612,6 +612,55 @@ MIGRATIONS: list[tuple[str, str]] = [
         "CREATE INDEX IF NOT EXISTS idx_homework_user ON homework(user_id, status)",
     ),
     ("rls.homework", "ALTER TABLE homework ENABLE ROW LEVEL SECURITY"),
+    # ── M14: режим школи (кілька викладачів + групи) ──────────────────────
+    (
+        "tenants.is_school",
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS is_school BOOLEAN NOT NULL DEFAULT FALSE",
+    ),
+    (
+        "users.is_active_teacher",
+        # Owner може деактивувати викладача, не видаляючи. Дефолт TRUE.
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active_teacher BOOLEAN NOT NULL DEFAULT TRUE",
+    ),
+    (
+        "groups table",
+        """
+        CREATE TABLE IF NOT EXISTS groups (
+            id               BIGSERIAL PRIMARY KEY,
+            tenant_id        INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            name             TEXT NOT NULL,
+            teacher_user_id  BIGINT REFERENCES users(id) ON DELETE SET NULL,
+            created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+    ),
+    (
+        "groups.idx",
+        "CREATE INDEX IF NOT EXISTS idx_groups_tenant_teacher ON groups(tenant_id, teacher_user_id)",
+    ),
+    (
+        "group_members table",
+        """
+        CREATE TABLE IF NOT EXISTS group_members (
+            id         BIGSERIAL PRIMARY KEY,
+            group_id   BIGINT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+            user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            added_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE (group_id, user_id)
+        )
+        """,
+    ),
+    (
+        "group_members.user_idx",
+        "CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id)",
+    ),
+    (
+        "decks.group_id",
+        # Колода може адресуватись групі (school-режим).
+        "ALTER TABLE decks ADD COLUMN IF NOT EXISTS group_id BIGINT REFERENCES groups(id) ON DELETE SET NULL",
+    ),
+    ("rls.groups",        "ALTER TABLE groups ENABLE ROW LEVEL SECURITY"),
+    ("rls.group_members", "ALTER TABLE group_members ENABLE ROW LEVEL SECURITY"),
 ]
 
 

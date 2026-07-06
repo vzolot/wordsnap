@@ -60,17 +60,22 @@ def _streak_from_dates(dates: list) -> int:
     return streak
 
 
-async def students_overview(tenant_id: int) -> list[dict]:
+async def students_overview(tenant_id: int, restrict_ids: list[int] | None = None) -> list[dict]:
     """Список учнів тенанта з агрегатами: стрік, повторень за 7д, останній
     візит, % вивчених слів з колод викладача, прапор ризику. Сортування:
-    неактивні зверху (кому варто написати)."""
+    неактивні зверху (кому варто написати).
+
+    restrict_ids (school-режим): якщо задано — лише ці учні (учні викладача)."""
     now = datetime.now(timezone.utc)
     week_ago = now - timedelta(days=7)
 
     async with SessionLocal() as s:
-        students = (await s.execute(
-            select(User).where(User.tenant_id == tenant_id, User.role == "student")
-        )).scalars().all()
+        q = select(User).where(User.tenant_id == tenant_id, User.role == "student")
+        if restrict_ids is not None:
+            if not restrict_ids:
+                return []
+            q = q.where(User.id.in_(restrict_ids))
+        students = (await s.execute(q)).scalars().all()
         if not students:
             return []
         ids = [u.id for u in students]

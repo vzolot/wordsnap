@@ -93,9 +93,14 @@ async def get_visible_decks(user_id: int, tenant_id: int) -> list[Deck]:
 # ─── Матеріалізація колоди в words учнів ─────────────────────────────────────
 
 async def _target_user_ids(session, deck: Deck) -> list[int]:
-    """Учні, яким призначена ця колода: усі студенти тенанта (assign_to_all)
-    або ті, що є в deck_assignments."""
-    if deck.assign_to_all:
+    """Учні, яким призначена ця колода: члени групи (group_id, school-режим),
+    усі студенти тенанта (assign_to_all), або deck_assignments."""
+    if deck.group_id:
+        from .models import GroupMember
+        rows = (await session.execute(
+            select(GroupMember.user_id).where(GroupMember.group_id == deck.group_id)
+        )).scalars().all()
+    elif deck.assign_to_all:
         rows = (await session.execute(
             select(User.id).where(
                 User.tenant_id == deck.tenant_id,
@@ -174,10 +179,14 @@ async def create_deck(
     target_lang: str | None = None,
     assign_to_all: bool = True,
     assignee_user_ids: list[int] | None = None,
+    group_id: int | None = None,
 ) -> Deck:
     """Створює колоду + deck_words + (за потреби) призначення, і матеріалізує
-    слова адресатам. assignee_user_ids враховуються лише коли assign_to_all=False
-    і мусять належати тому ж тенанту (перевіряється)."""
+    слова адресатам. group_id (school) → членам групи; інакше assignee_user_ids
+    коли assign_to_all=False. Адресати валідуються по тенанту."""
+    # Груповий таргет вимикає assign_to_all.
+    if group_id:
+        assign_to_all = False
     async with SessionLocal() as session:
         deck = Deck(
             tenant_id=tenant_id,
@@ -185,6 +194,7 @@ async def create_deck(
             title=title.strip()[:200] or "Колода",
             target_lang=target_lang,
             assign_to_all=assign_to_all,
+            group_id=group_id,
         )
         session.add(deck)
         await session.flush()  # отримати deck.id
@@ -301,12 +311,14 @@ async def set_deck_assignees(
         return len(valid_ids)
 
 
-async def list_teacher_decks(tenant_id: int) -> list[dict]:
-    """Колоди тенанта з кількістю слів і типом адресації — для дашборду викладача."""
+async def list_teacher_decks(tenant_id: int, owner_user_id: int | None = None) -> list[dict]:
+    """Колоди тенанта з кількістю слів і типом адресації — для дашборду викладача.
+    owner_user_id (school-режим): якщо задано — лише колоди цього викладача."""
     async with SessionLocal() as session:
-        decks = (await session.execute(
-            select(Deck).where(Deck.tenant_id == tenant_id).order_by(Deck.created_at.desc())
-        )).scalars().all()
+        q = select(Deck).where(Deck.tenant_id == tenant_id)
+        if owner_user_id is not None:
+            q = q.where(Deck.owner_user_id == owner_user_id)
+        decks = (await session.execute(q.order_by(Deck.created_at.desc()))).scalars().all()
         out = []
         for d in decks:
             wc = (await session.execute(
