@@ -54,6 +54,13 @@ async def telegram_auth_middleware(request: Request, call_next):
             params["tenant_id"] = [str(tenant_id)]
             request.scope["query_string"] = urlencode(params, doseq=True).encode()
             request.state.tenant_id = tenant_id
+            # Sentry-контекст: тег тенанта (для сегментації помилок по бренду).
+            # НЕ кладемо токенів/PII — лише числовий tenant_id.
+            try:
+                import sentry_sdk
+                sentry_sdk.set_tag("tenant_id", tenant_id)
+            except Exception:
+                pass
     return await call_next(request)
 
 

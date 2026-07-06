@@ -14,8 +14,14 @@ from core.db import SessionLocal
 from core.models import User
 from core import deck_service as ds
 from core import teacher_stats as tstats
+from core.rate_limit import allow as _rl_allow
 
 logger = logging.getLogger(__name__)
+
+# Ліміт завантаження колод: захист від випадкового спаму парсера (цикл на
+# клієнті). Щедрий для нормального викладача, але ловить розбіг.
+_DECK_WRITE_LIMIT = 30      # операцій запису колод
+_DECK_WRITE_WINDOW = 60.0   # за 60 секунд на викладача
 
 router = APIRouter()
 
@@ -93,6 +99,8 @@ async def teacher_create_deck(
     data: DeckCreateRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
 ):
     teacher = await _require_teacher(telegram_id, tenant_id)
+    if not _rl_allow(f"deckwrite:{tenant_id}:{telegram_id}", _DECK_WRITE_LIMIT, _DECK_WRITE_WINDOW):
+        raise HTTPException(status_code=429, detail="rate_limited")
     title = (data.title or "").strip()
     if not title:
         raise HTTPException(status_code=400, detail="title_required")
@@ -124,6 +132,8 @@ async def teacher_update_deck(
     telegram_id: int = Query(...), tenant_id: int = Query(1),
 ):
     await _require_teacher(telegram_id, tenant_id)
+    if not _rl_allow(f"deckwrite:{tenant_id}:{telegram_id}", _DECK_WRITE_LIMIT, _DECK_WRITE_WINDOW):
+        raise HTTPException(status_code=429, detail="rate_limited")
     result: dict = {"ok": True}
 
     if data.add_text:

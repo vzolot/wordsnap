@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { getTenantConfig } from '../api/client';
+import { setSentryTenant } from '../sentry';
 
 /**
  * White-label бренд тенанта. Тягне /api/tenant/config при старті, застосовує
@@ -83,6 +84,7 @@ export function TenantProvider({ children }) {
         if (!alive || !r?.data) return;
         const c = { ...DEFAULTS, ...r.data };
         applyBrand(c.color_primary, c.color_accent);
+        setSentryTenant(c.tenant_id, c.slug);
         setConfig(c);
         try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch { /* noop */ }
       })
