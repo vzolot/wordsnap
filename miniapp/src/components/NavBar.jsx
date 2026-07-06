@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useT } from '../contexts/LangContext';
+import { useTenant } from '../contexts/TenantContext';
 import { readCache } from '../api/client';
 import './NavBar.css';
 
@@ -17,10 +18,12 @@ const ICONS = {
   review: 'M21 12a9 9 0 1 1-3.5-7.1M21 4v5h-5',
   stats:  'M3 21h18M5 21V10M11 21V4M17 21v-7',
   teacher: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5',
+  lessons: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
 };
 
 function NavBar() {
   const { t } = useT();
+  const { isDefaultTenant } = useTenant();
   // Роль читаємо з кешу stats — вкладка «Викладач» лише для teacher/owner.
   const role = readCache('stats', { ignoreTtl: true })?.role;
   const isTeacher = role === 'teacher' || role === 'owner';
@@ -32,10 +35,14 @@ function NavBar() {
     { to: '/stats',  key: 'nav.stats',  icon: ICONS.stats, label: null },
   ];
   if (isTeacher) {
-    // Для викладача прибираємо «Пісні» (вторинне) і додаємо «Викладач»,
-    // щоб не перевантажувати таб-бар (макс ~5-6 іконок).
+    // Для викладача прибираємо «Пісні» (вторинне) і додаємо «Викладач»
+    // (там і колоди, і дашборд, і календар), щоб не перевантажувати таб-бар.
     items.splice(1, 1);
     items.push({ to: '/teacher', key: null, icon: ICONS.teacher, label: 'Викладач' });
+  } else if (!isDefaultTenant) {
+    // White-label учень: «Пісні» → «Уроки» (бронювання уроків із викладачем).
+    items.splice(1, 1);
+    items.push({ to: '/lessons', key: null, icon: ICONS.lessons, label: 'Уроки' });
   }
 
   return (

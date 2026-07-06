@@ -32,6 +32,8 @@ async def test_deck_materialization_no_reset_and_isolation():
     from core.user_service import get_or_create_user
     from core.word_service import process_review
     import core.deck_service as ds
+    from tests.conftest import bind_test_engine
+    bind_test_engine(core_db.SessionLocal)
 
     async with engine.begin() as c:
         await c.run_sync(Base.metadata.drop_all)
