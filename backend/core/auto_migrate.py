@@ -666,6 +666,11 @@ MIGRATIONS: list[tuple[str, str]] = [
         "tenants.monthly_report_enabled",
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS monthly_report_enabled BOOLEAN NOT NULL DEFAULT FALSE",
     ),
+    # ── Teacher UX: @username бота для кнопки «поділитися ботом» ───────────
+    (
+        "tenants.bot_username",
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS bot_username VARCHAR(64)",
+    ),
 ]
 
 

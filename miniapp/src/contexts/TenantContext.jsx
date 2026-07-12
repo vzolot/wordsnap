@@ -20,6 +20,7 @@ const DEFAULTS = {
   color_accent: '#EC4899',
   ai_snap_available: true,
   billing_ui_enabled: true,
+  bot_username: 'WordSnapBot',
 };
 
 const CACHE_KEY = 'wordsnap.tenant_config';

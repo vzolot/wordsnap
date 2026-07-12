@@ -696,6 +696,7 @@ async def main():
     from core.bot_registry import register as register_bot, make_bot
     from core.tenant_service import (
         sync_default_tenant, get_active_tenants, DEFAULT_TENANT_ID,
+        set_tenant_bot_username,
     )
 
     # Тенант 1 має отримати bot_token/bot_id з env — потрібно для резолву
@@ -710,6 +711,11 @@ async def main():
     tenant_bots = [bot]
     tenant_bot_pairs = []  # [(tenant, bot)] для брендового меню тенантів
     try:
+        me = await bot.get_me()
+        await set_tenant_bot_username(DEFAULT_TENANT_ID, me.username)
+    except Exception as e:
+        logger.warning(f"bot_username sync failed for tenant 1: {e}")
+    try:
         for tenant in await get_active_tenants():
             if tenant.id == DEFAULT_TENANT_ID or not tenant.bot_token:
                 continue
@@ -717,6 +723,11 @@ async def main():
             register_bot(tenant.id, tbot)
             tenant_bots.append(tbot)
             tenant_bot_pairs.append((tenant, tbot))
+            try:
+                tme = await tbot.get_me()
+                await set_tenant_bot_username(tenant.id, tme.username)
+            except Exception as e:
+                logger.warning(f"bot_username sync failed for {tenant.slug}: {e}")
             logger.info(
                 f"🤖 Tenant bot up: {tenant.slug} (id={tenant.id}, bot_id={tenant.bot_id})"
             )

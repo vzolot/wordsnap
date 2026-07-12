@@ -151,7 +151,24 @@ def config_payload(tenant: Tenant, ai_available: bool) -> dict:
         "color_accent": tenant.color_accent,
         "ai_snap_available": ai_available,
         "billing_ui_enabled": tenant.billing_ui_enabled,
+        # @username бота (публічний) — для кнопки «поділитися ботом» у викладача.
+        "bot_username": tenant.bot_username,
     }
+
+
+async def set_tenant_bot_username(tenant_id: int, username: str | None) -> None:
+    """Зберігає @username бота тенанта (без '@'), якщо змінився. Викликається
+    на старті після getMe. username публічний — не секрет."""
+    if not username:
+        return
+    async with SessionLocal() as session:
+        tenant = (await session.execute(
+            select(Tenant).where(Tenant.id == tenant_id)
+        )).scalar_one_or_none()
+        if tenant is not None and tenant.bot_username != username:
+            tenant.bot_username = username
+            await session.commit()
+            logger.info("set_tenant_bot_username: tenant %s → @%s", tenant_id, username)
 
 
 async def create_tenant(

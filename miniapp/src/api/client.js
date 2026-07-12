@@ -124,6 +124,11 @@ export const putAvailability = (slots) => api.put('/api/teacher/availability', {
 export const setClosedDate = (day, closed) => api.post('/api/teacher/closed_date', { day, closed });
 export const getTeacherLessons = () => api.get('/api/teacher/lessons');
 export const teacherCancelLesson = (id) => api.post(`/api/teacher/lessons/${id}/cancel`);
+// Ручне бронювання уроку викладачем (довільний час, обходить шаблон доступності).
+export const teacherCreateLesson = (studentUserId, startsAtUtc, durationMin = null) =>
+  api.post('/api/teacher/lessons', {
+    student_user_id: studentUserId, starts_at_utc: startsAtUtc, duration_min: durationMin,
+  });
 // Учень
 export const getCalendarSlots = () => api.get('/api/calendar/slots');
 export const getMyLessons = () => api.get('/api/calendar/my');

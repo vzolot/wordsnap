@@ -140,6 +140,7 @@ async def students_overview(tenant_id: int, restrict_ids: list[int] | None = Non
             ).strip() or (f"@{u.username}" if u.username else f"id{u.telegram_id}"),
             "streak": _streak_from_dates(dates),
             "reviews_7d": reviews_7d.get(u.id, 0),
+            "total_xp": u.total_xp or 0,
             "last_visit": last.isoformat() if last else None,
             "days_since_visit": days_since,
             "deck_words_total": total,

@@ -343,6 +343,9 @@ class Tenant(Base):
     bot_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Числова частина токена до ':' — для резолву тенанта з initData (bot_id).
     bot_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, nullable=True)
+    # @username бота (без '@') — для кнопки «поділитися ботом» у кабінеті
+    # викладача. Заповнюється на старті через getMe (не секрет, публічний).
+    bot_username: Mapped[str | None] = mapped_column(String(64), nullable=True)
     logo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     color_primary: Mapped[str] = mapped_column(
         String(9), nullable=False, default="#7C3AED", server_default="#7C3AED"

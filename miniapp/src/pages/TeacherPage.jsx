@@ -1,26 +1,54 @@
 import { useCallback, useEffect, useState } from 'react';
 import AppBar from '../components/AppBar';
+import { useTenant } from '../contexts/TenantContext';
 import {
   getTeacherDecks, getTeacherStudents, getTeacherDeck,
   createTeacherDeck, updateTeacherDeck, getTeacherStudentDetail,
   getAvailability, putAvailability, getTeacherLessons, teacherCancelLesson,
+  teacherCreateLesson,
   createDeckFromPhoto, assignHomework,
   getSchoolInfo, getTeachers, addTeacher, setTeacherActive,
-  getGroups, createGroup, setGroupMembers, getTeacherLeaderboard,
+  getGroups, createGroup, setGroupMembers,
 } from '../api/client';
 
-function TopWeek() {
-  const [data, setData] = useState(null);
-  useEffect(() => { getTeacherLeaderboard().then((r) => setData(r.data)).catch(() => setData({ top3: [] })); }, []);
-  if (!data || !data.top3 || data.top3.length === 0) return null;
+// ── Спільні хелпери для «поділитися ботом» ────────────────────────────────
+function botLink(username) {
+  return `https://t.me/${(username || 'WordSnapBot').replace(/^@/, '')}`;
+}
+function shareBot(username) {
+  const url = botLink(username);
+  const text = 'Приєднуйся — вчимо слова разом 📚';
+  const tg = window.Telegram?.WebApp;
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+  if (tg?.openTelegramLink) tg.openTelegramLink(shareUrl);
+  else window.open(shareUrl, '_blank');
+}
+
+function ShareBotButton({ block }) {
+  const { bot_username } = useTenant();
+  return (
+    <button
+      className={`tch-btn${block ? '' : ' sm'}`}
+      style={block ? { width: '100%', marginTop: 10 } : undefined}
+      onClick={() => shareBot(bot_username)}
+    >
+      🔗 Поділитися ботом
+    </button>
+  );
+}
+
+// Рейтинг усіх учнів тенанта за сумарним XP (замість тижневого топу повторень).
+function StudentRanking({ students }) {
+  if (!students || students.length === 0) return null;
+  const ranked = [...students].sort((a, b) => (b.total_xp || 0) - (a.total_xp || 0));
   const medals = ['🥇', '🥈', '🥉'];
   return (
     <div className="tch-card">
-      <h3 className="tch-h3">🏆 Топ тижня</h3>
-      {data.top3.map((r, i) => (
-        <div key={r.user_id} className="tch-word">
-          <span>{medals[i]} <b>{r.name}</b></span>
-          <span className="tch-muted">{r.reviews} повторень</span>
+      <h3 className="tch-h3">🏆 Рейтинг за XP</h3>
+      {ranked.map((s, i) => (
+        <div key={s.id} className="tch-word">
+          <span>{medals[i] || `${i + 1}.`} <b>{s.display_name}</b></span>
+          <span className="tch-muted">{s.total_xp || 0} XP</span>
         </div>
       ))}
     </div>
@@ -43,22 +71,39 @@ function fileToB64(file) {
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
 const toHHMM = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
-function fmtLesson(iso) {
-  const d = new Date(iso);
-  const wd = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][d.getDay()];
-  return `${wd} ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+// Дропдаун часу: 00:00…23:30 кроком 30 хв (замість нативного time-інпуту).
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => toHHMM(i * 30));
+function TimeSelect({ value, onChange }) {
+  return (
+    <select className="tch-time" value={value} onChange={(e) => onChange(e.target.value)}>
+      {TIME_OPTIONS.map((tt) => <option key={tt} value={tt}>{tt}</option>)}
+    </select>
+  );
 }
+const _WD_SHORT = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const dayLabel = (d) => `${_WD_SHORT[d.getDay()]}, ${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+const hhmmLocal = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
 function CalendarManager() {
   // ranges: { [weekday]: [{start,end}] }  (HH:MM рядки)
   const [ranges, setRanges] = useState({});
   const [tz, setTz] = useState('');
   const [lessons, setLessons] = useState([]);
+  const [students, setStudents] = useState([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
 
+  // Форма ручного бронювання уроку викладачем.
+  const [bkStudent, setBkStudent] = useState('');
+  const [bkDate, setBkDate] = useState('');
+  const [bkTime, setBkTime] = useState('12:00');
+  const [bkMsg, setBkMsg] = useState('');
+
   const load = useCallback(async () => {
-    const [a, l] = await Promise.all([getAvailability(), getTeacherLessons()]);
+    const [a, l, st] = await Promise.all([
+      getAvailability(), getTeacherLessons(), getTeacherStudents(),
+    ]);
     const r = {};
     (a.data.availability || []).forEach((s) => {
       (r[s.weekday] = r[s.weekday] || []).push({ start: toHHMM(s.start_min), end: toHHMM(s.end_min) });
@@ -66,6 +111,7 @@ function CalendarManager() {
     setRanges(r);
     setTz(a.data.timezone);
     setLessons(l.data.lessons || []);
+    setStudents(st.data.students || []);
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -86,7 +132,7 @@ function CalendarManager() {
     });
     try {
       await putAvailability(slots);
-      setMsg('Розклад збережено ✅');
+      setMsg('Збережено ✅');
     } catch { setMsg('Не вдалося зберегти.'); }
     finally { setBusy(false); }
   };
@@ -96,20 +142,51 @@ function CalendarManager() {
     try { await teacherCancelLesson(id); await load(); } finally { setBusy(false); }
   };
 
+  const book = async () => {
+    if (!bkStudent || !bkDate || !bkTime) { setBkMsg('Оберіть учня, дату і час.'); return; }
+    setBusy(true); setBkMsg('');
+    try {
+      // Дата+час у локальному поясі пристрою (= пояс викладача) → UTC ISO.
+      const iso = new Date(`${bkDate}T${bkTime}:00`).toISOString();
+      await teacherCreateLesson(Number(bkStudent), iso);
+      setBkMsg('Урок додано ✅');
+      setBkDate('');
+      await load();
+    } catch (e) {
+      const err = e?.response?.data?.detail;
+      setBkMsg(err === 'slot_taken' ? 'Цей час уже зайнятий.' : 'Не вдалося додати урок.');
+    } finally { setBusy(false); }
+  };
+
+  // Денний розклад: групуємо заброньовані уроки за локальною датою.
+  const byDay = [];
+  const _map = new Map();
+  [...lessons]
+    .sort((a, b) => new Date(a.starts_at_utc) - new Date(b.starts_at_utc))
+    .forEach((l) => {
+      const d = new Date(l.starts_at_utc);
+      const key = dayKey(d);
+      if (!_map.has(key)) { const g = { label: dayLabel(d), items: [] }; _map.set(key, g); byDay.push(g); }
+      _map.get(key).items.push(l);
+    });
+
   return (
     <>
+      {/* 1. Вільні години — інтервали, з яких учні самі бронюють. Дропдауни. */}
       <div className="tch-card">
-        <h3 className="tch-h3">Тижневий розклад доступності</h3>
-        <p className="tch-muted sm">Пояс: {tz || '—'} · тривалість слота = тривалість уроку.</p>
+        <h3 className="tch-h3">Вільні години</h3>
+        <p className="tch-muted sm">
+          Пояс: {tz || '—'} · тривалість слота = тривалість уроку. Учні бачать ці інтервали для самостійного запису.
+        </p>
         {WEEKDAYS.map((name, wd) => (
           <div key={wd} className="tch-wdrow">
             <div className="tch-wd">{name}</div>
             <div className="tch-wdranges">
               {(ranges[wd] || []).map((r, i) => (
                 <div key={i} className="tch-range">
-                  <input type="time" value={r.start} onChange={(e) => setField(wd, i, 'start', e.target.value)} />
+                  <TimeSelect value={r.start} onChange={(v) => setField(wd, i, 'start', v)} />
                   <span>–</span>
-                  <input type="time" value={r.end} onChange={(e) => setField(wd, i, 'end', e.target.value)} />
+                  <TimeSelect value={r.end} onChange={(v) => setField(wd, i, 'end', v)} />
                   <button className="tch-x" onClick={() => rmRange(wd, i)}>✕</button>
                 </div>
               ))}
@@ -119,17 +196,46 @@ function CalendarManager() {
         ))}
         {msg && <p className="tch-ok">{msg}</p>}
         <div className="tch-actions">
-          <button className="tch-btn" onClick={save} disabled={busy}>Зберегти розклад</button>
+          <button className="tch-btn" onClick={save} disabled={busy}>Зберегти вільні години</button>
         </div>
       </div>
 
+      {/* 2. Ручне бронювання уроку викладачем (окремо від вільних годин). */}
       <div className="tch-card">
-        <h3 className="tch-h3">Заброньовані уроки</h3>
-        {lessons.length === 0 && <p className="tch-muted">Поки що немає бронювань.</p>}
-        {lessons.map((l) => (
-          <div key={l.id} className="tch-word">
-            <span>📅 <b>{fmtLesson(l.starts_at_utc)}</b> — {l.student_name || 'учень'}</span>
-            <button className="tch-btn ghost sm" onClick={() => cancelLesson(l.id)} disabled={busy}>Скасувати</button>
+        <h3 className="tch-h3">Забронювати урок вручну</h3>
+        {students.length === 0 ? (
+          <p className="tch-muted sm">Спершу додайте учнів — тоді зможете ставити їм уроки.</p>
+        ) : (
+          <>
+            <div className="tch-book">
+              <select className="tch-time grow" value={bkStudent} onChange={(e) => setBkStudent(e.target.value)}>
+                <option value="">Учень…</option>
+                {students.map((s) => <option key={s.id} value={s.id}>{s.display_name}</option>)}
+              </select>
+              <input type="date" className="tch-time" value={bkDate} onChange={(e) => setBkDate(e.target.value)} />
+              <TimeSelect value={bkTime} onChange={setBkTime} />
+            </div>
+            {bkMsg && <p className="tch-ok">{bkMsg}</p>}
+            <div className="tch-actions">
+              <button className="tch-btn" onClick={book} disabled={busy}>Забронювати</button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* 3. Денний розклад: хто і о котрій. */}
+      <div className="tch-card">
+        <h3 className="tch-h3">Розклад</h3>
+        {byDay.length === 0 && <p className="tch-muted">Поки що немає бронювань.</p>}
+        {byDay.map((day) => (
+          <div key={day.label} className="tch-day">
+            <div className="tch-day-h">{day.label}</div>
+            {day.items.map((l) => (
+              <div key={l.id} className="tch-word">
+                <span>🕑 <b>{hhmmLocal(new Date(l.starts_at_utc))}</b> — {l.student_name || 'учень'}</span>
+                <button className="tch-btn ghost sm" onClick={() => cancelLesson(l.id)} disabled={busy}>Скасувати</button>
+              </div>
+            ))}
           </div>
         ))}
       </div>
@@ -467,13 +573,19 @@ function StudentsList() {
   if (sel != null) return <StudentDetail studentId={sel} onClose={() => setSel(null)} />;
   if (students === null) return <p className="tch-muted">Завантаження…</p>;
   if (students.length === 0) return (
-    <div className="tch-card"><p className="tch-muted">
-      Ще немає учнів. Поділіться посиланням на бота.</p></div>
+    <div className="tch-card">
+      <p className="tch-muted">Ще немає учнів. Поділіться посиланням на бота, щоб вони приєдналися.</p>
+      <ShareBotButton block />
+    </div>
   );
 
   return (
     <>
-      <TopWeek />
+      <StudentRanking students={students} />
+      <div className="tch-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span className="tch-muted sm">{students.length} учнів</span>
+        <ShareBotButton />
+      </div>
       {students.map((s) => (
         <button key={s.id} className="tch-deck" onClick={() => setSel(s.id)}>
           <div className="tch-deck-main">
@@ -481,7 +593,7 @@ function StudentsList() {
               {s.display_name}{s.at_risk && <span className="tch-risk">в ризику</span>}
             </div>
             <div className="tch-deck-sub">
-              🔥 {s.streak} · {s.reviews_7d} за 7д · {s.learned_pct}% вивчено · {relTime(s.last_visit)}
+              ⭐ {s.total_xp || 0} XP · 🔥 {s.streak} · {s.learned_pct}% вивчено · {relTime(s.last_visit)}
             </div>
           </div>
           <span className="tch-deck-edit">›</span>

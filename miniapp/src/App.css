@@ -2842,6 +2842,17 @@
   background: var(--bg); color: var(--text-1); font-size: 13px;
 }
 .tch-addrange { background: none; border: none; color: var(--violet); font-weight: 600; font-size: 13px; cursor: pointer; padding: 2px 0; }
+/* Дропдаун часу / дата-інпут у календарі (заміна нативного time-інпуту). */
+.tch-time {
+  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 6px 8px;
+  background: var(--bg); color: var(--text-1); font-size: 13px; min-width: 74px;
+}
+.tch-time.grow { flex: 1; min-width: 120px; }
+.tch-book { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 4px; }
+/* Денний розклад: група уроків одного дня. */
+.tch-day { margin-top: 10px; }
+.tch-day + .tch-day { border-top: 1px solid var(--border); padding-top: 8px; }
+.tch-day-h { font-weight: 700; color: var(--text-1); font-size: 13px; margin-bottom: 4px; text-transform: capitalize; }
 .tch-slotday { margin-top: 10px; }
 .tch-slotday-h { font-weight: 700; color: var(--text-1); font-size: 13px; margin-bottom: 6px; }
 .tch-slotgrid { display: flex; flex-wrap: wrap; gap: 6px; }

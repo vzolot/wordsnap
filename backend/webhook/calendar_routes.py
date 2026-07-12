@@ -128,6 +128,27 @@ async def teacher_cancel(
     return {"ok": True}
 
 
+class ManualLessonRequest(BaseModel):
+    student_user_id: int
+    starts_at_utc: str        # ISO; якщо без tz — трактуємо як UTC
+    duration_min: int | None = None
+
+
+@router.post("/api/teacher/lessons")
+async def teacher_create_lesson(
+    data: ManualLessonRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """Викладач вручну бронює урок для учня на довільний час."""
+    teacher = await _require_teacher(telegram_id, tenant_id)
+    r = await cal.create_manual_lesson(
+        tenant_id, teacher.id, data.student_user_id, data.starts_at_utc, data.duration_min,
+    )
+    if not r["ok"]:
+        raise HTTPException(status_code=400, detail=r["error"])
+    await _notify_lesson(tenant_id, teacher.id, data.student_user_id, r["starts_at_utc"], "booked")
+    return r
+
+
 # ─── Учень ───────────────────────────────────────────────────────────────────
 
 class BookRequest(BaseModel):

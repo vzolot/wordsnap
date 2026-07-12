@@ -234,6 +234,41 @@ async def book_lesson(
         return {"ok": True, "lesson_id": lesson.id, "starts_at_utc": starts.isoformat()}
 
 
+async def create_manual_lesson(
+    tenant_id: int, teacher_user_id: int, student_user_id: int,
+    starts_at_iso: str, duration_min: int | None = None,
+) -> dict:
+    """Викладач вручну ставить урок на будь-який час (не обмежено шаблоном
+    доступності — на відміну від book_lesson для учня). Захист від подвійного
+    бронювання лишається (унікальний індекс на активний слот викладача)."""
+    try:
+        starts = datetime.fromisoformat(starts_at_iso)
+    except ValueError:
+        return {"ok": False, "error": "bad_time"}
+    if starts.tzinfo is None:
+        starts = starts.replace(tzinfo=timezone.utc)
+    starts = starts.astimezone(timezone.utc)
+
+    async with SessionLocal() as s:
+        tenant = (await s.execute(select(Tenant).where(Tenant.id == tenant_id))).scalar_one_or_none()
+        lesson = Lesson(
+            tenant_id=tenant_id,
+            teacher_user_id=teacher_user_id,
+            student_user_id=student_user_id,
+            starts_at_utc=starts,
+            duration_min=(duration_min or (tenant.lesson_duration_min if tenant else 60)),
+            status="booked",
+        )
+        s.add(lesson)
+        try:
+            await s.commit()
+        except IntegrityError:
+            await s.rollback()
+            return {"ok": False, "error": "slot_taken"}
+        await s.refresh(lesson)
+        return {"ok": True, "lesson_id": lesson.id, "starts_at_utc": starts.isoformat()}
+
+
 async def cancel_lesson(tenant_id: int, lesson_id: int, by_user_id: int) -> dict:
     """Скасовує урок. Скасувати можуть учень або викладач цього уроку, не
     пізніше ніж за cancel_cutoff_hours до початку (для викладача — без обмеження)."""
