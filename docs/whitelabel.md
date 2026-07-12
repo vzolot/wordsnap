@@ -468,3 +468,47 @@ per-tenant брендинг на рівні Telegram + прибрали WordSnap
   «Пісні» для white-label учнів, вкладка «Викладач» для teacher/owner.)
 
 134 тести без регресій; build OK.
+
+---
+
+## Продакшн-деплой + перший тенант (2026-07-12)
+
+Перший реальний викат усієї white-label платформи в прод і підключення першого
+викладача — **«Польська з Мартою»** (@martapolish_bot).
+
+**Мердж і деплой:**
+- Весь стек (m1…m19) fast-forward-змерджено в `main` (main `e00ecc1` = тіп m19).
+- Перший Docker-білд на Railway впав: `backend/requirements.txt` містив злиплий
+  рядок `pytest-asyncio==0.24.0reportlab==4.2.5` (M15 дописав reportlab без `\n`).
+  Виправлено окремим комітом `e8d5ebc` (розбито на два рядки).
+- Перед міграцією знято `pg_dump` продової Supabase (потрібен pg_dump ≥ 17 —
+  сервер PG17; `brew install libpq` дає v18). **Нюанс:** `DATABASE_URL` іде через
+  transaction-пулер `:6543`, яким pg_dump/psql не працюють — для дампу/psql
+  міняти порт на session `:5432` того ж хоста.
+- Автодеплой (Railway, сервіс `worker`, проєкт eloquent-serenity) застосував
+  `auto_migrate`: **101 ok, 0 failed** на проді. Обидва боти полінгують на
+  спільному диспетчері: `@WordSnapBot` (t1) + `@martapolish_bot` (t2).
+
+**Тенант `marta` (id=2):** заведено через `scripts.add_tenant`
+(slug=marta, «Польська з Мартою», bot_id 8845995169, plan=trial,
+кольори `#DC2626/#F59E0B`, billing_ui=false). Бот сконфігуровано (команди,
+кнопка-меню→Mini App, брендовані опис/short) — і вручну через Bot API, і
+`setup_tenant_bot` на старті. Викладач (owner) = Volodymyr (tg 469478065,
+`role=teacher`); `logo_url` поки null.
+
+**E2E-верифікація ізоляції** (наскрізно через прод
+`https://worker-production-abd5.up.railway.app/api/tenant/config`, з підписаною
+initData у заголовку `X-Telegram-Init-Data`):
+- підпис токеном Марти → `tenant_id=2`, бренд Марти, `billing_ui_enabled=false`;
+- підпис токеном WordSnap → `tenant_id=1`, «WordSnap», `billing_ui_enabled=true`.
+Резолвинг тенанта з підпису бота (`tg_auth.resolve_init_data`) працює; WordSnap
+(тенант 1) не зачеплено.
+
+**Побічний фікс (не white-label):** `core/user_service.disable_reminders_if_blocked`
+використовував голий `update(User)`, а `core/user_service.py` не імпортував
+`update` із SQLAlchemy → `NameError: name 'update' is not defined` щоразу, коли
+юзер заблокував бота (функція мала вимкнути йому нагадування, але падала, тож
+заблоковані ретраїлися вічно). Додано `update` в імпорт.
+
+**Лишилось:** лого Марти; за потреби — перепризначити викладача на акаунт самої
+Марти (натисне Start → `owner_telegram_id` + `role=teacher` на її tg-id).

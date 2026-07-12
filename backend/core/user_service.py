@@ -3,7 +3,7 @@
 """
 import logging
 from datetime import date, datetime, timezone, timedelta
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 
 from . import analytics
 from .models import User, Word
