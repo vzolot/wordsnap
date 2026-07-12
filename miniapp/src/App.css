@@ -2772,13 +2772,30 @@
 .tch-textarea { resize: vertical; line-height: 1.4; }
 .tch-input:focus, .tch-textarea:focus { outline: 2px solid var(--violet); border-color: transparent; }
 
-.tch-toggle-row { display: flex; gap: 8px; }
+.tch-toggle-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .tch-pill {
-  flex: 1; padding: 9px 12px; border-radius: var(--r-f); font-weight: 600;
+  flex: 1 1 auto; padding: 9px 12px; border-radius: var(--r-f); font-weight: 600;
   font-size: 13px; border: 1px solid var(--border); background: var(--bg-pill);
   color: var(--text-2); cursor: pointer;
 }
 .tch-pill.on { background: var(--gradient); color: #fff; border-color: transparent; }
+.tch-top-actions { display: flex; gap: 8px; align-items: center; }
+/* Викладацькі KPI-плитки (вкладка «Статистика»). */
+.tch-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.tch-kpi { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-md, 14px); padding: 12px 6px; text-align: center; }
+.tch-kpi-n { font-size: 22px; font-weight: 800; color: var(--text-1); letter-spacing: -0.4px; }
+.tch-kpi-n.warn { color: var(--coral); }
+.tch-kpi-l { font-size: 10px; color: var(--text-2); margin-top: 3px; }
+/* Банер режиму «перегляд як учень». */
+.preview-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--violet-soft); color: var(--text-1);
+  padding: 8px 14px; font-size: 13px; font-weight: 600;
+}
+.preview-banner button {
+  background: var(--gradient); color: #fff; border: none; border-radius: 999px;
+  padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+}
 
 .tch-students { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
 .tch-student { display: flex; align-items: center; gap: 8px; padding: 7px 4px; font-size: 14px; color: var(--text-1); }

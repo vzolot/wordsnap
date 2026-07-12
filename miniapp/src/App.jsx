@@ -6,6 +6,7 @@ import DebugBanner from './components/DebugBanner';
 import WelcomeStories, { shouldShowWelcome } from './components/WelcomeStories';
 import { LangProvider } from './contexts/LangContext';
 import { TenantProvider, useTenant } from './contexts/TenantContext';
+import { RoleProvider, useRole } from './contexts/RoleContext';
 import { applyReferral, getTelegramUserId, prefetchAll, saveSurvey } from './api/client';
 import { initAnalytics, track } from './utils/analytics';
 import { getAttribution } from './utils/attribution';
@@ -56,9 +57,12 @@ const RouteFallback = () => (
 // перехід на /pro редіректить на home, і жодних цін учні не бачать.
 function AppRoutes() {
   const { billingEnabled } = useTenant();
+  const { teacherMode } = useRole();
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
+      {/* Викладач заходить одразу в кабінет, а не на учнівську головну.
+          У режимі «перегляд як учень» teacherMode=false → звичайна головна. */}
+      <Route path="/" element={teacherMode ? <Navigate to="/teacher?tab=students" replace /> : <HomePage />} />
       <Route path="/words" element={<WordsPage />} />
       <Route path="/review" element={<ReviewPage />} />
       <Route path="/songs" element={<SongsPage />} />
@@ -132,6 +136,21 @@ function TelegramBackButton() {
     };
   }, [location.pathname, navigate]);
   return null;
+}
+
+// Банер режиму «перегляд як учень» — щоб викладач завжди міг повернутись у кабінет.
+function StudentPreviewBanner() {
+  const { studentPreview, setStudentPreview } = useRole();
+  const navigate = useNavigate();
+  if (!studentPreview) return null;
+  return (
+    <div className="preview-banner">
+      <span>👁 Перегляд як учень</span>
+      <button onClick={() => { setStudentPreview(false); navigate('/teacher?tab=students'); }}>
+        Вийти в кабінет
+      </button>
+    </div>
+  );
 }
 
 function App() {
@@ -324,19 +343,22 @@ function App() {
   return (
     <TenantProvider>
       <LangProvider>
-        {showWelcome && <WelcomeStories onClose={() => setShowWelcome(false)} />}
-        <BrowserRouter>
-          <RouteAnalytics />
-          <DeepLinkHandler />
-          <TelegramBackButton />
-          <div className="app">
-            <DebugBanner />
-            <Suspense fallback={<RouteFallback />}>
-              <AppRoutes />
-            </Suspense>
-            <NavBar />
-          </div>
-        </BrowserRouter>
+        <RoleProvider>
+          {showWelcome && <WelcomeStories onClose={() => setShowWelcome(false)} />}
+          <BrowserRouter>
+            <RouteAnalytics />
+            <DeepLinkHandler />
+            <TelegramBackButton />
+            <div className="app">
+              <DebugBanner />
+              <StudentPreviewBanner />
+              <Suspense fallback={<RouteFallback />}>
+                <AppRoutes />
+              </Suspense>
+              <NavBar />
+            </div>
+          </BrowserRouter>
+        </RoleProvider>
       </LangProvider>
     </TenantProvider>
   );

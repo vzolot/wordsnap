@@ -1,7 +1,7 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useT } from '../contexts/LangContext';
 import { useTenant } from '../contexts/TenantContext';
-import { readCache } from '../api/client';
+import { useRole } from '../contexts/RoleContext';
 import './NavBar.css';
 
 const Icon = ({ d }) => (
@@ -17,16 +17,47 @@ const ICONS = {
   book:   'M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 1 4 17.5zM4 17.5A2.5 2.5 0 0 1 6.5 20H20',
   review: 'M21 12a9 9 0 1 1-3.5-7.1M21 4v5h-5',
   stats:  'M3 21h18M5 21V10M11 21V4M17 21v-7',
-  teacher: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5',
+  users:  'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   lessons: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
 };
+
+// Викладацька навігація: 4 вкладки кабінету. Активна визначається за ?tab=,
+// бо всі ведуть на /teacher.
+const TEACHER_TABS = [
+  { tab: 'students', icon: ICONS.users,   label: 'Учні' },
+  { tab: 'decks',    icon: ICONS.book,    label: 'Колоди' },
+  { tab: 'calendar', icon: ICONS.lessons, label: 'Календар' },
+  { tab: 'stats',    icon: ICONS.stats,   label: 'Статистика' },
+];
+
+function TeacherNav() {
+  const loc = useLocation();
+  const onTeacher = loc.pathname === '/teacher';
+  const tab = new URLSearchParams(loc.search).get('tab') || 'students';
+  return (
+    <nav className="navbar">
+      {TEACHER_TABS.map((it) => (
+        <NavLink
+          key={it.tab}
+          to={`/teacher?tab=${it.tab}`}
+          className={onTeacher && tab === it.tab ? 'nav-item active' : 'nav-item'}
+        >
+          <Icon d={it.icon} />
+          <span className="nav-label">{it.label}</span>
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
 
 function NavBar() {
   const { t } = useT();
   const { isDefaultTenant } = useTenant();
-  // Роль читаємо з кешу stats — вкладка «Викладач» лише для teacher/owner.
-  const role = readCache('stats', { ignoreTtl: true })?.role;
-  const isTeacher = role === 'teacher' || role === 'owner';
+  const { teacherMode } = useRole();
+
+  // Викладач (не в режимі «перегляд як учень») → окремий викладацький таб-бар.
+  if (teacherMode) return <TeacherNav />;
+
   const items = [
     { to: '/',       key: 'nav.home',   icon: ICONS.home,  label: null },
     { to: '/songs',  key: 'nav.songs',  icon: ICONS.songs, label: null },
@@ -34,12 +65,7 @@ function NavBar() {
     { to: '/words',  key: 'nav.words',  icon: ICONS.book,  label: null },
     { to: '/stats',  key: 'nav.stats',  icon: ICONS.stats, label: null },
   ];
-  if (isTeacher) {
-    // Для викладача прибираємо «Пісні» (вторинне) і додаємо «Викладач»
-    // (там і колоди, і дашборд, і календар), щоб не перевантажувати таб-бар.
-    items.splice(1, 1);
-    items.push({ to: '/teacher', key: null, icon: ICONS.teacher, label: 'Викладач' });
-  } else if (!isDefaultTenant) {
+  if (!isDefaultTenant) {
     // White-label учень: «Пісні» → «Уроки» (бронювання уроків із викладачем).
     items.splice(1, 1);
     items.push({ to: '/lessons', key: null, icon: ICONS.lessons, label: 'Уроки' });

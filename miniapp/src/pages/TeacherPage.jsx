@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppBar from '../components/AppBar';
 import { useTenant } from '../contexts/TenantContext';
+import { useRole } from '../contexts/RoleContext';
 import {
   getTeacherDecks, getTeacherStudents, getTeacherDeck,
   createTeacherDeck, updateTeacherDeck, getTeacherStudentDetail,
@@ -702,15 +704,80 @@ function SchoolManager() {
   );
 }
 
+function Kpi({ value, label, warn }) {
+  return (
+    <div className="tch-kpi">
+      <div className={`tch-kpi-n${warn ? ' warn' : ''}`}>{value}</div>
+      <div className="tch-kpi-l">{label}</div>
+    </div>
+  );
+}
+
+// Викладацька статистика: зведені KPI + детальний прогрес по ОБРАНИХ учнях
+// (перевикористовує StudentPicker для вибору і StudentDetail для показу).
+function TeacherStats({ students }) {
+  const [sel, setSel] = useState(new Set());
+  const toggle = (id) => setSel((prev) => {
+    const n = new Set(prev);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+
+  if (!students || students.length === 0) {
+    return (
+      <div className="tch-card">
+        <p className="tch-muted">Статистика зʼявиться, коли приєднаються учні.</p>
+      </div>
+    );
+  }
+
+  const n = students.length;
+  const active7 = students.filter((s) => (s.reviews_7d || 0) > 0).length;
+  const atRisk = students.filter((s) => s.at_risk).length;
+  const avgLearned = Math.round(students.reduce((a, s) => a + (s.learned_pct || 0), 0) / n);
+
+  return (
+    <>
+      <div className="tch-kpis">
+        <Kpi value={n} label="учнів" />
+        <Kpi value={active7} label="активних 7д" />
+        <Kpi value={atRisk} label="у ризику" warn={atRisk > 0} />
+        <Kpi value={`${avgLearned}%`} label="сер. вивчено" />
+      </div>
+
+      <div className="tch-card">
+        <h3 className="tch-h3">Статистика по учнях</h3>
+        <p className="tch-muted sm">Оберіть учнів — нижче зʼявиться їхній детальний прогрес.</p>
+        <StudentPicker students={students} selected={sel} onToggle={toggle} />
+      </div>
+
+      {[...sel].map((id) => (
+        <StudentDetail key={id} studentId={id} onClose={() => toggle(id)} />
+      ))}
+    </>
+  );
+}
+
 export default function TeacherPage() {
+  // Активна вкладка — з URL (?tab=), щоб нижня викладацька навігація й
+  // внутрішні пігулки були одним джерелом істини.
+  const [sp, setSp] = useSearchParams();
+  const view = sp.get('tab') || 'students'; // students | decks | calendar | stats | school
+  const setView = (v) => setSp({ tab: v }, { replace: true });
+
+  const { setStudentPreview } = useRole();
+  const navigate = useNavigate();
+  const previewAsStudent = () => { setStudentPreview(true); navigate('/'); };
+
   const [decks, setDecks] = useState(null);
   const [students, setStudents] = useState([]);
   const [mode, setMode] = useState('list'); // list | create | edit
   const [editId, setEditId] = useState(null);
   const [forbidden, setForbidden] = useState(false);
-  const [view, setView] = useState('decks'); // decks | students
   const [isSchool, setIsSchool] = useState(false);
 
+  // При зміні вкладки скидаємо стан редагування колод.
+  useEffect(() => { setMode('list'); setEditId(null); }, [view]);
   useEffect(() => { getSchoolInfo().then((r) => setIsSchool(!!r.data.is_school)).catch(() => {}); }, []);
 
   const load = useCallback(async () => {
@@ -743,18 +810,23 @@ export default function TeacherPage() {
       <div className="tch-wrap">
         <div className="tch-top">
           <h2 className="tch-title">Викладач</h2>
-          {view === 'decks' && mode === 'list' && (
-            <button className="tch-btn" onClick={() => setMode('create')}>+ Колода</button>
-          )}
+          <div className="tch-top-actions">
+            {view === 'decks' && mode === 'list' && (
+              <button className="tch-btn" onClick={() => setMode('create')}>+ Колода</button>
+            )}
+            <button className="tch-btn ghost sm" onClick={previewAsStudent}>👁 Як учень</button>
+          </div>
         </div>
 
         <div className="tch-toggle-row">
-          <button className={`tch-pill ${view === 'decks' ? 'on' : ''}`}
-                  onClick={() => { setView('decks'); setMode('list'); }}>Колоди</button>
           <button className={`tch-pill ${view === 'students' ? 'on' : ''}`}
                   onClick={() => setView('students')}>Учні</button>
+          <button className={`tch-pill ${view === 'decks' ? 'on' : ''}`}
+                  onClick={() => setView('decks')}>Колоди</button>
           <button className={`tch-pill ${view === 'calendar' ? 'on' : ''}`}
                   onClick={() => setView('calendar')}>Календар</button>
+          <button className={`tch-pill ${view === 'stats' ? 'on' : ''}`}
+                  onClick={() => setView('stats')}>Статистика</button>
           {isSchool && (
             <button className={`tch-pill ${view === 'school' ? 'on' : ''}`}
                     onClick={() => setView('school')}>Школа</button>
@@ -763,6 +835,7 @@ export default function TeacherPage() {
 
         {view === 'students' && <StudentsList />}
         {view === 'calendar' && <CalendarManager />}
+        {view === 'stats' && <TeacherStats students={students} />}
         {view === 'school' && <SchoolManager />}
 
         {view === 'decks' && mode === 'create' && (
