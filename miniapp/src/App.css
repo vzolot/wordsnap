@@ -2889,6 +2889,24 @@
   border: 1px dashed var(--violet); color: var(--violet); background: var(--violet-soft);
   font-weight: 600; font-size: 13px; cursor: pointer; text-align: center;
 }
+.tch-photo-btn:disabled { opacity: 0.6; }
+.tch-photo-row { display: flex; gap: 8px; }
+.tch-photo-row .tch-photo-btn { flex: 1; }
+/* Модалка живої камери. */
+.cam-overlay {
+  position: fixed; inset: 0; z-index: 1000; padding: 16px;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex; align-items: center; justify-content: center;
+}
+.cam-box {
+  width: 100%; max-width: 420px; overflow: hidden;
+  background: var(--bg-card); border-radius: var(--r-lg, 18px);
+  display: flex; flex-direction: column;
+}
+.cam-video { width: 100%; max-height: 68vh; background: #000; display: block; object-fit: contain; }
+.cam-fallback { padding: 24px 16px; text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.cam-actions { display: flex; gap: 10px; padding: 12px; }
+.cam-actions .tch-btn { flex: 1; }
 
 /* ── M13: домашнє завдання ─────────────────────────────────────────────────── */
 .tch-hw { font-size: 12px; font-weight: 600; white-space: nowrap; }

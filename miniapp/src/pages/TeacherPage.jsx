@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppBar from '../components/AppBar';
+import CameraCapture from '../components/CameraCapture';
 import { useTenant } from '../contexts/TenantContext';
 import { useRole } from '../contexts/RoleContext';
 import {
@@ -288,17 +289,15 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [camOpen, setCamOpen] = useState(false);
   const assignAll = target === 'all';
 
   useEffect(() => { getGroups().then((r) => setGroups(r.data.groups || [])).catch(() => {}); }, []);
 
-  const onPhoto = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
+  // Спільний пайплайн: base64-зображення → AI-розпізнавання пар → у текст.
+  const recognize = async (b64, mime) => {
     setErr(''); setPhotoBusy(true);
     try {
-      const { b64, mime } = await fileToB64(file);
       const r = await createDeckFromPhoto(b64, mime);
       const pairs = r.data.pairs || [];
       if (pairs.length === 0) { setErr('Не вдалося розпізнати слова на фото.'); return; }
@@ -310,6 +309,20 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
         ? 'Ліміт розпізнавання фото на цей місяць вичерпано. Доступно з наступного місяця.'
         : 'Не вдалося обробити фото.');
     } finally { setPhotoBusy(false); }
+  };
+
+  const onPhoto = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const { b64, mime } = await fileToB64(file);
+    await recognize(b64, mime);
+  };
+
+  // Кадр із живої камери → закриваємо камеру → розпізнаємо.
+  const onCameraCapture = async (b64, mime) => {
+    setCamOpen(false);
+    await recognize(b64, mime);
   };
 
   const toggle = (id) => setSelected((prev) => {
@@ -358,11 +371,20 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      <label className="tch-photo-btn">
-        {photoBusy ? '📷 Розпізнаю…' : '📷 Створити з фото'}
-        <input type="file" accept="image/*" capture="environment"
-               onChange={onPhoto} disabled={photoBusy} hidden />
-      </label>
+      <div className="tch-photo-row">
+        <button type="button" className="tch-photo-btn"
+                onClick={() => { setErr(''); setCamOpen(true); }} disabled={photoBusy}>
+          📷 Зробити фото
+        </button>
+        <label className={`tch-photo-btn${photoBusy ? ' busy' : ''}`}>
+          🖼 З файлу
+          <input type="file" accept="image/*" onChange={onPhoto} disabled={photoBusy} hidden />
+        </label>
+      </div>
+      {photoBusy && <p className="tch-muted sm">📷 Розпізнаю слова…</p>}
+      {camOpen && (
+        <CameraCapture onCapture={onCameraCapture} onClose={() => setCamOpen(false)} busy={photoBusy} />
+      )}
       <div className="tch-toggle-row">
         <button className={`tch-pill ${target === 'all' ? 'on' : ''}`}
                 onClick={() => setTarget('all')}>Всім</button>
