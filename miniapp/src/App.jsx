@@ -114,25 +114,37 @@ function TelegramBackButton() {
     const tg = window.Telegram?.WebApp;
     const bb = tg?.BackButton;
     if (!bb) return;
-    const isHome = location.pathname === '/' || location.pathname === '/home';
-    const apply = () => { if (isHome) bb.hide(); else bb.show(); };
+    // Кореневі екрани — без «назад» (там Telegram показує нативну ✕ «закрити»):
+    // учнівська головна і кабінет викладача (/teacher — його «домашній» екран).
+    const ROOTS = ['/', '/home', '/teacher'];
+    const isRoot = ROOTS.includes(location.pathname);
+    const apply = () => { if (isRoot) bb.hide(); else bb.show(); };
     const onBack = () => navigate(-1);
 
-    apply();
-    try { bb.onClick(onBack); } catch {}
-
-    // Restore handler after Telegram's native modals close.
-    const onModalClosed = () => {
+    // Перевстановлює стан + обробник. offClick ПЕРЕД onClick — щоб не
+    // накопичувати дублікати (інакше один тап = кілька navigate(-1)).
+    const restore = () => {
       apply();
-      try { bb.onClick(onBack); } catch {}
+      try { bb.offClick(onBack); bb.onClick(onBack); } catch {}
     };
-    try { tg.onEvent?.('invoiceClosed', onModalClosed); } catch {}
-    try { tg.onEvent?.('popupClosed', onModalClosed); } catch {}
+    restore();
+
+    // КРИТИЧНО: Telegram скидає BackButton.onClick при відкритті нативних
+    // оверлеїв — invoice/popup, А ТАКОЖ share через openTelegramLink (кнопка
+    // «Поділитися ботом»). Після повернення фокуса кнопка «назад» лишалась
+    // мертвою. Перевстановлюємо обробник при поверненні видимості/фокуса.
+    const onVis = () => { if (document.visibilityState === 'visible') restore(); };
+    try { tg.onEvent?.('invoiceClosed', restore); } catch {}
+    try { tg.onEvent?.('popupClosed', restore); } catch {}
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', restore);
 
     return () => {
       try { bb.offClick(onBack); } catch {}
-      try { tg.offEvent?.('invoiceClosed', onModalClosed); } catch {}
-      try { tg.offEvent?.('popupClosed', onModalClosed); } catch {}
+      try { tg.offEvent?.('invoiceClosed', restore); } catch {}
+      try { tg.offEvent?.('popupClosed', restore); } catch {}
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', restore);
     };
   }, [location.pathname, navigate]);
   return null;

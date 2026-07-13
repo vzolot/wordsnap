@@ -13,7 +13,8 @@ import { readCache } from '../api/client';
 // when they already compute it for their own logic (HomePage / StatsPage).
 function AppBar({ showProLink = true, isPro: isProProp = null }) {
   const { t } = useT();
-  const { display_name, logo_url, billingEnabled } = useTenant();
+  const { display_name, logo_url, billingEnabled, isDefaultTenant } = useTenant();
+  const closeApp = () => { try { window.Telegram?.WebApp?.close?.(); } catch { /* noop */ } };
   const cached = readCache('stats', { ignoreTtl: true });
   const isPro = isProProp !== null ? isProProp : (cached?.plan === 'pro');
   // Логотип: картинка бренду якщо є, інакше перша літера назви (WordSnap → «W»).
@@ -34,6 +35,15 @@ function AppBar({ showProLink = true, isPro: isProProp = null }) {
       </div>
       <div className="app-bar-actions">
         <ThemeToggle />
+        {/* Явна кнопка «закрити додаток» (white-label). WordSnap (тенант 1)
+            лишається без змін — там працює нативне закриття Telegram. */}
+        {!isDefaultTenant && (
+          <button className="app-bar-settings" onClick={closeApp} aria-label="Закрити додаток">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
         <Link to="/settings" className="app-bar-settings" aria-label={t('settings.title')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
