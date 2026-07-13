@@ -28,6 +28,11 @@ class WordsBulkRequest(BaseModel):
     words: list[str]
 
 
+class SnapPhotoRequest(BaseModel):
+    image_b64: str            # base64 без data-URL префіксу
+    image_mime: str = "image/jpeg"
+
+
 class ReviewRequest(BaseModel):
     word_id: int
     quality: int = 3
@@ -725,6 +730,50 @@ async def add_words_bulk_endpoint(
         "added_count": len(added),
         "limit_hit": len(skipped_limit) > 0,
     }
+
+
+@router.post("/api/snap/photo")
+async def snap_photo_endpoint(
+    data: SnapPhotoRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """Фото → слова: vision-екстракт кандидатів у target_lang юзера. Не додає
+    одразу — повертає слова, які фронт показує для підтвердження, а тоді шле у
+    /api/words/bulk. Поважає місячний AI-ліміт тенанта (як фото-колоди)."""
+    from core.user_service import get_or_create_user
+    from core.openai_client import extract_words_from_image
+    from core.tenant_service import get_tenant_by_id, ai_snap_available, incr_ai_snap_usage
+
+    user = await get_or_create_user(telegram_id=telegram_id, tenant_id=tenant_id)
+    if not user.target_lang:
+        return {"error": "setup_required"}
+
+    tenant = await get_tenant_by_id(tenant_id)
+    if tenant is not None and not await ai_snap_available(tenant):
+        raise HTTPException(status_code=429, detail="ai_snap_limit_reached")
+
+    b64 = (data.image_b64 or "").strip()
+    if not b64:
+        raise HTTPException(status_code=400, detail="image_required")
+
+    try:
+        words = await extract_words_from_image(
+            b64,
+            target_lang=user.target_lang,
+            native_lang=user.native_lang or "uk",
+            image_mime=(data.image_mime or "image/jpeg"),
+        )
+    except Exception:
+        logger.warning("snap_photo extract failed", exc_info=True)
+        words = []
+
+    # Рахуємо витрату AI-снапу лише коли реально викликали vision.
+    if tenant is not None:
+        await incr_ai_snap_usage(tenant_id)
+
+    analytics.capture(telegram_id, "snap_extracted", {
+        "source": "miniapp_photo", "n_words": len(words), "target_lang": user.target_lang,
+    })
+    return {"words": words}
 
 
 @router.get("/api/songs")

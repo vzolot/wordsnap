@@ -61,6 +61,9 @@ export const submitReview = (wordId, quality, mode = 'cards') =>
   api.post('/api/review', { word_id: wordId, quality, mode });
 export const addWord = (word) => api.post('/api/words', { word });
 export const bulkAddWords = (words) => api.post('/api/words/bulk', { words });
+// Фото → слова: vision-екстракт кандидатів (потім підтверджуємо через bulk).
+export const snapPhoto = (imageB64, imageMime) =>
+  api.post('/api/snap/photo', { image_b64: imageB64, image_mime: imageMime });
 export const deleteWord = (wordId) => api.delete(`/api/words/${wordId}`);
 export const updateWordTranslation = (wordId, translation) =>
   api.patch(`/api/words/${wordId}`, { translation });

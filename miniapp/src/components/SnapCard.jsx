@@ -1,11 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addWord, clearCache, readCache, writeCache } from '../api/client';
+import { addWord, bulkAddWords, snapPhoto, clearCache, readCache, writeCache } from '../api/client';
 import { pollImage } from '../utils/pollImage';
 import { useT } from '../contexts/LangContext';
 import { useTenant } from '../contexts/TenantContext';
 import { track } from '../utils/analytics';
 import WordResult from './WordResult';
+import CameraCapture from './CameraCapture';
+
+// File → base64 (без data-URL префіксу) + mime.
+function fileToB64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => { const s = String(r.result); resolve({ b64: s.slice(s.indexOf(',') + 1), mime: file.type || 'image/jpeg' }); };
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
 
 function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
   const { t } = useT();
@@ -16,6 +27,12 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [errorKind, setErrorKind] = useState(null); // 'limit' | other
+  // Фото → слова
+  const [camOpen, setCamOpen] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [candidates, setCandidates] = useState(null); // list of words | null
+  const [addingBulk, setAddingBulk] = useState(false);
+  const [photoMsg, setPhotoMsg] = useState('');
   // Поточне очікуване слово для полінгу картинки. Скидається при reset/submit.
   const activeWordIdRef = useRef(null);
   const unmountedRef = useRef(false);
@@ -114,6 +131,62 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
     setError('');
   };
 
+  // ── Фото → слова ──────────────────────────────────────────────────────────
+  const doExtract = async (b64, mime) => {
+    setError(''); setErrorKind(null); setPhotoMsg(''); setExtracting(true);
+    try {
+      const r = await snapPhoto(b64, mime);
+      if (r.data?.error === 'setup_required') { setError(t('snap.setup_required')); return; }
+      const words = r.data?.words || [];
+      if (words.length === 0) { setError(t('snap.photo_empty')); return; }
+      setCandidates(words);
+      track('snap_photo_extracted', { n_words: words.length });
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      setError(detail === 'ai_snap_limit_reached' ? t('snap.photo_limit') : t('snap.error'));
+    } finally { setExtracting(false); }
+  };
+
+  const onCameraCapture = async (b64, mime) => { setCamOpen(false); await doExtract(b64, mime); };
+
+  const onFile = async (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    const { b64, mime } = await fileToB64(f);
+    await doExtract(b64, mime);
+  };
+
+  const removeCandidate = (w) => setCandidates((prev) => (prev || []).filter((x) => x !== w));
+
+  const addCandidates = async () => {
+    if (!candidates?.length) return;
+    setAddingBulk(true); setError('');
+    try {
+      const r = await bulkAddWords(candidates);
+      if (r.data?.error === 'setup_required') { setError(t('snap.setup_required')); return; }
+      const added = r.data?.added_count ?? (r.data?.added?.length || 0);
+      setPhotoMsg(t('snap.photo_added', { n: added }));
+      setCandidates(null);
+      // Оптимістично оновлюємо кеш stats + інвалідатимо words (як у submit).
+      const cachedStats = readCache('stats', { ignoreTtl: true });
+      if (cachedStats) {
+        writeCache('stats', {
+          ...cachedStats,
+          total_words: (cachedStats.total_words || 0) + added,
+          used_today: (cachedStats.used_today || 0) + added,
+        });
+      }
+      clearCache('words');
+      onAdded?.();
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      setError(detail === 'setup_required' ? t('snap.setup_required') : t('snap.error'));
+    } finally { setAddingBulk(false); }
+  };
+
+  const photoBusy = extracting || addingBulk;
+
   return (
     <div className="snap-card">
       <div className="snap-head">
@@ -167,6 +240,36 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
               )}
             </div>
           )}
+
+          <div className="snap-photo-row">
+            <button type="button" className="snap-photo-btn"
+                    onClick={() => { setError(''); setCamOpen(true); }} disabled={loading || photoBusy}>
+              {t('snap.photo')}
+            </button>
+            <label className={`snap-photo-btn${(loading || photoBusy) ? ' disabled' : ''}`}>
+              {t('snap.file')}
+              <input type="file" accept="image/*" hidden onChange={onFile} disabled={loading || photoBusy} />
+            </label>
+          </div>
+          {extracting && <p className="snap-photo-msg">{t('snap.extracting')}</p>}
+          {photoMsg && <p className="snap-photo-msg ok">{photoMsg}</p>}
+          {candidates && candidates.length > 0 && (
+            <div className="snap-candidates">
+              <p className="snap-cand-hint">{t('snap.found_pick')}</p>
+              <div className="snap-chips">
+                {candidates.map((w) => (
+                  <button key={w} type="button" className="snap-chip" onClick={() => removeCandidate(w)}>
+                    {w}<span className="snap-chip-x">×</span>
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="snap-submit" style={{ width: '100%', marginTop: 10 }}
+                      onClick={addCandidates} disabled={addingBulk}>
+                {addingBulk ? <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> : '✨'}
+                <span>{t('snap.add_n', { n: candidates.length })}</span>
+              </button>
+            </div>
+          )}
         </form>
       ) : (
         <>
@@ -175,6 +278,10 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
             ✨ {t('snap.another')}
           </button>
         </>
+      )}
+
+      {camOpen && (
+        <CameraCapture onCapture={onCameraCapture} onClose={() => setCamOpen(false)} busy={extracting} />
       )}
     </div>
   );
