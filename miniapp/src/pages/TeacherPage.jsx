@@ -6,7 +6,7 @@ import { useTenant } from '../contexts/TenantContext';
 import { useRole } from '../contexts/RoleContext';
 import {
   getTeacherDecks, getTeacherStudents, getTeacherDeck,
-  createTeacherDeck, updateTeacherDeck, getTeacherStudentDetail,
+  createTeacherDeck, updateTeacherDeck, deleteTeacherDeck, getTeacherStudentDetail,
   getAvailability, putAvailability, getTeacherLessons, teacherCancelLesson,
   teacherCreateLesson,
   createDeckFromPhoto, assignHomework,
@@ -358,6 +358,9 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
   return (
     <div className="tch-card">
       <h3 className="tch-h3">Нова колода</h3>
+      <p className="tch-muted sm" style={{ marginTop: 0 }}>
+        Пиши слова <b>мовою, яку викладаєш</b> (напр. польською) — переклад рідною й приклади підставляться самі.
+      </p>
       <input
         className="tch-input"
         placeholder="Назва колоди (напр. «Польська: побут»)"
@@ -446,6 +449,17 @@ function EditDeck({ deckId, students, onClose }) {
     } finally { setBusy(false); }
   };
 
+  const delDeck = () => {
+    const doDel = async () => {
+      setBusy(true);
+      try { await deleteTeacherDeck(deckId); onClose(); } finally { setBusy(false); }
+    };
+    const tg = window.Telegram?.WebApp;
+    const q = 'Видалити колоду разом зі словами в учнів? Це не можна скасувати.';
+    if (tg?.showConfirm) tg.showConfirm(q, (ok) => { if (ok) doDel(); });
+    else if (window.confirm(q)) doDel();
+  };
+
   if (!deck) return <div className="tch-card"><p className="tch-muted">Завантаження…</p></div>;
 
   return (
@@ -486,6 +500,10 @@ function EditDeck({ deckId, students, onClose }) {
 
       <h4 className="tch-h4">Домашнє завдання (дедлайн)</h4>
       <DeadlineAssign deckId={deckId} />
+
+      <div className="tch-actions" style={{ marginTop: 18 }}>
+        <button className="tch-btn danger" onClick={delDeck} disabled={busy}>🗑 Видалити колоду</button>
+      </div>
     </div>
   );
 }

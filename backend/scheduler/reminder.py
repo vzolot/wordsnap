@@ -218,7 +218,11 @@ async def check_and_send_daily_pushes(bot: Bot) -> None:
     try:
         async with SessionLocal() as session:
             users = list((await session.execute(
-                select(User).where(User.reminders_enabled == True)  # noqa: E712
+                # Лише учні: викладачам (teacher/owner) review-нагадування зайві.
+                select(User).where(
+                    User.reminders_enabled == True,  # noqa: E712
+                    User.role == "student",
+                )
             )).scalars().all())
 
         from core.bot_registry import get_bot

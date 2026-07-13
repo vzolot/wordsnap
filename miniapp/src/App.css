@@ -2835,6 +2835,7 @@
   background: var(--gradient); color: #fff; border: none; cursor: pointer;
 }
 .tch-btn.ghost { background: var(--bg-pill); color: var(--text-1); }
+.tch-btn.danger { background: transparent; color: var(--coral); border: 1px solid var(--coral); }
 .tch-btn.sm { padding: 6px 12px; font-size: 13px; }
 .tch-btn:disabled { opacity: 0.6; }
 

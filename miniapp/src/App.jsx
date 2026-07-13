@@ -119,7 +119,12 @@ function TelegramBackButton() {
     const ROOTS = ['/', '/home', '/teacher'];
     const isRoot = ROOTS.includes(location.pathname);
     const apply = () => { if (isRoot) bb.hide(); else bb.show(); };
-    const onBack = () => navigate(-1);
+    // Якщо екран відкрито дип-лінком (напр. /review з нагадування, replace:true)
+    // — історії немає, і navigate(-1) «нікуди не веде». Тоді ведемо на home.
+    const onBack = () => {
+      if (window.history.length > 1) navigate(-1);
+      else navigate('/', { replace: true });
+    };
 
     // Перевстановлює стан + обробник. offClick ПЕРЕД onClick — щоб не
     // накопичувати дублікати (інакше один тап = кілька navigate(-1)).

@@ -10,6 +10,7 @@ const LANG_LOCALES = {
   es: ['es-ES', 'es-MX', 'es-US', 'es'],
   pl: ['pl-PL', 'pl'],
   de: ['de-DE', 'de-AT', 'de-CH', 'de'],
+  fr: ['fr-FR', 'fr-CA', 'fr'],
 };
 
 let voicesCache = [];
@@ -47,8 +48,12 @@ export function isSpeechSupported() {
 export function speak(text, langCode) {
   if (!isSpeechSupported() || !text) return;
   const synth = window.speechSynthesis;
-  // Скасовуємо попереднє щоб не було накладень якщо юзер тапає швидко
-  try { synth.cancel(); } catch { /* noop */ }
+  // Голоси часто вантажаться ліниво — оновлюємо перед вибором (getVoices
+  // синхронний і зазвичай уже заповнений на момент тапу користувача).
+  refreshVoices();
+  // Скасовуємо ЛИШЕ якщо реально щось грає/у черзі — інакше на деяких WebKit
+  // cancel() ковтає і нову фразу (частий баг «нічого не озвучується»).
+  try { if (synth.speaking || synth.pending) synth.cancel(); } catch { /* noop */ }
 
   const utter = new SpeechSynthesisUtterance(String(text));
   const voice = pickVoice(langCode);
@@ -56,7 +61,7 @@ export function speak(text, langCode) {
     utter.voice = voice;
     utter.lang = voice.lang;
   } else {
-    const locales = LANG_LOCALES[langCode] || [langCode];
+    const locales = LANG_LOCALES[langCode] || (langCode ? [langCode] : []);
     if (locales[0]) utter.lang = locales[0];
   }
   // Трохи повільніше — зручніше для вивчення
@@ -65,5 +70,7 @@ export function speak(text, langCode) {
 
   try {
     synth.speak(utter);
+    // Chrome/деякі WebKit інколи ставлять чергу на паузу — «будимо».
+    setTimeout(() => { try { synth.resume(); } catch { /* noop */ } }, 60);
   } catch { /* noop */ }
 }

@@ -239,12 +239,8 @@ function CardsMode({ current, onAnswer, t, lang }) {
 
   useEffect(() => { setRevealed(false); setSelected(null); }, [current.id]);
 
-  const exampleSentence = (() => {
-    const ex = current.examples;
-    if (!ex || !ex.length) return null;
-    const first = ex[0];
-    return typeof first === 'string' ? first : first?.sentence;
-  })();
+  // До 3 прикладів із поясненням — як у картці основного WordSnap.
+  const examples = Array.isArray(current.examples) ? current.examples.slice(0, 3) : [];
 
   const handle = (q, k) => {
     if (selected) return;
@@ -275,10 +271,20 @@ function CardsMode({ current, onAnswer, t, lang }) {
               <div className="translation-text">{FLAGS[lang] || ''} {current.translation}</div>
               {current.memory_tip && <div className="translation-sub">{current.memory_tip}</div>}
             </div>
-            {exampleSentence && (
+            {examples.length > 0 && (
               <div className="review-examples">
                 <div className="eyebrow" style={{ padding: '0 4px' }}>{t('review.example')}</div>
-                <div className="review-example">"{exampleSentence}"</div>
+                {examples.map((ex, i) => {
+                  const sentence = typeof ex === 'string' ? ex : ex?.sentence;
+                  const explanation = typeof ex === 'string' ? null : ex?.explanation;
+                  if (!sentence) return null;
+                  return (
+                    <div key={i} className="review-example">
+                      <div>&quot;{sentence}&quot;</div>
+                      {explanation && <div className="translation-sub" style={{ marginTop: 2 }}>{explanation}</div>}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </>

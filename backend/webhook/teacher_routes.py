@@ -230,6 +230,18 @@ async def teacher_deck_from_photo(
     return {"ok": True, "pairs": pairs}
 
 
+@router.delete("/api/teacher/decks/{deck_id}")
+async def teacher_delete_deck(
+    deck_id: int, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """Видаляє колоду разом із матеріалізованими словами учнів із неї."""
+    await _require_teacher(telegram_id, tenant_id)
+    ok = await ds.delete_deck(deck_id, tenant_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="deck_not_found")
+    return {"ok": True}
+
+
 @router.patch("/api/teacher/decks/{deck_id}")
 async def teacher_update_deck(
     deck_id: int, data: DeckPatchRequest,

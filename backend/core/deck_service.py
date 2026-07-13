@@ -230,26 +230,90 @@ async def _materialize(session, deck: Deck, user_ids: list[int]) -> int:
     )).scalars().all()
     if not deck_words:
         return 0
+    target = deck.target_lang or "en"
+
+    # Уже матеріалізовані (uid, word) — щоб не збагачувати/вставляти повторно.
+    existing: set[tuple[int, str]] = set()
+    for uid, w in (await session.execute(
+        select(Word.user_id, Word.word).where(
+            Word.deck_id == deck.id, Word.user_id.in_(user_ids),
+        )
+    )).all():
+        existing.add((uid, w))
+
+    # Лише слова, яких комусь бракує → їх збагачуємо (по разу на слово).
+    pending: dict[str, DeckWord] = {}
+    for dw in deck_words:
+        norm = dw.word.lower().strip()
+        if any((uid, norm) not in existing for uid in user_ids):
+            pending[norm] = dw
+    if not pending:
+        return 0
+
+    # native для AI-збагачення — у власника колоди (викладача), інакше uk.
+    native = "uk"
+    if deck.owner_user_id:
+        native = (await session.execute(
+            select(User.native_lang).where(User.id == deck.owner_user_id)
+        )).scalar_one_or_none() or "uk"
+
+    # AI-збагачення (кешоване get_word_data) + картинка (Unsplash) — щоб картки
+    # колод мали приклади/memory_tip/частину мови/картинку, як у основному WordSnap.
+    from .openai_client import get_word_data
+    from .unsplash_client import search_image
+    enrich: dict[str, dict] = {}
+    for norm, dw in pending.items():
+        data = None
+        try:
+            data = await get_word_data(dw.word, target, native)
+        except Exception:
+            data = None
+        data = data or {}
+        image_url = None
+        try:
+            image_url = await search_image(data.get("image_keyword") or dw.word)
+        except Exception:
+            image_url = None
+        enrich[norm] = {
+            "part_of_speech": data.get("part_of_speech"),
+            "difficulty": data.get("difficulty"),
+            "examples": data.get("examples"),
+            "memory_tip": data.get("memory_tip"),
+            "image_url": image_url,
+            "image_keyword": data.get("image_keyword"),
+        }
+
     now = datetime.now(timezone.utc)
     inserted = 0
     for uid in user_ids:
-        rows = [
-            {
+        rows = []
+        for dw in deck_words:
+            norm = dw.word.lower().strip()
+            if (uid, norm) in existing:
+                continue
+            e = enrich.get(norm, {})
+            rows.append({
                 "user_id": uid,
                 "tenant_id": deck.tenant_id,
                 "deck_id": deck.id,
-                "word": dw.word.lower().strip(),
+                "word": norm,
                 "translation": dw.translation,
                 "target_lang": (dw.target_lang or deck.target_lang or "en"),
+                "part_of_speech": e.get("part_of_speech"),
+                "difficulty": e.get("difficulty"),
+                "examples": e.get("examples"),
+                "memory_tip": e.get("memory_tip"),
+                "image_url": e.get("image_url"),
+                "image_keyword": e.get("image_keyword"),
                 "next_review": now,  # доступне до повторення одразу
                 "interval_days": 1.0,
                 "ease_factor": 2.5,
                 "review_count": 0,
                 "status": "learning",
                 "source": "deck",
-            }
-            for dw in deck_words
-        ]
+            })
+        if not rows:
+            continue
         stmt = pg_insert(Word).values(rows).on_conflict_do_nothing(
             index_elements=["user_id", "word", "target_lang"]
         )
@@ -384,6 +448,26 @@ async def remove_deck_word(deck_id: int, tenant_id: int, deck_word_id: int) -> b
         )
         await session.commit()
         return (res.rowcount or 0) > 0
+
+
+async def delete_deck(deck_id: int, tenant_id: int) -> bool:
+    """Повністю видаляє колоду: шаблон (deck_words), призначення й
+    МАТЕРІАЛІЗОВАНІ слова учнів із цієї колоди (source='deck'). Особисті слова
+    учнів (додані вручну) не чіпаються. Повертає True, якщо колода існувала."""
+    async with SessionLocal() as session:
+        deck = (await session.execute(
+            select(Deck).where(Deck.id == deck_id, Deck.tenant_id == tenant_id)
+        )).scalar_one_or_none()
+        if deck is None:
+            return False
+        # Спершу прибираємо матеріалізовані слова цієї колоди в учнів.
+        await session.execute(
+            delete(Word).where(Word.deck_id == deck.id, Word.tenant_id == tenant_id)
+        )
+        # Далі сам deck — deck_words / deck_assignments підуть за CASCADE.
+        await session.execute(delete(Deck).where(Deck.id == deck.id))
+        await session.commit()
+        return True
 
 
 async def set_deck_assignees(

@@ -45,7 +45,10 @@ async def check_and_send_streak_saves(bot: Bot) -> None:
     try:
         async with SessionLocal() as session:
             users = list((await session.execute(
-                select(User).where(User.reminders_enabled == True)
+                select(User).where(
+                    User.reminders_enabled == True,  # noqa: E712
+                    User.role == "student",  # не смикаємо викладачів
+                )
             )).scalars().all())
 
             sent = 0

@@ -85,6 +85,7 @@ async def _eligible_users(session) -> list[tuple[User, int]]:
         .join(last_review_sq, last_review_sq.c.uid == User.id)
         .where(
             User.reminders_enabled == True,  # noqa: E712
+            User.role == "student",  # викладачам re-engage не шлемо
             User.total_reviews > 0,
             last_review_sq.c.last_review < inactive_before,
             (User.last_reengage_push_at.is_(None))
