@@ -13,6 +13,7 @@ sync (лениво, на завантаженні слів/ревʼю).
 """
 from __future__ import annotations
 
+import asyncio
 import re
 from datetime import datetime, timezone
 
@@ -63,6 +64,110 @@ def parse_word_pairs(text: str, limit: int = 500) -> list[tuple[str, str]]:
         if len(pairs) >= limit:
             break
     return pairs
+
+
+def parse_deck_entries(text: str, limit: int = 500) -> list[tuple[str, str | None]]:
+    """Як parse_word_pairs, але переклад НЕОБОВʼЯЗКОВИЙ: рядок без роздільника
+    (саме слово/фраза) → (word, None). None пізніше заповнить автопереклад."""
+    out: list[tuple[str, str | None]] = []
+    seen: set[str] = set()
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        word = translation = None
+        if "\t" in line:
+            word, _, translation = line.partition("\t")
+        else:
+            m = re.search(r"\s+[-–—:]\s+", line)  # тире/двокрапка з пробілами
+            if m:
+                word = line[: m.start()]
+                translation = line[m.end():]
+            elif ";" in line:
+                word, _, translation = line.partition(";")
+            elif "," in line:
+                word, _, translation = line.partition(",")
+            else:
+                word = line  # лише слово — переклад підставимо автоматично
+        word = (word or "").strip()[:255]
+        translation = ((translation or "").strip()[:500]) or None
+        if not word:
+            continue
+        key = word.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append((word, translation))
+        if len(out) >= limit:
+            break
+    return out
+
+
+async def autofill_translations(
+    entries: list[tuple[str, str | None]], target_lang: str, native_lang: str,
+) -> list[tuple[str, str]]:
+    """Заповнює відсутні переклади через AI (get_word_data — та сама модель+кеш,
+    що й у WordSnap). Якщо AI не дав переклад — лишаємо саме слово, щоб пара
+    ніколи не була порожньою. Обмежена конкурентність (щоб не бити по rate-limit)."""
+    from .openai_client import get_word_data
+
+    sem = asyncio.Semaphore(5)
+
+    async def resolve(word: str, tr: str | None) -> tuple[str, str]:
+        if tr:
+            return (word, tr)
+        async with sem:
+            try:
+                data = await get_word_data(word, target_lang or "en", native_lang or "uk")
+                t = ((data or {}).get("translation") or "").strip()
+            except Exception:
+                t = ""
+        return (word, t or word)
+
+    return list(await asyncio.gather(*[resolve(w, t) for (w, t) in entries]))
+
+
+async def notify_students_new_words(
+    tenant_id: int, deck_id: int, count: int, *, is_new_deck: bool,
+) -> int:
+    """Сповіщає учнів-адресатів колоди про нові слова (з бота тенанта). Викликати
+    після create_deck/add_words_to_deck. Помилки надсилання ковтаються. Повертає
+    к-сть надісланих."""
+    if count <= 0:
+        return 0
+    async with SessionLocal() as session:
+        deck = (await session.execute(
+            select(Deck).where(Deck.id == deck_id, Deck.tenant_id == tenant_id)
+        )).scalar_one_or_none()
+        if deck is None:
+            return 0
+        user_ids = await _target_user_ids(session, deck)
+        if not user_ids:
+            return 0
+        tg_ids = (await session.execute(
+            select(User.telegram_id).where(
+                User.id.in_(user_ids), User.role == "student",
+            )
+        )).scalars().all()
+        title = deck.title
+
+    if not tg_ids:
+        return 0
+
+    from html import escape
+    from .telegram_send import send_message
+    safe = escape(title or "колода")
+    if is_new_deck:
+        text = (f"📚 Ваш викладач додав нову колоду «{safe}» ({count} слів).\n"
+                f"Відкрий додаток і почни вчити!")
+    else:
+        text = (f"✨ Ваш викладач додав {count} нових слів у колоду «{safe}».\n"
+                f"Відкрий додаток, щоб їх повторити!")
+    results = await asyncio.gather(
+        *[send_message(tid, text, tenant_id=tenant_id) for tid in tg_ids],
+        return_exceptions=True,
+    )
+    return sum(1 for r in results if not isinstance(r, Exception))
 
 
 # ─── Видимість колод ─────────────────────────────────────────────────────────

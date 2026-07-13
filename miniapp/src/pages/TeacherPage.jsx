@@ -321,7 +321,7 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
   const submit = async () => {
     setErr('');
     if (!title.trim()) { setErr('Вкажіть назву колоди'); return; }
-    if (!text.trim()) { setErr('Додайте слова: «слово - переклад» по рядку'); return; }
+    if (!text.trim()) { setErr('Додайте слова — по одному на рядок (переклад необовʼязковий)'); return; }
     if (target === 'group' && !groupId) { setErr('Оберіть групу'); return; }
     setBusy(true);
     try {
@@ -335,7 +335,7 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
       onCreated(r.data);
     } catch (e) {
       setErr(e?.response?.data?.detail === 'no_valid_pairs'
-        ? 'Не розпізнав жодної пари. Формат: «слово - переклад» по рядку.'
+        ? 'Не розпізнав жодного слова. Додай по слову на рядок (переклад необовʼязковий).'
         : 'Не вдалося створити колоду. Спробуйте ще раз.');
     } finally {
       setBusy(false);
@@ -354,7 +354,7 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
       <textarea
         className="tch-textarea"
         rows={8}
-        placeholder={'Слова, по одному на рядок:\nдім - dom\nвода - woda\n\nАбо вставте CSV (2 колонки).'}
+        placeholder={'Одне слово на рядок — переклад підставиться сам:\ndom\nwoda\n\nАбо задай свій переклад: «слово - переклад».\nМожна вставити CSV (2 колонки).'}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
@@ -450,7 +450,7 @@ function EditDeck({ deckId, students, onClose }) {
       <textarea
         className="tch-textarea"
         rows={4}
-        placeholder={'нове слово - переклад'}
+        placeholder={'нове слово (переклад підставиться сам) або «слово - переклад»'}
         value={addText}
         onChange={(e) => setAddText(e.target.value)}
       />

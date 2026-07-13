@@ -126,19 +126,29 @@ async def teacher_create_deck(
     title = (data.title or "").strip()
     if not title:
         raise HTTPException(status_code=400, detail="title_required")
-    pairs = ds.parse_word_pairs(data.text or "")
-    if not pairs:
+    # Переклад НЕОБОВʼЯЗКОВИЙ: рядок «лише слово» → автопереклад через AI.
+    entries = ds.parse_deck_entries(data.text or "")
+    if not entries:
         raise HTTPException(status_code=400, detail="no_valid_pairs")
+    deck_target = (data.target_lang or teacher.target_lang or "en")
+    pairs = await ds.autofill_translations(
+        entries, target_lang=deck_target, native_lang=(teacher.native_lang or "uk"),
+    )
     deck = await ds.create_deck(
         tenant_id=tenant_id,
         owner_user_id=teacher.id,
         title=title,
         pairs=pairs,
-        target_lang=(data.target_lang or teacher.target_lang),
+        target_lang=deck_target,
         assign_to_all=bool(data.assign_to_all),
         assignee_user_ids=data.assignee_user_ids,
         group_id=data.group_id,
     )
+    # Сповіщаємо учнів-адресатів про нову колоду (best-effort).
+    try:
+        await ds.notify_students_new_words(tenant_id, deck.id, len(pairs), is_new_deck=True)
+    except Exception:
+        logger.warning("notify_students_new_words (create) failed", exc_info=True)
     analytics.capture(telegram_id, "teacher_deck_created", {
         "tenant_id": tenant_id,
         "deck_id": deck.id,
@@ -225,19 +235,29 @@ async def teacher_update_deck(
     deck_id: int, data: DeckPatchRequest,
     telegram_id: int = Query(...), tenant_id: int = Query(1),
 ):
-    await _require_teacher(telegram_id, tenant_id)
+    teacher = await _require_teacher(telegram_id, tenant_id)
     if not _rl_allow(f"deckwrite:{tenant_id}:{telegram_id}", _DECK_WRITE_LIMIT, _DECK_WRITE_WINDOW):
         raise HTTPException(status_code=429, detail="rate_limited")
     result: dict = {"ok": True}
 
     if data.add_text:
-        pairs = ds.parse_word_pairs(data.add_text)
-        if pairs:
+        entries = ds.parse_deck_entries(data.add_text)
+        if entries:
+            pairs = await ds.autofill_translations(
+                entries,
+                target_lang=(teacher.target_lang or "en"),
+                native_lang=(teacher.native_lang or "uk"),
+            )
             try:
                 added = await ds.add_words_to_deck(deck_id, tenant_id, pairs)
             except ValueError:
                 raise HTTPException(status_code=404, detail="deck_not_found")
             result["added_words"] = added
+            if added:
+                try:
+                    await ds.notify_students_new_words(tenant_id, deck_id, added, is_new_deck=False)
+                except Exception:
+                    logger.warning("notify_students_new_words (add) failed", exc_info=True)
 
     if data.remove_word_ids:
         removed = 0
