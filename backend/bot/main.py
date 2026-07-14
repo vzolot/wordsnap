@@ -88,6 +88,38 @@ async def cmd_start(message: Message):
         tenant_id=tid,
     )
 
+    # Власник/викладач white-label бренду чи школи — НЕ учень: пропускаємо
+    # учнівський онбординг (вибір рідної мови) і ведемо одразу в кабінет.
+    # Власника тенанта (owner_telegram_id) авто-промоутимо в owner при 1-му /start.
+    if tid != 1:
+        from core.tenant_service import get_tenant_by_id
+        _tenant = await get_tenant_by_id(tid)
+        if _tenant and _tenant.owner_telegram_id == tg_user.id and user.role != "owner":
+            from sqlalchemy import update as sa_update
+            from core.db import SessionLocal
+            from core.models import User as UserModel
+            async with SessionLocal() as session:
+                await session.execute(
+                    sa_update(UserModel).where(UserModel.id == user.id).values(role="owner")
+                )
+                await session.commit()
+            user.role = "owner"
+        if user.role in ("teacher", "owner"):
+            brand = _tenant.display_name if _tenant else "?"
+            is_owner = user.role == "owner"
+            manage = "викладачами й учнями" if (is_owner and _tenant and _tenant.is_school) \
+                else "колодами, учнями й розкладом"
+            role_word = "адміністратор" if is_owner and _tenant and _tenant.is_school else "викладач"
+            kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
+                text="📱 Відкрити кабінет", web_app=WebAppInfo(url=MINI_APP_URL),
+            )]])
+            await message.answer(
+                f"👋 <b>{brand}</b>\n\nВи {role_word}. Відкрийте кабінет, щоб керувати {manage}.",
+                reply_markup=kb,
+            )
+            logger.info(f"Teacher/owner {tg_user.id} started ({user.role}, tenant {tid}) — onboarding skipped")
+            return
+
     # Affiliate/influencer flow: payload `aff_<slug>`. First-touch
     # зберігаємо у `users.affiliate_slug` + `affiliate_at`. Подальші
     # платежі цього юзера автоматично генерують revenue-share row
