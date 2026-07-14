@@ -64,6 +64,8 @@ async def main() -> int:
     p.add_argument("--color-primary", default=None)
     p.add_argument("--color-accent", default=None)
     p.add_argument("--plan", default="trial", choices=["trial", "active", "paused"])
+    p.add_argument("--is-school", action="store_true",
+                   help="режим школи: кілька викладачів + групи + вкладка «Школа»")
     args = p.parse_args()
 
     token = args.bot_token.strip()
@@ -99,6 +101,7 @@ async def main() -> int:
         color_primary=args.color_primary,
         color_accent=args.color_accent,
         plan=args.plan,
+        is_school=args.is_school,
     )
 
     # bot_token НЕ друкуємо (секрет).
@@ -110,6 +113,7 @@ async def main() -> int:
     print(f"  bot:           @{me['username']} (bot_id={tenant.bot_id})")
     print(f"  owner tg id:   {tenant.owner_telegram_id}")
     print(f"  plan:          {tenant.plan}")
+    print(f"  школа:         {'так (кілька викладачів)' if tenant.is_school else 'ні (соло)'}")
     print(f"  колір бренду:  {tenant.color_primary} / {tenant.color_accent}")
     print("─" * 64)
     print("  BotFather → Bot Settings → Menu Button → URL:")

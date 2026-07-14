@@ -233,9 +233,11 @@ async def create_tenant(
     color_primary: str | None = None,
     color_accent: str | None = None,
     plan: str = "trial",
+    is_school: bool = False,
 ) -> Tenant:
     """Створює новий тенант (викликає admin-скрипт add_tenant.py). bot_id
-    парситься з токена. billing_ui_enabled лишається false (white-label)."""
+    парситься з токена. billing_ui_enabled лишається false (white-label).
+    is_school=True → режим школи (кілька викладачів + групи, вкладка «Школа»)."""
     bot_id = parse_bot_id(bot_token)
     if bot_id is None:
         raise ValueError(f"Не вдалося витягти bot_id з токена (формат <id>:<hash>)")
@@ -248,6 +250,7 @@ async def create_tenant(
             owner_telegram_id=owner_telegram_id,
             logo_url=logo_url,
             plan=plan,
+            is_school=is_school,
         )
         if color_primary:
             tenant.color_primary = color_primary
