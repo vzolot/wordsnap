@@ -189,6 +189,122 @@ def create_payment_link(
     }
 
 
+# ─── Оплата сервісу тенантом (викладачем): $19/міс ───────────────────────────
+TENANT_SUB_AMOUNT = 19.0
+
+
+def create_tenant_payment_link(
+    tenant_id: int,
+    owner_telegram_id: int | None,
+    product_label: str,
+    amount: float = TENANT_SUB_AMOUNT,
+) -> dict:
+    """Перша оплата сервісу тенантом. БЕЗ regularMode — автопродовження робимо
+    самі через charge_tenant_recurring за збереженим recToken (надійніше, ніж
+    WayForPay-managed регуляр). order_reference = TEN_<tenant_id>_<ts>."""
+    if not MERCHANT_LOGIN or not MERCHANT_SECRET:
+        raise ValueError("WayForPay credentials not configured")
+    # WayForPay-підпис = str(amount); для цілих сум "19.0" != очікуване "19" і
+    # підпис не зійшовся б. Нормалізуємо до int, коли сума ціла.
+    if isinstance(amount, float) and amount.is_integer():
+        amount = int(amount)
+    order_reference = f"TEN_{tenant_id}_{int(time.time())}"
+    order_date = int(time.time())
+    product_names = [product_label[:120]]
+    product_counts = [1]
+    product_prices = [amount]
+    signature = generate_purchase_signature(
+        merchant_account=MERCHANT_LOGIN,
+        merchant_domain=MERCHANT_DOMAIN,
+        order_reference=order_reference,
+        order_date=order_date,
+        amount=amount,
+        currency="USD",
+        product_names=product_names,
+        product_counts=product_counts,
+        product_prices=product_prices,
+    )
+    cid = owner_telegram_id or tenant_id
+    params = {
+        "merchantAccount": MERCHANT_LOGIN,
+        "merchantDomainName": MERCHANT_DOMAIN,
+        "merchantSignature": signature,
+        "orderReference": order_reference,
+        "orderDate": order_date,
+        "amount": amount,
+        "currency": "USD",
+        "productName[]": product_names[0],
+        "productCount[]": product_counts[0],
+        "productPrice[]": product_prices[0],
+        "clientFirstName": f"Tenant{cid}",
+        "clientEmail": f"tenant{cid}@wordsnap.app",
+        "language": "UA",
+        "returnUrl": RETURN_URL,
+    }
+    if WEBHOOK_URL:
+        params["serviceUrl"] = WEBHOOK_URL
+    logger.info(f"Created TENANT payment link for tenant {tenant_id}, order {order_reference}")
+    return {
+        "payment_url": f"{WAYFORPAY_PURCHASE_URL}?{urlencode(params)}",
+        "order_reference": order_reference,
+        "form_url": WAYFORPAY_PURCHASE_URL,
+        "form_fields": params,
+    }
+
+
+async def charge_tenant_recurring(
+    rec_token: str, tenant_id: int, amount: float = TENANT_SUB_AMOUNT
+) -> dict:
+    """Автосписання $19 зі збереженого токена картки тенанта (з cron-задачі)."""
+    if isinstance(amount, float) and amount.is_integer():
+        amount = int(amount)
+    order_reference = f"TEN_REC_{tenant_id}_{int(time.time())}"
+    signature = generate_charge_signature(
+        merchant_account=MERCHANT_LOGIN,
+        order_reference=order_reference,
+        amount=amount,
+        currency="USD",
+    )
+    payload = {
+        "transactionType": "CHARGE",
+        "merchantAccount": MERCHANT_LOGIN,
+        "merchantAuthType": "SimpleSignature",
+        "merchantSignature": signature,
+        "apiVersion": 1,
+        "orderReference": order_reference,
+        "amount": amount,
+        "currency": "USD",
+        "recToken": rec_token,
+        "productName": ["WordSnap white-label service - 30 days"],
+        "productCount": [1],
+        "productPrice": [amount],
+    }
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(WAYFORPAY_API_URL, json=payload)
+            data = response.json()
+            logger.info(
+                f"TENANT recurring charge tenant {tenant_id}: "
+                f"reasonCode={data.get('reasonCode')} reason={data.get('reason')}"
+            )
+            return {
+                "success": str(data.get("reasonCode")) == "1100",
+                "order_reference": order_reference,
+                "reason_code": str(data.get("reasonCode", "")),
+                "reason": data.get("reason", ""),
+                "raw": data,
+            }
+    except Exception as e:
+        logger.error(f"WayForPay tenant charge error: {e}", exc_info=True)
+        return {
+            "success": False,
+            "order_reference": order_reference,
+            "reason_code": "ERROR",
+            "reason": str(e),
+            "raw": {},
+        }
+
+
 # === ПЕРЕВІРКА CALLBACK ===
 
 def verify_callback_signature(data: dict) -> bool:

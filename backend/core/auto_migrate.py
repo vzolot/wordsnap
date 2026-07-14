@@ -671,6 +671,28 @@ MIGRATIONS: list[tuple[str, str]] = [
         "tenants.bot_username",
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS bot_username VARCHAR(64)",
     ),
+    # ── Оплата сервісу викладачем ($19/міс, автопродовження) ──────────────
+    (
+        "tenants.billing",
+        "ALTER TABLE tenants "
+        "ADD COLUMN IF NOT EXISTS sub_status VARCHAR(20) NOT NULL DEFAULT 'trial', "
+        "ADD COLUMN IF NOT EXISTS sub_price_usd NUMERIC(10,2) NOT NULL DEFAULT 19, "
+        "ADD COLUMN IF NOT EXISTS sub_expires_at TIMESTAMPTZ, "
+        "ADD COLUMN IF NOT EXISTS sub_order_ref TEXT, "
+        "ADD COLUMN IF NOT EXISTS sub_rec_token TEXT, "
+        "ADD COLUMN IF NOT EXISTS sub_auto_renew BOOLEAN NOT NULL DEFAULT FALSE, "
+        "ADD COLUMN IF NOT EXISTS sub_next_charge_at TIMESTAMPTZ, "
+        "ADD COLUMN IF NOT EXISTS sub_last_payment_at TIMESTAMPTZ, "
+        "ADD COLUMN IF NOT EXISTS sub_reminder_sent_at TIMESTAMPTZ",
+    ),
+    (
+        "payment_history.tenant_id",
+        "ALTER TABLE payment_history ADD COLUMN IF NOT EXISTS tenant_id INTEGER",
+    ),
+    (
+        "payment_history.user_id_nullable",
+        "ALTER TABLE payment_history ALTER COLUMN user_id DROP NOT NULL",
+    ),
 ]
 
 

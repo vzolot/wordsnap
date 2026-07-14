@@ -5,13 +5,13 @@
 """
 import logging
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 
 from core import analytics
 from core.db import SessionLocal
-from core.models import User
+from core.models import Tenant, User
 from core import deck_service as ds
 from core import teacher_stats as tstats
 from core.rate_limit import allow as _rl_allow
@@ -400,3 +400,35 @@ async def teacher_leaderboard(
         congrat = None
     return {"top": lb["rows"], "top3": top3, "congrat_message": congrat,
             "week_start": lb["week_start"]}
+
+
+# ─── Оплата сервісу викладачем ($19/міс) ─────────────────────────────────────
+
+@router.get("/api/teacher/billing")
+async def teacher_billing_status_endpoint(
+    telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """Статус підписки на сервіс для кабінету викладача (без rec_token)."""
+    await _require_teacher(telegram_id, tenant_id)
+    from core.tenant_service import tenant_billing_status
+    async with SessionLocal() as session:
+        tenant = (await session.execute(
+            select(Tenant).where(Tenant.id == tenant_id)
+        )).scalar_one_or_none()
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="tenant_not_found")
+    return tenant_billing_status(tenant)
+
+
+@router.post("/api/teacher/billing/pay")
+async def teacher_billing_pay(
+    request: Request, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """URL на HPP-сторінку оплати сервісу ($19). Клієнт відкриває його через
+    tg.openLink → /pay/tenant рендерить auto-submit форму WayForPay."""
+    await _require_teacher(telegram_id, tenant_id)
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    if scheme == "http":
+        scheme = "https"
+    base = f"{scheme}://{request.url.netloc}"
+    return {"payment_url": f"{base}/pay/tenant?tenant_id={tenant_id}"}

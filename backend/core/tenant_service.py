@@ -156,6 +156,59 @@ def config_payload(tenant: Tenant, ai_available: bool) -> dict:
     }
 
 
+TENANT_SUB_DAYS = 30
+
+
+async def activate_tenant_subscription(
+    tenant_id: int, rec_token: str | None = None, order_ref: str | None = None,
+    days: int = TENANT_SUB_DAYS,
+) -> Tenant | None:
+    """Активує/продовжує підписку викладача після успішної оплати. Продовжує від
+    поточного sub_expires_at (якщо ще активна), інакше від тепер. Зберігає токен
+    картки для автосписання, знімає паузу з бота."""
+    from datetime import timedelta
+    async with SessionLocal() as session:
+        tenant = (await session.execute(
+            select(Tenant).where(Tenant.id == tenant_id)
+        )).scalar_one_or_none()
+        if tenant is None:
+            return None
+        now = datetime.now(timezone.utc)
+        base = tenant.sub_expires_at if (tenant.sub_expires_at and tenant.sub_expires_at > now) else now
+        tenant.sub_expires_at = base + timedelta(days=days)
+        tenant.sub_status = "active"
+        tenant.sub_last_payment_at = now
+        tenant.sub_reminder_sent_at = None
+        tenant.sub_next_charge_at = tenant.sub_expires_at  # автосписання в день закінчення
+        if order_ref and not tenant.sub_order_ref:
+            tenant.sub_order_ref = order_ref
+        if rec_token:
+            tenant.sub_rec_token = rec_token
+            tenant.sub_auto_renew = True
+        if tenant.plan == "paused":
+            tenant.plan = "active"  # оплата знімає паузу (бот підніметься на redeploy)
+        await session.commit()
+        await session.refresh(tenant)
+        logger.info("activate_tenant_subscription: tenant %s → %s", tenant_id, tenant.sub_expires_at)
+        return tenant
+
+
+def tenant_billing_status(tenant: Tenant) -> dict:
+    """Публічний статус підписки для UI викладача (без rec_token)."""
+    now = datetime.now(timezone.utc)
+    exp = tenant.sub_expires_at
+    active = bool(tenant.sub_status == "active" and exp and exp > now)
+    days_left = max(0, (exp - now).days) if exp and exp > now else 0
+    return {
+        "status": tenant.sub_status,
+        "active": active,
+        "price_usd": float(tenant.sub_price_usd or 19),
+        "expires_at": exp.isoformat() if exp else None,
+        "days_left": days_left,
+        "auto_renew": bool(tenant.sub_auto_renew),
+    }
+
+
 async def set_tenant_bot_username(tenant_id: int, username: str | None) -> None:
     """Зберігає @username бота тенанта (без '@'), якщо змінився. Викликається
     на старті після getMe. username публічний — не секрет."""

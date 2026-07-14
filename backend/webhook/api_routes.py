@@ -1143,6 +1143,52 @@ async def pay_redirect(telegram_id: int = Query(...), period: str = Query("month
     return HTMLResponse(content=html)
 
 
+@router.get("/pay/tenant")
+async def pay_tenant_redirect(tenant_id: int = Query(...)):
+    """Auto-submit HPP форма для оплати сервісу тенантом ($19/міс). Аналог /pay,
+    але для підписки викладача (order_reference TEN_<tenant_id>_<ts>)."""
+    from html import escape as html_escape
+    from fastapi.responses import HTMLResponse
+    from core.wayforpay_client import create_tenant_payment_link
+    from core.tenant_service import get_tenant_by_id
+
+    tenant = await get_tenant_by_id(tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="tenant_not_found")
+    label = f"{tenant.display_name} — сервіс (30 днів)"
+    try:
+        payment = create_tenant_payment_link(
+            tenant_id=tenant.id,
+            owner_telegram_id=tenant.owner_telegram_id,
+            product_label=label,
+            amount=float(tenant.sub_price_usd or 19),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+    fields_html = "".join(
+        f'<input type="hidden" name="{html_escape(str(k))}" value="{html_escape(str(v))}">'
+        for k, v in payment["form_fields"].items()
+    )
+    html = (
+        '<!doctype html><html><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        '<title>Redirecting…</title>'
+        '<style>body{font-family:-apple-system,sans-serif;background:#FCE7F3;'
+        'display:grid;place-items:center;min-height:100vh;margin:0;color:#0E0B1A}'
+        '.box{text-align:center;padding:24px}.s{display:inline-block;width:24px;height:24px;'
+        'border:3px solid #7C3AED;border-bottom-color:transparent;border-radius:50%;'
+        'animation:r 0.8s linear infinite}@keyframes r{to{transform:rotate(360deg)}}</style></head>'
+        '<body><div class="box"><div class="s"></div>'
+        '<p style="margin-top:16px;font-weight:600">Opening WayForPay…</p></div>'
+        f'<form id="f" method="POST" action="{html_escape(payment["form_url"])}">'
+        f'{fields_html}</form>'
+        '<script>document.getElementById("f").submit();</script>'
+        '</body></html>'
+    )
+    return HTMLResponse(content=html)
+
+
 @router.post("/api/wayforpay/callback")
 @router.post("/wayforpay/callback")
 async def wayforpay_callback(request: Request):
@@ -1207,6 +1253,73 @@ async def wayforpay_callback(request: Request):
     if not verify_callback_signature(data):
         logger.warning(f"WayForPay: bad signature for {order_ref}")
         raise HTTPException(status_code=403, detail="Bad signature")
+
+    # ── Оплата сервісу ТЕНАНТОМ (викладачем): TEN_<tid>_<ts> / TEN_REC_<tid>_<ts>.
+    # Окрема гілка — активує підписку тенанта, а не студентське Pro.
+    if order_ref.startswith("TEN_"):
+        parts_t = order_ref.split("_")
+        tenant_id_pay: int | None = None
+        is_rec_t = False
+        try:
+            if len(parts_t) >= 3 and parts_t[1] == "REC":
+                tenant_id_pay = int(parts_t[2]); is_rec_t = True
+            elif len(parts_t) >= 3:
+                tenant_id_pay = int(parts_t[1])
+        except (ValueError, IndexError):
+            logger.error(f"WayForPay: cannot parse tenant order_reference {order_ref}")
+        t_success = transaction_status == "Approved" and reason_code == "1100"
+        if tenant_id_pay is not None:
+            from sqlalchemy.exc import IntegrityError
+            from core.tenant_service import activate_tenant_subscription, get_tenant_by_id
+            is_new_t = False
+            try:
+                async with SessionLocal() as session:
+                    existing = (await session.execute(
+                        select(PaymentHistory.id).where(PaymentHistory.order_reference == order_ref)
+                    )).scalar_one_or_none()
+                    if not existing:
+                        session.add(PaymentHistory(
+                            user_id=None, tenant_id=tenant_id_pay, order_reference=order_ref,
+                            amount=amount, currency=str(data.get("currency", "USD")),
+                            status="success" if t_success else "failed",
+                            transaction_status=transaction_status, reason_code=reason_code,
+                            reason=str(data.get("reason", "")), is_recurring=is_rec_t,
+                            rec_token=str(rec_token) if rec_token else None, raw_payload=data,
+                        ))
+                        try:
+                            await session.commit()
+                        except IntegrityError:
+                            await session.rollback()
+                            logger.info(f"WayForPay: duplicate tenant callback race for {order_ref}")
+                        else:
+                            is_new_t = True
+            except Exception as e:
+                logger.error(f"WayForPay: tenant payment history save failed: {e}", exc_info=True)
+            if t_success and is_new_t:
+                try:
+                    await activate_tenant_subscription(
+                        tenant_id=tenant_id_pay,
+                        rec_token=str(rec_token) if rec_token else None,
+                        order_ref=order_ref, days=30,
+                    )
+                    try:
+                        from core.telegram_send import send_message
+                        t = await get_tenant_by_id(tenant_id_pay)
+                        if t and t.owner_telegram_id:
+                            await send_message(
+                                t.owner_telegram_id,
+                                "✅ <b>Оплата отримана — підписку на сервіс продовжено на 30 днів.</b>\nДякую!",
+                                tenant_id=tenant_id_pay,
+                            )
+                    except Exception as e:
+                        logger.warning(f"WayForPay: tenant notify failed: {e}")
+                except Exception as e:
+                    logger.error(f"WayForPay: activate_tenant failed for {tenant_id_pay}: {e}", exc_info=True)
+        now_t = int(_time.time())
+        return {
+            "orderReference": order_ref, "status": "accept", "time": now_t,
+            "signature": generate_response_signature(order_ref, "accept", now_t),
+        }
 
     # Парсимо order_reference: WS_<tg_id>_<period[:3]>_<ts> або
     # WS_<tg_id>_<ts> (legacy) або WS_REC_<tg_id>_<ts> (recurring)

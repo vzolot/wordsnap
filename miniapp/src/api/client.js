@@ -103,6 +103,9 @@ export const createTeacherDeck = (payload) => api.post('/api/teacher/decks', pay
 export const updateTeacherDeck = (deckId, patch) =>
   api.patch(`/api/teacher/decks/${deckId}`, patch);
 export const deleteTeacherDeck = (deckId) => api.delete(`/api/teacher/decks/${deckId}`);
+// Оплата сервісу викладачем ($19/міс).
+export const getTeacherBilling = () => api.get('/api/teacher/billing');
+export const teacherBillingPay = () => api.post('/api/teacher/billing/pay');
 // M11: фото сторінки → пари «слово–переклад» (превʼю для редагування).
 export const createDeckFromPhoto = (imageB64, imageMime) =>
   api.post('/api/teacher/decks/from_photo', { image_b64: imageB64, image_mime: imageMime });

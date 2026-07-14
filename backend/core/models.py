@@ -238,7 +238,13 @@ class PaymentHistory(Base):
     __tablename__ = "payment_history"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
+    # Nullable: платежі тенанта (оплата сервісу) не привʼязані до студента.
+    user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    # Заповнюється для платежів тенанта (оплата сервісу викладачем). Для
+    # студентських Pro-платежів — NULL (історично).
+    tenant_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     order_reference: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="USD")
@@ -390,6 +396,24 @@ class Tenant(Base):
     monthly_report_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # ── Оплата сервісу викладачем: $19/міс, автопродовження через charge_recurring.
+    # trial | active | past_due | cancelled.
+    sub_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="trial", server_default="trial"
+    )
+    sub_price_usd: Mapped[float] = mapped_column(
+        Numeric(10, 2), nullable=False, default=19, server_default="19"
+    )
+    sub_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sub_order_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Токен збереженої картки для автосписання — СЕКРЕТ, не віддавати в API.
+    sub_rec_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sub_auto_renew: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    sub_next_charge_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sub_last_payment_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sub_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

@@ -2814,6 +2814,12 @@
 .tch-kpi-n { font-size: 22px; font-weight: 800; color: var(--text-1); letter-spacing: -0.4px; }
 .tch-kpi-n.warn { color: var(--coral); }
 .tch-kpi-l { font-size: 10px; color: var(--text-2); margin-top: 3px; }
+/* Білінг-картка викладача. */
+.tch-billing-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.tch-billing-badge { flex-shrink: 0; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.tch-billing-badge.ok { background: rgba(22, 163, 74, 0.15); color: #16a34a; }
+.tch-billing-badge.bad { background: rgba(239, 68, 68, 0.15); color: var(--coral); }
+.tch-billing-badge.muted { background: var(--bg-pill); color: var(--text-2); }
 /* Банер режиму «перегляд як учень». */
 .preview-banner {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;

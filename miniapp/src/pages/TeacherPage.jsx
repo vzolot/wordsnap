@@ -12,6 +12,7 @@ import {
   createDeckFromPhoto, assignHomework,
   getSchoolInfo, getTeachers, addTeacher, setTeacherActive,
   getGroups, createGroup, setGroupMembers,
+  getTeacherBilling, teacherBillingPay,
 } from '../api/client';
 
 // ── Спільні хелпери для «поділитися ботом» ────────────────────────────────
@@ -753,6 +754,66 @@ function Kpi({ value, label, warn }) {
   );
 }
 
+// Оплата сервісу викладачем ($19/міс).
+function TeacherBilling() {
+  const [b, setB] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { getTeacherBilling().then((r) => setB(r.data)).catch(() => setB(null)); }, []);
+
+  const pay = async () => {
+    setBusy(true);
+    try {
+      const r = await teacherBillingPay();
+      const url = r.data?.payment_url;
+      if (url) {
+        const tg = window.Telegram?.WebApp;
+        if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
+      }
+    } finally { setBusy(false); }
+  };
+
+  if (!b) return null;
+  const fmt = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  };
+  const active = b.active;
+  const statusLabel = active ? 'Активна'
+    : b.status === 'past_due' ? 'Прострочено'
+    : b.status === 'trial' ? 'Пробний період' : 'Неактивна';
+  const cls = active ? 'ok' : b.status === 'past_due' ? 'bad' : 'muted';
+
+  return (
+    <div className="tch-card tch-billing">
+      <div className="tch-billing-top">
+        <div>
+          <div className="tch-h3" style={{ margin: 0 }}>💳 Підписка на сервіс</div>
+          <div className="tch-muted sm" style={{ marginTop: 2 }}>${b.price_usd}/міс</div>
+        </div>
+        <span className={`tch-billing-badge ${cls}`}>{statusLabel}</span>
+      </div>
+      {active && b.expires_at && (
+        <p className="tch-muted sm">
+          {b.auto_renew ? 'Автопродовження · наступний платіж' : 'Діє до'} {fmt(b.expires_at)}
+          {typeof b.days_left === 'number' ? ` (${b.days_left} дн.)` : ''}
+        </p>
+      )}
+      {b.status === 'past_due' && (
+        <p className="tch-muted sm" style={{ color: 'var(--coral)' }}>
+          Оплата прострочена — сервіс може призупинитись.
+        </p>
+      )}
+      <div className="tch-actions">
+        <button className="tch-btn" onClick={pay} disabled={busy}>
+          {active ? `Продовжити $${b.price_usd}` : `Оплатити $${b.price_usd}`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Викладацька статистика: зведені KPI + детальний прогрес по ОБРАНИХ учнях
 // (перевикористовує StudentPicker для вибору і StudentDetail для показу).
 function TeacherStats({ students }) {
@@ -765,9 +826,12 @@ function TeacherStats({ students }) {
 
   if (!students || students.length === 0) {
     return (
-      <div className="tch-card">
-        <p className="tch-muted">Статистика зʼявиться, коли приєднаються учні.</p>
-      </div>
+      <>
+        <TeacherBilling />
+        <div className="tch-card">
+          <p className="tch-muted">Статистика по учнях зʼявиться, коли вони приєднаються.</p>
+        </div>
+      </>
     );
   }
 
@@ -778,6 +842,7 @@ function TeacherStats({ students }) {
 
   return (
     <>
+      <TeacherBilling />
       <div className="tch-kpis">
         <Kpi value={n} label="учнів" />
         <Kpi value={active7} label="активних 7д" />
