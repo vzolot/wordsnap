@@ -432,3 +432,27 @@ async def teacher_billing_pay(
         scheme = "https"
     base = f"{scheme}://{request.url.netloc}"
     return {"payment_url": f"{base}/pay/tenant?tenant_id={tenant_id}"}
+
+
+# ─── Інвайт-посилання школи ──────────────────────────────────────────────────
+
+@router.get("/api/teacher/school/invites")
+async def school_invites(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    """Посилання-запрошення: для owner — на викладачів + своє на учнів; для
+    викладача — своє на учнів (кріпить учня до нього)."""
+    teacher = await _require_teacher(telegram_id, tenant_id)
+    from core.group_service import ensure_default_group, get_teacher_invite_token, is_school
+    if not await is_school(tenant_id):
+        return {"is_school": False}
+    async with SessionLocal() as session:
+        tenant = (await session.execute(
+            select(Tenant).where(Tenant.id == tenant_id)
+        )).scalar_one_or_none()
+    bot = (tenant.bot_username if tenant else None) or "WordSnapBot"
+    out = {"is_school": True, "role": teacher.role}
+    g = await ensure_default_group(tenant_id, teacher.id, teacher.first_name or "")
+    out["student_invite_url"] = f"https://t.me/{bot}?start=s_{g.invite_token}"
+    if teacher.role == "owner":
+        token = await get_teacher_invite_token(tenant_id)
+        out["teacher_invite_url"] = f"https://t.me/{bot}?start=t_{token}"
+    return out

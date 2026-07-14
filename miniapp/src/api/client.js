@@ -116,6 +116,8 @@ export const getHomework = () => api.get('/api/homework');
 
 // M14: режим школи.
 export const getSchoolInfo = () => api.get('/api/teacher/school');
+// Інвайт-посилання школи (викладач/учні).
+export const getSchoolInvites = () => api.get('/api/teacher/school/invites');
 export const getTeachers = () => api.get('/api/teacher/teachers');
 export const addTeacher = (telegramId) => api.post('/api/teacher/teachers', { telegram_id: telegramId });
 export const setTeacherActive = (id, active) => api.post(`/api/teacher/teachers/${id}/active`, { active });

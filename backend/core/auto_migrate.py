@@ -693,6 +693,23 @@ MIGRATIONS: list[tuple[str, str]] = [
         "payment_history.user_id_nullable",
         "ALTER TABLE payment_history ALTER COLUMN user_id DROP NOT NULL",
     ),
+    # ── Інвайт-посилання школи (викладачі + учні до викладача) ────────────
+    (
+        "tenants.teacher_invite_token",
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS teacher_invite_token VARCHAR(24)",
+    ),
+    (
+        "groups.invite_token",
+        "ALTER TABLE groups ADD COLUMN IF NOT EXISTS invite_token VARCHAR(24)",
+    ),
+    (
+        "groups.invite_token_uq",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_groups_invite_token ON groups(invite_token) WHERE invite_token IS NOT NULL",
+    ),
+    (
+        "groups.is_default",
+        "ALTER TABLE groups ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT FALSE",
+    ),
 ]
 
 

@@ -5,11 +5,17 @@ Solo-тенанти (is_school=false) не зачіпаються: там оди
 """
 from __future__ import annotations
 
+import secrets
+
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from .db import SessionLocal
-from .models import Group, GroupMember, User
+from .models import Group, GroupMember, Tenant, User
+
+
+def _new_token() -> str:
+    return secrets.token_urlsafe(12)[:24]
 
 
 # ─── Викладачі (owner керує) ─────────────────────────────────────────────────
@@ -44,7 +50,9 @@ async def add_teacher(tenant_id: int, telegram_id: int) -> dict:
         user.role = "teacher"
         user.is_active_teacher = True
         await s.commit()
-        return {"ok": True, "user_id": user.id}
+        uid, name = user.id, (user.first_name or "")
+    await ensure_default_group(tenant_id, uid, name)
+    return {"ok": True, "user_id": uid}
 
 
 async def set_teacher_active(tenant_id: int, teacher_user_id: int, active: bool) -> bool:
@@ -151,8 +159,87 @@ async def student_ids_for_teacher(tenant_id: int, teacher_user_id: int) -> list[
 
 
 async def is_school(tenant_id: int) -> bool:
-    from .models import Tenant
     async with SessionLocal() as s:
         return bool((await s.execute(
             select(Tenant.is_school).where(Tenant.id == tenant_id)
         )).scalar_one_or_none())
+
+
+# ─── Інвайт-посилання (викладачі + учні до викладача) ────────────────────────
+
+async def ensure_default_group(tenant_id: int, teacher_user_id: int, teacher_name: str = "") -> Group:
+    """Дефолтна група викладача (для інвайту учнів). Створює з invite_token якщо нема."""
+    async with SessionLocal() as s:
+        g = (await s.execute(
+            select(Group).where(
+                Group.tenant_id == tenant_id,
+                Group.teacher_user_id == teacher_user_id,
+                Group.is_default.is_(True),
+            )
+        )).scalar_one_or_none()
+        if g is None:
+            g = Group(
+                tenant_id=tenant_id, teacher_user_id=teacher_user_id,
+                name=(f"Учні {teacher_name}".strip()[:120] or "Мої учні"),
+                is_default=True, invite_token=_new_token(),
+            )
+            s.add(g)
+            await s.commit()
+            await s.refresh(g)
+        elif not g.invite_token:
+            g.invite_token = _new_token()
+            await s.commit()
+            await s.refresh(g)
+        return g
+
+
+async def get_teacher_invite_token(tenant_id: int, regenerate: bool = False) -> str | None:
+    """Токен інвайту викладачів школи (генерує при першому запиті). None якщо не школа."""
+    async with SessionLocal() as s:
+        t = (await s.execute(select(Tenant).where(Tenant.id == tenant_id))).scalar_one_or_none()
+        if t is None or not t.is_school:
+            return None
+        if regenerate or not t.teacher_invite_token:
+            t.teacher_invite_token = _new_token()
+            await s.commit()
+        return t.teacher_invite_token
+
+
+async def redeem_teacher_invite(tenant_id: int, token: str, user_id: int) -> bool:
+    """t_<token>: якщо збігається з teacher_invite_token школи → робимо викладачем."""
+    if not token:
+        return False
+    name = ""
+    async with SessionLocal() as s:
+        t = (await s.execute(select(Tenant).where(Tenant.id == tenant_id))).scalar_one_or_none()
+        if t is None or not t.is_school or not t.teacher_invite_token or t.teacher_invite_token != token:
+            return False
+        u = (await s.execute(
+            select(User).where(User.id == user_id, User.tenant_id == tenant_id)
+        )).scalar_one_or_none()
+        if u is None:
+            return False
+        name = u.first_name or ""
+        if u.role != "owner":
+            u.role = "teacher"
+            u.is_active_teacher = True
+            await s.commit()
+    await ensure_default_group(tenant_id, user_id, name)
+    return True
+
+
+async def redeem_student_invite(tenant_id: int, token: str, user_id: int) -> int | None:
+    """s_<token>: кріпить учня до групи з цим invite_token. Повертає teacher_user_id."""
+    if not token:
+        return None
+    async with SessionLocal() as s:
+        g = (await s.execute(
+            select(Group).where(Group.tenant_id == tenant_id, Group.invite_token == token)
+        )).scalar_one_or_none()
+        if g is None:
+            return None
+        await s.execute(pg_insert(GroupMember).values(
+            group_id=g.id, user_id=user_id,
+        ).on_conflict_do_nothing(index_elements=["group_id", "user_id"]))
+        await s.commit()
+        return g.teacher_user_id

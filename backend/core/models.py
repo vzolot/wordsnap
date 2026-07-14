@@ -392,6 +392,9 @@ class Tenant(Base):
     is_school: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # Токен для інвайт-посилання викладачів (t.me/<bot>?start=t_<token>) —
+    # хто приєднається за ним, стає викладачем школи.
+    teacher_invite_token: Mapped[str | None] = mapped_column(String(24), nullable=True)
     # M15: місячний PDF-звіт про прогрес (опція на тенанта).
     monthly_report_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
@@ -604,6 +607,13 @@ class Group(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     teacher_user_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    # Токен для інвайт-посилання учнів (t.me/<bot>?start=s_<token>) → учень, що
+    # приєднався за ним, кріпиться до цієї групи (тобто до її викладача).
+    invite_token: Mapped[str | None] = mapped_column(String(24), unique=True, nullable=True)
+    # Дефолтна група викладача (авто-створена) — для інвайту учнів «до викладача».
+    is_default: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

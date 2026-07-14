@@ -88,6 +88,17 @@ async def cmd_start(message: Message):
         tenant_id=tid,
     )
 
+    # Інвайт-посилання школи: t_<token> → стати викладачем; s_<token> → учень
+    # кріпиться до групи викладача. Обробляємо ДО гілки пропуску онбордингу
+    # нижче — щоб редемпшн t_ підхопився і привітав як викладача.
+    if tid != 1 and payload:
+        from core.group_service import redeem_student_invite, redeem_teacher_invite
+        if payload.startswith("t_"):
+            if await redeem_teacher_invite(tid, payload[2:], user.id):
+                user.role = "teacher"
+        elif payload.startswith("s_"):
+            await redeem_student_invite(tid, payload[2:], user.id)
+
     # Власник/викладач white-label бренду чи школи — НЕ учень: пропускаємо
     # учнівський онбординг (вибір рідної мови) і ведемо одразу в кабінет.
     # Власника тенанта (owner_telegram_id) авто-промоутимо в owner при 1-му /start.

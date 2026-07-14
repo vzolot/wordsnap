@@ -10,7 +10,7 @@ import {
   getAvailability, putAvailability, getTeacherLessons, teacherCancelLesson,
   teacherCreateLesson,
   createDeckFromPhoto, assignHomework,
-  getSchoolInfo, getTeachers, addTeacher, setTeacherActive,
+  getSchoolInfo, getSchoolInvites, getTeachers, addTeacher, setTeacherActive,
   getGroups, createGroup, setGroupMembers,
   getTeacherBilling, teacherBillingPay,
 } from '../api/client';
@@ -22,6 +22,13 @@ function botLink(username) {
 function shareBot(username) {
   const url = botLink(username);
   const text = 'Приєднуйся — вчимо слова разом 📚';
+  const tg = window.Telegram?.WebApp;
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+  if (tg?.openTelegramLink) tg.openTelegramLink(shareUrl);
+  else window.open(shareUrl, '_blank');
+}
+
+function shareInvite(url, text) {
   const tg = window.Telegram?.WebApp;
   const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
   if (tg?.openTelegramLink) tg.openTelegramLink(shareUrl);
@@ -674,14 +681,19 @@ function SchoolManager() {
   const [newTeacher, setNewTeacher] = useState('');
   const [newGroup, setNewGroup] = useState('');
   const [editGroup, setEditGroup] = useState(null);
+  const [invites, setInvites] = useState(null);
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
     const inf = (await getSchoolInfo()).data;
     setInfo(inf);
-    const [g, s] = await Promise.all([getGroups(), getTeacherStudents()]);
+    const [g, s, inv] = await Promise.all([
+      getGroups(), getTeacherStudents(),
+      getSchoolInvites().then((r) => r.data).catch(() => null),
+    ]);
     setGroups(g.data.groups || []);
     setStudents(s.data.students || []);
+    setInvites(inv);
     if (inf.role === 'owner') setTeachers((await getTeachers()).data.teachers || []);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -707,6 +719,17 @@ function SchoolManager() {
       {info.role === 'owner' && (
         <div className="tch-card">
           <h3 className="tch-h3">Викладачі</h3>
+          {invites?.teacher_invite_url && (
+            <>
+              <p className="tch-muted sm" style={{ marginTop: 0 }}>
+                Надішли це посилання викладачу — він приєднається до школи одним тапом.
+              </p>
+              <button className="tch-btn" style={{ width: '100%', marginBottom: 10 }}
+                      onClick={() => shareInvite(invites.teacher_invite_url, 'Приєднуйся як викладач 👩‍🏫')}>
+                🔗 Запросити викладача
+              </button>
+            </>
+          )}
           {teachers.map((t) => (
             <div key={t.id} className="tch-word">
               <span>{t.name} · {t.role === 'owner' ? 'власник' : (t.is_active ? 'активний' : 'вимкнено')}</span>
@@ -723,6 +746,21 @@ function SchoolManager() {
             <button className="tch-btn sm" onClick={addT}>Додати викладача</button>
           </div>
           {msg && <p className="tch-ok">{msg}</p>}
+        </div>
+      )}
+
+      {invites?.student_invite_url && (
+        <div className="tch-card">
+          <h3 className="tch-h3">Запросити учнів</h3>
+          <p className="tch-muted sm" style={{ marginTop: 0 }}>
+            {info.role === 'owner'
+              ? 'Учні, що приєднаються за цим посиланням, стануть вашими (як власника). Кожен викладач має своє посилання у власному кабінеті.'
+              : 'Надішли це посилання своїм учням — вони приєднаються саме до тебе.'}
+          </p>
+          <button className="tch-btn" style={{ width: '100%' }}
+                  onClick={() => shareInvite(invites.student_invite_url, 'Приєднуйся — вчимо слова разом 📚')}>
+            🔗 Запросити учнів
+          </button>
         </div>
       )}
 
