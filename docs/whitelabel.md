@@ -634,3 +634,27 @@ billing off; `/api/teacher/students` та `/api/teacher/availability` → 200.
   approval у Telegram): анонс камери (Threads), word-card «payslip» (IG), reel
   «tęskność» (IG Reels + Threads). Полагоджено health-alert (протермінований
   IG-токен уже оновлено в GitHub Secrets 12.07; підтверджено наскрізним reel).
+
+## Оплата сервісу викладачем — $19/міс (2026-07-14, коміт d0f5d6e)
+
+Підписка викладача на сам сервіс (Марта → оператору), окремо від студентських
+оплат (у white-label їх нема) і від разового рахунку за кастомний додаток.
+Рішення: **автопродовження** (app-side `charge_recurring`, не глючний regularMode)
++ **автопауза після grace**.
+
+- **`Tenant`:** білінг-колонки `sub_status` (trial/active/past_due/cancelled),
+  `sub_price_usd` (19), `sub_expires_at`, `sub_order_ref`, `sub_rec_token` (секрет),
+  `sub_auto_renew`, `sub_next_charge_at`, `sub_last_payment_at`, `sub_reminder_sent_at`.
+  `payment_history` дістав `tenant_id`, а `user_id` став nullable.
+- **WayForPay:** `create_tenant_payment_link` (order-ref `TEN_<tid>_<ts>`, БЕЗ
+  regularMode) + `charge_tenant_recurring` (`TEN_REC_…`). Суму нормалізуємо до int,
+  коли ціла (інакше `str(19.0)` ламає підпис).
+- **Вебхук `/wayforpay/callback`:** гілка на `TEN_…` → ідемпотентний `PaymentHistory`
+  → `activate_tenant_subscription` (+30 днів, зберігає токен, `auto_renew=True`,
+  знімає паузу, `plan='active'`).
+- **Роути:** `GET /pay/tenant` (HPP), `GET /api/teacher/billing`, `POST /api/teacher/billing/pay`.
+- **Шедулер `tenant_billing_loop`** (щогодини): списання в день закінчення →
+  помилка `past_due`+нагадування; нагадування за 3 дні (не-авто); автопауза після
+  3 днів грейсу (`plan='paused'`).
+- **UI:** картка «💳 Підписка на сервіс» у вкладці «Статистика» кабінету викладача.
+  Гроші → на WayForPay-мерчант оператора (той самий, що WordSnap). E2E-перевірено.
