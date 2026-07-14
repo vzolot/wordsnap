@@ -327,6 +327,13 @@ async def sync_decks_for_user(user_id: int, tenant_id: int) -> int:
     завантаженні слів/ревʼю — новий учень так підхоплює assign_to_all-колоди,
     а вже призначені раніше — залишаються без змін (ідемпотентно)."""
     async with SessionLocal() as session:
+        # Викладачам/owner колоди НЕ матеріалізуємо — вони не учні (інакше при
+        # перегляді «Як учень» їм би налипали слова колод і review-нагадування).
+        role = (await session.execute(
+            select(User.role).where(User.id == user_id)
+        )).scalar_one_or_none()
+        if role in ("teacher", "owner"):
+            return 0
         decks = (await session.execute(
             visible_decks_stmt(user_id, tenant_id)
         )).scalars().all()
