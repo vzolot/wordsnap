@@ -2814,12 +2814,14 @@
 .tch-kpi-n { font-size: 22px; font-weight: 800; color: var(--text-1); letter-spacing: -0.4px; }
 .tch-kpi-n.warn { color: var(--coral); }
 .tch-kpi-l { font-size: 10px; color: var(--text-2); margin-top: 3px; }
-/* Білінг-картка викладача. */
-.tch-billing-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-.tch-billing-badge { flex-shrink: 0; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
-.tch-billing-badge.ok { background: rgba(22, 163, 74, 0.15); color: #16a34a; }
-.tch-billing-badge.bad { background: rgba(239, 68, 68, 0.15); color: var(--coral); }
-.tch-billing-badge.muted { background: var(--bg-pill); color: var(--text-2); }
+/* Компактна білінг-картка викладача (внизу «Статистики»). */
+.tch-billing { padding: 12px 14px; }
+.tch-billing-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tch-billing-title { font-size: 14px; font-weight: 700; color: var(--text-1); }
+.tch-billing-status { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.tch-billing-status.bad { color: var(--coral); }
+.tch-billing-status.muted { color: var(--text-3); }
+.tch-billing .tch-btn { flex-shrink: 0; }
 /* Банер режиму «перегляд як учень». */
 .preview-banner {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;

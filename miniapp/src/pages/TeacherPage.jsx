@@ -780,34 +780,21 @@ function TeacherBilling() {
     return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
   };
   const active = b.active;
-  const statusLabel = active ? 'Активна'
-    : b.status === 'past_due' ? 'Прострочено'
+  const statusLine = active
+    ? `${b.auto_renew ? 'Автопродовження' : 'Активна'} · до ${fmt(b.expires_at)}${typeof b.days_left === 'number' ? ` (${b.days_left} дн.)` : ''}`
+    : b.status === 'past_due' ? 'Прострочено — сервіс може призупинитись'
     : b.status === 'trial' ? 'Пробний період' : 'Неактивна';
-  const cls = active ? 'ok' : b.status === 'past_due' ? 'bad' : 'muted';
+  const statusCls = active ? '' : b.status === 'past_due' ? 'bad' : 'muted';
 
   return (
     <div className="tch-card tch-billing">
-      <div className="tch-billing-top">
-        <div>
-          <div className="tch-h3" style={{ margin: 0 }}>💳 Підписка на сервіс</div>
-          <div className="tch-muted sm" style={{ marginTop: 2 }}>${b.price_usd}/міс</div>
+      <div className="tch-billing-row">
+        <div style={{ minWidth: 0 }}>
+          <div className="tch-billing-title">💳 Підписка · ${b.price_usd}/міс</div>
+          <div className={`tch-billing-status ${statusCls}`}>{statusLine}</div>
         </div>
-        <span className={`tch-billing-badge ${cls}`}>{statusLabel}</span>
-      </div>
-      {active && b.expires_at && (
-        <p className="tch-muted sm">
-          {b.auto_renew ? 'Автопродовження · наступний платіж' : 'Діє до'} {fmt(b.expires_at)}
-          {typeof b.days_left === 'number' ? ` (${b.days_left} дн.)` : ''}
-        </p>
-      )}
-      {b.status === 'past_due' && (
-        <p className="tch-muted sm" style={{ color: 'var(--coral)' }}>
-          Оплата прострочена — сервіс може призупинитись.
-        </p>
-      )}
-      <div className="tch-actions">
-        <button className="tch-btn" onClick={pay} disabled={busy}>
-          {active ? `Продовжити $${b.price_usd}` : `Оплатити $${b.price_usd}`}
+        <button className="tch-btn sm" onClick={pay} disabled={busy}>
+          {active ? 'Продовжити' : `Оплатити $${b.price_usd}`}
         </button>
       </div>
     </div>
@@ -827,10 +814,10 @@ function TeacherStats({ students }) {
   if (!students || students.length === 0) {
     return (
       <>
-        <TeacherBilling />
         <div className="tch-card">
           <p className="tch-muted">Статистика по учнях зʼявиться, коли вони приєднаються.</p>
         </div>
+        <TeacherBilling />
       </>
     );
   }
@@ -842,7 +829,6 @@ function TeacherStats({ students }) {
 
   return (
     <>
-      <TeacherBilling />
       <div className="tch-kpis">
         <Kpi value={n} label="учнів" />
         <Kpi value={active7} label="активних 7д" />
@@ -859,6 +845,8 @@ function TeacherStats({ students }) {
       {[...sel].map((id) => (
         <StudentDetail key={id} studentId={id} onClose={() => toggle(id)} />
       ))}
+
+      <TeacherBilling />
     </>
   );
 }
