@@ -51,7 +51,7 @@ const DEFAULT_SLIDES = [
 // пара сторінок про сам процес користування.
 const WL_STUDENT_SLIDES = [
   {
-    type: 'icon', emoji: '📚',
+    type: 'icon', icon: '/onboarding/icons/onb-learn.svg',
     title: 'Навчання з викладачем',
     body: 'Ваш викладач додає вам слова та колоди — вони одразу зʼявляться тут. Нічого налаштовувати не треба.',
   },
@@ -61,7 +61,7 @@ const WL_STUDENT_SLIDES = [
     body: 'Слова показуються за інтервальним повторенням — так вони закріплюються надовго.',
   },
   {
-    type: 'icon', emoji: '📅',
+    type: 'icon', icon: '/onboarding/icons/onb-calendar.svg',
     title: 'Записуйтесь на уроки',
     body: 'У розділі «Уроки» оберіть вільний час і забронюйте заняття з викладачем.',
   },
@@ -70,7 +70,7 @@ const WL_STUDENT_SLIDES = [
 // Викладач: як додавати слова, вести календар і дивитись прогрес.
 const TEACHER_SLIDES = [
   {
-    type: 'icon', emoji: '📸',
+    type: 'icon', icon: '/onboarding/icons/onb-camera.svg',
     title: 'Додавайте слова учням',
     body: 'Створюйте колоди вручну або сфотографуйте сторінку підручника — застосунок сам розпізнає слова й переклади.',
   },
@@ -80,7 +80,7 @@ const TEACHER_SLIDES = [
     body: 'Слова показуються учням за інтервальним повторенням — вони закріплюють їх саме тоді, коли починають забувати.',
   },
   {
-    type: 'icon', emoji: '📅',
+    type: 'icon', icon: '/onboarding/icons/onb-calendar.svg',
     title: 'Календар і статистика',
     body: 'Відкрийте вільні години для запису на уроки та стежте за прогресом кожного учня у вкладці «Статистика».',
   },
@@ -89,17 +89,17 @@ const TEACHER_SLIDES = [
 // Власник школи: запросити команду, призначити учнів, керувати підпискою.
 const OWNER_SLIDES = [
   {
-    type: 'icon', emoji: '🏫',
+    type: 'icon', icon: '/onboarding/icons/onb-school.svg',
     title: 'Запросіть команду',
     body: 'У вкладці «Школа» надішліть посилання-запрошення викладачам, потім учням — і призначте кожному учню викладача.',
   },
   {
-    type: 'icon', emoji: '📅',
+    type: 'icon', icon: '/onboarding/icons/onb-calendar.svg',
     title: 'Розклади викладачів',
     body: 'У «Календар» оберіть викладача й перегляньте або складіть його розклад — усе в одному місці.',
   },
   {
-    type: 'icon', emoji: '📊',
+    type: 'icon', icon: '/onboarding/icons/onb-stats.svg',
     title: 'Статистика та оплата',
     body: 'Дивіться статистику викладачів, а внизу «Статистика» — керуйте підпискою: $19/міс базово (ви як викладач) + $5 за кожного доданого викладача.',
   },
@@ -176,7 +176,7 @@ function WelcomeStories({ onClose }) {
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    SLIDES.forEach(s => { if (s.photo) { const i = new Image(); i.src = s.photo; } });
+    SLIDES.forEach(s => { const src = s.photo || s.icon; if (src) { const i = new Image(); i.src = src; } });
     track('welcome_started', { total_steps: SLIDES.length });
     // Підкачуємо свіжі stats — якщо юзер уже мав налаштування, picker вже preselected
     getStats().then(r => {
@@ -286,7 +286,11 @@ function WelcomeStories({ onClose }) {
 
       {slide.type === 'icon' && (
         <div className="welcome-hero welcome-hero-icon">
-          <div className="welcome-icon-badge">{slide.emoji}</div>
+          <div className="welcome-icon-badge">
+            {slide.icon
+              ? <img className="welcome-icon-img" src={slide.icon} alt="" draggable={false} />
+              : slide.emoji}
+          </div>
         </div>
       )}
 

@@ -1414,12 +1414,11 @@
 
 /* Емодзі-бейдж для рольового онбордингу (викладач/власник/учень школи) —
  * коли для слайду немає ілюстрації, показуємо велику іконку у градієнт-колі. */
-/* Іконкові слайди мають короткий контент — hero не має «розпирати» екран,
- * інакше довгий заголовок+опис виштовхують CTA за межі. Робимо його компактним
- * і нерозтяжним, а контент — з можливістю прокрутки. */
-.welcome-hero-icon { flex: 0 1 auto; align-items: center; justify-content: center; padding: 8px 0; }
+/* Іконкові слайди: hero росте як і решта (SRS/фото), тож CTA завжди на одному
+ * рівні (притиснута донизу). Довгий контент прокручується в .welcome-content. */
+.welcome-hero-icon { flex: 1 1 auto; align-items: center; justify-content: center; padding: 8px 0; }
 .welcome-icon-badge {
-  width: clamp(96px, 26vw, 128px);
+  width: clamp(112px, 30vw, 148px);
   aspect-ratio: 1;
   border-radius: 50%;
   display: grid;
@@ -1428,6 +1427,12 @@
   line-height: 1;
   background: linear-gradient(135deg, var(--violet, #7C3AED), var(--pink, #EC4899));
   box-shadow: 0 12px 32px rgba(124, 58, 237, 0.28);
+}
+.welcome-icon-img {
+  width: 58%;
+  height: 58%;
+  object-fit: contain;
+  -webkit-user-drag: none;
 }
 
 /* SRS-roadmap для слайду "Закріплюємо надовго" — 5 рівновіддалених точок,

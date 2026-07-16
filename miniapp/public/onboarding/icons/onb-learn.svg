@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+<defs>
+<linearGradient id="b" x1="10" y1="10" x2="86" y2="86" gradientUnits="userSpaceOnUse"><stop stop-color="#FFFEFB"></stop><stop offset="1" stop-color="#FFE8D1"></stop></linearGradient>
+<linearGradient id="a" x1="20" y1="20" x2="80" y2="80" gradientUnits="userSpaceOnUse"><stop stop-color="#FDE047"></stop><stop offset="1" stop-color="#F59E0B"></stop></linearGradient>
+<filter id="s" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#5B21B6" flood-opacity="0.35"></feDropShadow></filter>
+</defs>
+<g filter="url(#s)">
+<path d="M16 39 C28 32 40 33 46 38 L46 79 C40 74 28 73 16 78 Z" fill="url(#b)" stroke="url(#b)" stroke-width="6" stroke-linejoin="round" paint-order="stroke"></path>
+<path d="M80 39 C68 32 56 33 50 38 L50 79 C56 74 68 73 80 78 Z" fill="url(#b)" stroke="url(#b)" stroke-width="6" stroke-linejoin="round" paint-order="stroke"></path>
+</g>
+<path d="M23 47 C30 43 37 43 42 46 M23 56 C30 52 37 52 42 55" stroke="#F59E0B" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"></path>
+<path d="M73 47 C66 43 59 43 54 46 M73 56 C66 52 59 52 54 55" stroke="#F59E0B" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"></path>
+<g class="spark" filter="url(#s)">
+<path d="M68 8 C70 15.5 74.5 20 82 22 C74.5 24 70 28.5 68 36 C66 28.5 61.5 24 54 22 C61.5 20 66 15.5 68 8 Z" fill="url(#a)"></path>
+<circle cx="54" cy="34" r="3" fill="url(#a)"></circle>
+</g>
+</svg>
