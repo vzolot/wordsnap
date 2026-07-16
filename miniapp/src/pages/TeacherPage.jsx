@@ -97,6 +97,23 @@ const dayLabel = (d) => `${_WD_SHORT[d.getDay()]}, ${String(d.getDate()).padStar
 const hhmmLocal = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
 function CalendarManager() {
+  const { role } = useRole();
+  const { is_school } = useTenant();
+  const isOwnerSchool = role === 'owner' && is_school;
+  // Власник школи керує календарем ОБРАНОГО викладача.
+  const [teachers, setTeachers] = useState([]);
+  const [teacherId, setTeacherId] = useState(null);
+
+  useEffect(() => {
+    if (!isOwnerSchool) return;
+    getTeachers().then((r) => {
+      const list = r.data.teachers || [];
+      setTeachers(list);
+      const first = list.find((t) => t.role === 'teacher') || list[0];
+      if (first) setTeacherId(first.id);
+    }).catch(() => {});
+  }, [isOwnerSchool]);
+
   // ranges: { [weekday]: [{start,end}] }  (HH:MM рядки)
   const [ranges, setRanges] = useState({});
   const [tz, setTz] = useState('');
@@ -112,8 +129,9 @@ function CalendarManager() {
   const [bkMsg, setBkMsg] = useState('');
 
   const load = useCallback(async () => {
+    if (isOwnerSchool && !teacherId) return;  // власник ще не обрав викладача
     const [a, l, st] = await Promise.all([
-      getAvailability(), getTeacherLessons(), getTeacherStudents(),
+      getAvailability(teacherId), getTeacherLessons(teacherId), getTeacherStudents(),
     ]);
     const r = {};
     (a.data.availability || []).forEach((s) => {
@@ -123,7 +141,7 @@ function CalendarManager() {
     setTz(a.data.timezone);
     setLessons(l.data.lessons || []);
     setStudents(st.data.students || []);
-  }, []);
+  }, [isOwnerSchool, teacherId]);
   useEffect(() => { load(); }, [load]);
 
   const addRange = (wd) => setRanges((p) => ({ ...p, [wd]: [...(p[wd] || []), { start: '10:00', end: '11:00' }] }));
@@ -142,7 +160,7 @@ function CalendarManager() {
       });
     });
     try {
-      await putAvailability(slots);
+      await putAvailability(slots, teacherId);
       setMsg('Збережено ✅');
     } catch { setMsg('Не вдалося зберегти.'); }
     finally { setBusy(false); }
@@ -150,7 +168,7 @@ function CalendarManager() {
 
   const cancelLesson = async (id) => {
     setBusy(true);
-    try { await teacherCancelLesson(id); await load(); } finally { setBusy(false); }
+    try { await teacherCancelLesson(id, teacherId); await load(); } finally { setBusy(false); }
   };
 
   const book = async () => {
@@ -159,7 +177,7 @@ function CalendarManager() {
     try {
       // Дата+час у локальному поясі пристрою (= пояс викладача) → UTC ISO.
       const iso = new Date(`${bkDate}T${bkTime}:00`).toISOString();
-      await teacherCreateLesson(Number(bkStudent), iso);
+      await teacherCreateLesson(Number(bkStudent), iso, null, teacherId);
       setBkMsg('Урок додано ✅');
       setBkDate('');
       await load();
@@ -183,6 +201,24 @@ function CalendarManager() {
 
   return (
     <>
+      {/* Власник школи: обирає викладача, чий календар налаштовує. */}
+      {isOwnerSchool && (
+        <div className="tch-card">
+          <h3 className="tch-h3">Календар викладача</h3>
+          <select className="tch-input" value={teacherId || ''}
+                  onChange={(e) => setTeacherId(Number(e.target.value) || null)}>
+            <option value="">— оберіть викладача —</option>
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}{t.role === 'owner' ? ' (ви)' : ''}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {isOwnerSchool && !teacherId ? (
+        <div className="tch-card"><p className="tch-muted">Оберіть викладача, щоб побачити й налаштувати його розклад.</p></div>
+      ) : (
+        <>
       {/* 1. Вільні години — інтервали, з яких учні самі бронюють. Дропдауни. */}
       <div className="tch-card">
         <h3 className="tch-h3">Вільні години</h3>
@@ -250,6 +286,8 @@ function CalendarManager() {
           </div>
         ))}
       </div>
+        </>
+      )}
     </>
   );
 }
@@ -740,12 +778,6 @@ function SchoolManager() {
               )}
             </div>
           ))}
-          <div className="tch-range" style={{ flexWrap: 'wrap', marginTop: 8 }}>
-            <input className="tch-input" style={{ flex: 1 }} placeholder="Telegram ID викладача"
-                   value={newTeacher} onChange={(e) => setNewTeacher(e.target.value)} />
-            <button className="tch-btn sm" onClick={addT}>Додати викладача</button>
-          </div>
-          {msg && <p className="tch-ok">{msg}</p>}
         </div>
       )}
 
@@ -765,7 +797,11 @@ function SchoolManager() {
       )}
 
       <div className="tch-card">
-        <h3 className="tch-h3">Групи</h3>
+        <h3 className="tch-h3">Групи <span className="tch-muted" style={{ fontWeight: 400, fontSize: 12 }}>— опційно</span></h3>
+        <p className="tch-muted sm" style={{ marginTop: 0 }}>
+          Створювати групи не обовʼязково: учень, що приєднався за посиланням-запрошенням,
+          одразу кріпиться до викладача. Групи — лише щоб ділити учнів на класи.
+        </p>
         {groups.length === 0 && <p className="tch-muted">Ще немає груп.</p>}
         {groups.map((g) => (
           <div key={g.id} className="tch-word">
@@ -947,21 +983,6 @@ export default function TeacherPage() {
             )}
             <button className="tch-btn ghost sm" onClick={previewAsStudent}>👁 Як учень</button>
           </div>
-        </div>
-
-        <div className="tch-toggle-row">
-          <button className={`tch-pill ${view === 'students' ? 'on' : ''}`}
-                  onClick={() => setView('students')}>Учні</button>
-          <button className={`tch-pill ${view === 'decks' ? 'on' : ''}`}
-                  onClick={() => setView('decks')}>Колоди</button>
-          <button className={`tch-pill ${view === 'calendar' ? 'on' : ''}`}
-                  onClick={() => setView('calendar')}>Календар</button>
-          <button className={`tch-pill ${view === 'stats' ? 'on' : ''}`}
-                  onClick={() => setView('stats')}>Статистика</button>
-          {isSchool && (
-            <button className={`tch-pill ${view === 'school' ? 'on' : ''}`}
-                    onClick={() => setView('school')}>Школа</button>
-          )}
         </div>
 
         {view === 'students' && <StudentsList />}

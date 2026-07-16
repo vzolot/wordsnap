@@ -128,15 +128,18 @@ export const setGroupMembers = (groupId, userIds) =>
 
 // ── Календар уроків (M9) ──────────────────────────────────────────────────
 // Викладач
-export const getAvailability = () => api.get('/api/teacher/availability');
-export const putAvailability = (slots) => api.put('/api/teacher/availability', { slots });
-export const setClosedDate = (day, closed) => api.post('/api/teacher/closed_date', { day, closed });
-export const getTeacherLessons = () => api.get('/api/teacher/lessons');
-export const teacherCancelLesson = (id) => api.post(`/api/teacher/lessons/${id}/cancel`);
+// teacherId (опційно) — owner школи керує календарем ОБРАНОГО викладача.
+const _tp = (teacherId) => (teacherId ? { teacher_user_id: teacherId } : {});
+export const getAvailability = (teacherId) => api.get('/api/teacher/availability', { params: _tp(teacherId) });
+export const putAvailability = (slots, teacherId) => api.put('/api/teacher/availability', { slots }, { params: _tp(teacherId) });
+export const setClosedDate = (day, closed, teacherId) => api.post('/api/teacher/closed_date', { day, closed }, { params: _tp(teacherId) });
+export const getTeacherLessons = (teacherId) => api.get('/api/teacher/lessons', { params: _tp(teacherId) });
+export const teacherCancelLesson = (id, teacherId) => api.post(`/api/teacher/lessons/${id}/cancel`, null, { params: _tp(teacherId) });
 // Ручне бронювання уроку викладачем (довільний час, обходить шаблон доступності).
-export const teacherCreateLesson = (studentUserId, startsAtUtc, durationMin = null) =>
+export const teacherCreateLesson = (studentUserId, startsAtUtc, durationMin = null, teacherId = null) =>
   api.post('/api/teacher/lessons', {
     student_user_id: studentUserId, starts_at_utc: startsAtUtc, duration_min: durationMin,
+    teacher_user_id: teacherId,
   });
 // Учень
 export const getCalendarSlots = () => api.get('/api/calendar/slots');

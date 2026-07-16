@@ -21,6 +21,7 @@ const DEFAULTS = {
   ai_snap_available: true,
   billing_ui_enabled: true,
   bot_username: 'WordSnapBot',
+  is_school: false,
 };
 
 const CACHE_KEY = 'wordsnap.tenant_config';

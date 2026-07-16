@@ -19,11 +19,12 @@ const ICONS = {
   stats:  'M3 21h18M5 21V10M11 21V4M17 21v-7',
   users:  'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   lessons: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+  school: 'M3 21h18M5 21V8l7-4 7 4v13M9 21v-5a3 3 0 0 1 6 0v5',
 };
 
-// Викладацька навігація: 4 вкладки кабінету. Активна визначається за ?tab=,
-// бо всі ведуть на /teacher.
-const TEACHER_TABS = [
+// Викладацька навігація. Активна вкладка — за ?tab= (усі ведуть на /teacher).
+// У школі додається вкладка «Школа». Верхніх пігулок більше немає — усе тут.
+const BASE_TEACHER_TABS = [
   { tab: 'students', icon: ICONS.users,   label: 'Учні' },
   { tab: 'decks',    icon: ICONS.book,    label: 'Колоди' },
   { tab: 'calendar', icon: ICONS.lessons, label: 'Календар' },
@@ -32,11 +33,15 @@ const TEACHER_TABS = [
 
 function TeacherNav() {
   const loc = useLocation();
+  const { is_school } = useTenant();
   const onTeacher = loc.pathname === '/teacher';
   const tab = new URLSearchParams(loc.search).get('tab') || 'students';
+  const tabs = is_school
+    ? [...BASE_TEACHER_TABS, { tab: 'school', icon: ICONS.school, label: 'Школа' }]
+    : BASE_TEACHER_TABS;
   return (
     <nav className="navbar">
-      {TEACHER_TABS.map((it) => (
+      {tabs.map((it) => (
         <NavLink
           key={it.tab}
           to={`/teacher?tab=${it.tab}`}

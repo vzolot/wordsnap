@@ -153,6 +153,8 @@ def config_payload(tenant: Tenant, ai_available: bool) -> dict:
         "billing_ui_enabled": tenant.billing_ui_enabled,
         # @username бота (публічний) — для кнопки «поділитися ботом» у викладача.
         "bot_username": tenant.bot_username,
+        # Режим школи — щоб нижня навігація показувала вкладку «Школа».
+        "is_school": tenant.is_school,
     }
 
 

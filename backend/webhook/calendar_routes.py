@@ -72,9 +72,25 @@ class ClosedDateRequest(BaseModel):
     closed: bool = True
 
 
+async def _target_teacher(requester: User, tenant_id: int, teacher_user_id: int | None) -> User:
+    """owner школи може керувати календарем ОБРАНОГО викладача (передав teacher_user_id).
+    Усі інші — лише свій календар."""
+    if teacher_user_id and requester.role == "owner":
+        async with SessionLocal() as s:
+            u = (await s.execute(select(User).where(
+                User.id == teacher_user_id, User.tenant_id == tenant_id,
+                User.role.in_(("teacher", "owner")),
+            ))).scalar_one_or_none()
+        if u is not None:
+            return u
+    return requester
+
+
 @router.get("/api/teacher/availability")
-async def get_availability(telegram_id: int = Query(...), tenant_id: int = Query(1)):
-    teacher = await _require_teacher(telegram_id, tenant_id)
+async def get_availability(telegram_id: int = Query(...), tenant_id: int = Query(1),
+                           teacher_user_id: int | None = Query(None)):
+    requester = await _require_teacher(telegram_id, tenant_id)
+    teacher = await _target_teacher(requester, tenant_id, teacher_user_id)
     async with SessionLocal() as s:
         tenant = (await s.execute(select(Tenant).where(Tenant.id == tenant_id))).scalar_one()
     return {
@@ -89,8 +105,10 @@ async def get_availability(telegram_id: int = Query(...), tenant_id: int = Query
 @router.put("/api/teacher/availability")
 async def put_availability(
     data: AvailabilityRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+    teacher_user_id: int | None = Query(None),
 ):
-    teacher = await _require_teacher(telegram_id, tenant_id)
+    requester = await _require_teacher(telegram_id, tenant_id)
+    teacher = await _target_teacher(requester, tenant_id, teacher_user_id)
     n = await cal.set_availability(tenant_id, teacher.id, data.slots)
     return {"ok": True, "slots": n}
 
@@ -98,8 +116,10 @@ async def put_availability(
 @router.post("/api/teacher/closed_date")
 async def post_closed_date(
     data: ClosedDateRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+    teacher_user_id: int | None = Query(None),
 ):
-    teacher = await _require_teacher(telegram_id, tenant_id)
+    requester = await _require_teacher(telegram_id, tenant_id)
+    teacher = await _target_teacher(requester, tenant_id, teacher_user_id)
     try:
         day = date.fromisoformat(data.day)
     except ValueError:
@@ -109,8 +129,10 @@ async def post_closed_date(
 
 
 @router.get("/api/teacher/lessons")
-async def teacher_lessons(telegram_id: int = Query(...), tenant_id: int = Query(1)):
-    teacher = await _require_teacher(telegram_id, tenant_id)
+async def teacher_lessons(telegram_id: int = Query(...), tenant_id: int = Query(1),
+                          teacher_user_id: int | None = Query(None)):
+    requester = await _require_teacher(telegram_id, tenant_id)
+    teacher = await _target_teacher(requester, tenant_id, teacher_user_id)
     lessons = await cal.list_lessons(tenant_id, teacher_user_id=teacher.id)
     return {"lessons": lessons, "timezone": teacher.timezone or "Europe/Kiev"}
 
@@ -118,8 +140,10 @@ async def teacher_lessons(telegram_id: int = Query(...), tenant_id: int = Query(
 @router.post("/api/teacher/lessons/{lesson_id}/cancel")
 async def teacher_cancel(
     lesson_id: int, telegram_id: int = Query(...), tenant_id: int = Query(1),
+    teacher_user_id: int | None = Query(None),
 ):
-    teacher = await _require_teacher(telegram_id, tenant_id)
+    requester = await _require_teacher(telegram_id, tenant_id)
+    teacher = await _target_teacher(requester, tenant_id, teacher_user_id)
     r = await cal.cancel_lesson(tenant_id, lesson_id, by_user_id=teacher.id)
     if not r["ok"]:
         raise HTTPException(status_code=400, detail=r["error"])
@@ -132,14 +156,16 @@ class ManualLessonRequest(BaseModel):
     student_user_id: int
     starts_at_utc: str        # ISO; якщо без tz — трактуємо як UTC
     duration_min: int | None = None
+    teacher_user_id: int | None = None  # owner — для якого викладача
 
 
 @router.post("/api/teacher/lessons")
 async def teacher_create_lesson(
     data: ManualLessonRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
 ):
-    """Викладач вручну бронює урок для учня на довільний час."""
-    teacher = await _require_teacher(telegram_id, tenant_id)
+    """Викладач (або owner за викладача) вручну бронює урок для учня."""
+    requester = await _require_teacher(telegram_id, tenant_id)
+    teacher = await _target_teacher(requester, tenant_id, data.teacher_user_id)
     r = await cal.create_manual_lesson(
         tenant_id, teacher.id, data.student_user_id, data.starts_at_utc, data.duration_min,
     )
