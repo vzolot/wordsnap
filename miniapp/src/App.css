@@ -2845,6 +2845,20 @@
 .tch-billing-status.bad { color: var(--coral); }
 .tch-billing-status.muted { color: var(--text-3); }
 .tch-billing .tch-btn { flex-shrink: 0; }
+/* Селектор оплачених викладацьких місць (передоплата). */
+.tch-seats {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+}
+.tch-seats-label { font-size: 12px; color: var(--text-2); min-width: 0; }
+.tch-seats-ctl { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.tch-seats-btn {
+  width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg-card); color: var(--text-1); font-size: 20px; font-weight: 700;
+  line-height: 1; display: grid; place-items: center; cursor: pointer;
+}
+.tch-seats-btn:disabled { opacity: 0.4; cursor: default; }
+.tch-seats-n { min-width: 20px; text-align: center; font-size: 18px; font-weight: 800; color: var(--text-1); }
 /* Банер режиму «перегляд як учень». */
 .preview-banner {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;

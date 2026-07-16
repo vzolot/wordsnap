@@ -417,6 +417,11 @@ class Tenant(Base):
     sub_next_charge_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sub_last_payment_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sub_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Оплачені викладацькі «місця» (окрім власника): база $19 покриває власника,
+    # кожне місце — +$5. Власник може передоплатити наперед (seats ≥ фактичних).
+    sub_teacher_seats: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

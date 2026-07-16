@@ -109,6 +109,8 @@ export const deleteTeacherDeck = (deckId) => api.delete(`/api/teacher/decks/${de
 // Оплата сервісу викладачем ($19/міс).
 export const getTeacherBilling = () => api.get('/api/teacher/billing');
 export const teacherBillingPay = () => api.post('/api/teacher/billing/pay');
+// Власник обирає кількість оплачених викладацьких місць (передоплата).
+export const setTeacherSeats = (seats) => api.post('/api/teacher/billing/seats', { seats });
 // M11: фото сторінки → пари «слово–переклад» (превʼю для редагування).
 export const createDeckFromPhoto = (imageB64, imageMime) =>
   api.post('/api/teacher/decks/from_photo', { image_b64: imageB64, image_mime: imageMime });

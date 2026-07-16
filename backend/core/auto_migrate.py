@@ -715,6 +715,11 @@ MIGRATIONS: list[tuple[str, str]] = [
         "users.timezone_kyiv",
         "UPDATE users SET timezone='Europe/Kyiv' WHERE timezone='Europe/Kiev'",
     ),
+    # ── Оплачені викладацькі місця (передоплата за N викладачів) ──────────────
+    (
+        "tenants.sub_teacher_seats",
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS sub_teacher_seats INTEGER NOT NULL DEFAULT 0",
+    ),
 ]
 
 

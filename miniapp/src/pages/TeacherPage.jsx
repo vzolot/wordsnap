@@ -14,7 +14,7 @@ import {
   getSchoolInfo, getSchoolInvites, getSchoolOverview, assignStudentToTeacher,
   getTeachers, addTeacher, setTeacherActive,
   getGroups, createGroup, setGroupMembers,
-  getTeacherBilling, teacherBillingPay,
+  getTeacherBilling, teacherBillingPay, setTeacherSeats,
 } from '../api/client';
 
 // ── Спільні хелпери для «поділитися ботом» ────────────────────────────────
@@ -845,7 +845,8 @@ function Kpi({ value, label, warn }) {
   );
 }
 
-// Оплата сервісу викладачем ($19/міс).
+// Оплата сервісу власником. У школі — селектор кількості викладацьких місць
+// (передоплата): база $19 покриває власника, кожне місце +$5.
 function TeacherBilling() {
   const [b, setB] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -864,6 +865,18 @@ function TeacherBilling() {
     } finally { setBusy(false); }
   };
 
+  // Змінити кількість оплачених місць (не менше за фактичних викладачів).
+  const changeSeats = async (delta) => {
+    if (!b) return;
+    const next = Math.max(b.teachers || 0, Math.min(50, (b.seats || 0) + delta));
+    if (next === b.seats) return;
+    setBusy(true);
+    try {
+      const r = await setTeacherSeats(next);
+      setB(r.data);
+    } finally { setBusy(false); }
+  };
+
   if (!b) return null;
   const fmt = (iso) => {
     if (!iso) return '';
@@ -876,11 +889,10 @@ function TeacherBilling() {
     : b.status === 'past_due' ? 'Прострочено — сервіс може призупинитись'
     : b.status === 'trial' ? 'Пробний період' : 'Неактивна';
   const statusCls = active ? '' : b.status === 'past_due' ? 'bad' : 'muted';
-  // Розшифровка ціни для школи: база покриває власника-викладача,
-  // кожен доданий викладач — +$5.
+  const seats = b.seats || 0;
   const breakdown = b.is_school
-    ? (b.teachers > 0
-        ? `$${b.base_usd} база (ви) + $${b.per_extra_usd} × ${b.teachers} викл. = $${b.price_usd}`
+    ? (seats > 0
+        ? `$${b.base_usd} база (ви) + $${b.per_extra_usd} × ${seats} = $${b.price_usd}`
         : `$${b.base_usd} база — ви як викладач`)
     : null;
 
@@ -895,6 +907,23 @@ function TeacherBilling() {
           {active ? 'Продовжити' : `Оплатити $${b.price_usd}`}
         </button>
       </div>
+
+      {b.is_school && (
+        <div className="tch-seats">
+          <div className="tch-seats-label">
+            Викладачів (окрім вас) · ${b.per_extra_usd}/міс кожен
+            {b.teachers > 0 && <span className="tch-muted sm"> · зараз у школі: {b.teachers}</span>}
+          </div>
+          <div className="tch-seats-ctl">
+            <button className="tch-seats-btn" onClick={() => changeSeats(-1)}
+              disabled={busy || seats <= (b.teachers || 0)} aria-label="Менше">−</button>
+            <span className="tch-seats-n">{seats}</span>
+            <button className="tch-seats-btn" onClick={() => changeSeats(1)}
+              disabled={busy || seats >= 50} aria-label="Більше">+</button>
+          </div>
+        </div>
+      )}
+
       {breakdown && <div className="tch-billing-status muted" style={{ marginTop: 6 }}>{breakdown}</div>}
     </div>
   );

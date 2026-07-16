@@ -37,14 +37,23 @@ async def count_school_teachers(tenant_id: int) -> int:
     return int(n or 0)
 
 
+async def billed_teacher_seats(tenant: Tenant) -> int:
+    """Скільки викладацьких місць тарифікуємо: max(оплачені наперед, фактичні),
+    щоб ніколи не недоплатити, але дозволити передоплату."""
+    if not tenant.is_school:
+        return 0
+    actual = await count_school_teachers(tenant.id)
+    paid = int(tenant.sub_teacher_seats or 0)
+    return max(paid, actual)
+
+
 async def compute_tenant_price(tenant: Tenant) -> float:
-    """Актуальна місячна ціна: база (власник як викладач) + $5 за кожного
-    доданого викладача. Для соло-тенанта (не школа) — завжди база."""
+    """Актуальна місячна ціна: база (власник як викладач) + $5 за кожне
+    викладацьке місце. Для соло-тенанта (не школа) — завжди база."""
     base = float(tenant.sub_price_usd or TENANT_BASE_PRICE)
     if not tenant.is_school:
         return base
-    n = await count_school_teachers(tenant.id)
-    return base + TENANT_EXTRA_TEACHER_PRICE * n
+    return base + TENANT_EXTRA_TEACHER_PRICE * await billed_teacher_seats(tenant)
 
 DEFAULT_TENANT_ID = 1
 
@@ -232,6 +241,7 @@ async def tenant_billing_status(tenant: Tenant) -> dict:
     days_left = max(0, (exp - now).days) if exp and exp > now else 0
     price = await compute_tenant_price(tenant)
     teachers = await count_school_teachers(tenant.id) if tenant.is_school else 0
+    seats = await billed_teacher_seats(tenant)  # тарифіковані місця (max опл./факт.)
     return {
         "status": tenant.sub_status,
         "active": active,
@@ -239,11 +249,31 @@ async def tenant_billing_status(tenant: Tenant) -> dict:
         "base_usd": float(tenant.sub_price_usd or TENANT_BASE_PRICE),
         "per_extra_usd": TENANT_EXTRA_TEACHER_PRICE,
         "is_school": bool(tenant.is_school),
-        "teachers": teachers,  # додані викладачі (role='teacher'), кожен по $5
+        "teachers": teachers,   # фактичні викладачі (role='teacher')
+        "seats": seats,         # за скільки викладацьких місць платимо (кожне +$5)
         "expires_at": exp.isoformat() if exp else None,
         "days_left": days_left,
         "auto_renew": bool(tenant.sub_auto_renew),
     }
+
+
+TENANT_MAX_SEATS = 50
+
+
+async def set_tenant_teacher_seats(tenant_id: int, seats: int) -> Tenant | None:
+    """Власник обирає, за скільки викладачів платить (передоплата). Не менше за
+    фактичну кількість викладачів і не більше за TENANT_MAX_SEATS."""
+    async with SessionLocal() as session:
+        tenant = (await session.execute(
+            select(Tenant).where(Tenant.id == tenant_id)
+        )).scalar_one_or_none()
+        if tenant is None:
+            return None
+        actual = await count_school_teachers(tenant_id) if tenant.is_school else 0
+        tenant.sub_teacher_seats = max(actual, min(int(seats), TENANT_MAX_SEATS))
+        await session.commit()
+        await session.refresh(tenant)
+        return tenant
 
 
 async def set_tenant_bot_username(tenant_id: int, username: str | None) -> None:

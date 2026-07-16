@@ -429,6 +429,24 @@ async def teacher_billing_status_endpoint(
     return await tenant_billing_status(tenant)
 
 
+class SeatsRequest(BaseModel):
+    seats: int
+
+
+@router.post("/api/teacher/billing/seats")
+async def teacher_billing_set_seats(
+    data: SeatsRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """Власник обирає, за скільки викладачів платити (передоплата). Повертає
+    оновлений статус підписки з новою ціною."""
+    await _require_owner(telegram_id, tenant_id)
+    from core.tenant_service import set_tenant_teacher_seats, tenant_billing_status
+    tenant = await set_tenant_teacher_seats(tenant_id, data.seats)
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="tenant_not_found")
+    return await tenant_billing_status(tenant)
+
+
 @router.post("/api/teacher/billing/pay")
 async def teacher_billing_pay(
     request: Request, telegram_id: int = Query(...), tenant_id: int = Query(1),
