@@ -14,9 +14,37 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from .db import SessionLocal
-from .models import AiSnapUsage, Tenant
+from .models import AiSnapUsage, Tenant, User
 
 logger = logging.getLogger(__name__)
+
+# Тарифікація сервісу для тенанта.
+# База $19/міс включає ОДНОГО викладача; кожен наступний викладач у школі — +$5.
+# Для соло-тенанта (не школа) — завжди база (один викладач = власник).
+TENANT_BASE_PRICE = 19.0
+TENANT_EXTRA_TEACHER_PRICE = 5.0
+
+
+async def count_school_teachers(tenant_id: int) -> int:
+    """Кількість викладачів у школі (role='teacher', без owner-адміністратора)."""
+    from sqlalchemy import func
+    async with SessionLocal() as session:
+        n = (await session.execute(
+            select(func.count()).select_from(User).where(
+                User.tenant_id == tenant_id, User.role == "teacher"
+            )
+        )).scalar_one()
+    return int(n or 0)
+
+
+async def compute_tenant_price(tenant: Tenant) -> float:
+    """Актуальна місячна ціна: база + $5 за кожного викладача понад першого.
+    $19 включає одного викладача (у школі — це перший доданий; для соло — власник)."""
+    base = float(tenant.sub_price_usd or TENANT_BASE_PRICE)
+    if not tenant.is_school:
+        return base
+    n = await count_school_teachers(tenant.id)
+    return base + TENANT_EXTRA_TEACHER_PRICE * max(0, n - 1)
 
 DEFAULT_TENANT_ID = 1
 
@@ -195,16 +223,24 @@ async def activate_tenant_subscription(
         return tenant
 
 
-def tenant_billing_status(tenant: Tenant) -> dict:
-    """Публічний статус підписки для UI викладача (без rec_token)."""
+async def tenant_billing_status(tenant: Tenant) -> dict:
+    """Публічний статус підписки для UI викладача (без rec_token).
+    price_usd — актуальна ціна з урахуванням кількості викладачів у школі."""
     now = datetime.now(timezone.utc)
     exp = tenant.sub_expires_at
     active = bool(tenant.sub_status == "active" and exp and exp > now)
     days_left = max(0, (exp - now).days) if exp and exp > now else 0
+    price = await compute_tenant_price(tenant)
+    teachers = await count_school_teachers(tenant.id) if tenant.is_school else 1
     return {
         "status": tenant.sub_status,
         "active": active,
-        "price_usd": float(tenant.sub_price_usd or 19),
+        "price_usd": price,
+        "base_usd": float(tenant.sub_price_usd or TENANT_BASE_PRICE),
+        "per_extra_usd": TENANT_EXTRA_TEACHER_PRICE,
+        "is_school": bool(tenant.is_school),
+        "teachers": teachers,
+        "extra_teachers": max(0, teachers - 1) if tenant.is_school else 0,
         "expires_at": exp.isoformat() if exp else None,
         "days_left": days_left,
         "auto_renew": bool(tenant.sub_auto_renew),

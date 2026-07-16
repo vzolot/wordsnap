@@ -47,9 +47,10 @@ async def _run_once() -> None:
             select(Tenant).where(Tenant.id != DEFAULT_TENANT_ID)
         )).scalars().all()
 
+    from core.tenant_service import compute_tenant_price
     for t in tenants:
         try:
-            price = float(t.sub_price_usd or 19)
+            price = await compute_tenant_price(t)
 
             # 1) Автопродовження.
             if (t.sub_auto_renew and t.sub_rec_token and t.sub_next_charge_at
@@ -63,7 +64,7 @@ async def _run_once() -> None:
                     if t.owner_telegram_id:
                         await send_message(
                             t.owner_telegram_id,
-                            "⚠️ Не вдалось автоматично списати оплату за сервіс ($19). "
+                            f"⚠️ Не вдалось автоматично списати оплату за сервіс (${price:g}). "
                             "Перевір картку і оплати в кабінеті: Викладач → Підписка.",
                             tenant_id=t.id,
                         )

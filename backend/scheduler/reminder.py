@@ -48,9 +48,9 @@ async def _count_due_words(user_id: int) -> int:
 
 def _user_tz(user: User) -> ZoneInfo:
     try:
-        return ZoneInfo(user.timezone or "Europe/Kiev")
+        return ZoneInfo(user.timezone or "Europe/Kyiv")
     except ZoneInfoNotFoundError:
-        return ZoneInfo("Europe/Kiev")
+        return ZoneInfo("Europe/Kyiv")
 
 
 ACTIVE_WINDOW_HOURS = 12  # Тривалість активного push-вікна після reminder_time
@@ -193,7 +193,7 @@ async def send_daily_push_for_user(bot: Bot, user: User, *, force: bool = False)
         "target_lang": user.target_lang,
         "native_lang": user.native_lang,
         "hour_local": local_now.hour,
-        "timezone": user.timezone or "Europe/Kiev",
+        "timezone": user.timezone or "Europe/Kyiv",
         "word_id": word.id,
         "word_status": word.status,
         "due_total": due_total,

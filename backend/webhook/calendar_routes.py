@@ -49,13 +49,13 @@ async def _notify_lesson(tenant_id: int, teacher_id: int, student_id: int,
     verb = {"booked": "заброньовано", "cancelled": "скасовано"}.get(kind, kind)
     emoji = "📅" if kind == "booked" else "❌"
     if teacher:
-        when = _fmt(starts_iso, teacher.timezone or "Europe/Kiev")
+        when = _fmt(starts_iso, teacher.timezone or "Europe/Kyiv")
         sname = (student.first_name if student else None) or "учень"
         await send_message(teacher.telegram_id,
                            f"{emoji} Урок {verb}: <b>{when}</b> — {sname}",
                            tenant_id=tenant_id)
     if student:
-        when = _fmt(starts_iso, student.timezone or "Europe/Kiev")
+        when = _fmt(starts_iso, student.timezone or "Europe/Kyiv")
         await send_message(student.telegram_id,
                            f"{emoji} Твій урок {verb}: <b>{when}</b>",
                            tenant_id=tenant_id)
@@ -96,7 +96,7 @@ async def get_availability(telegram_id: int = Query(...), tenant_id: int = Query
     return {
         "availability": await cal.get_availability(tenant_id, teacher.id),
         "closed_dates": await cal.get_closed_dates(tenant_id, teacher.id),
-        "timezone": teacher.timezone or "Europe/Kiev",
+        "timezone": teacher.timezone or "Europe/Kyiv",
         "lesson_duration_min": tenant.lesson_duration_min,
         "cancel_cutoff_hours": tenant.cancel_cutoff_hours,
     }
@@ -134,7 +134,7 @@ async def teacher_lessons(telegram_id: int = Query(...), tenant_id: int = Query(
     requester = await _require_teacher(telegram_id, tenant_id)
     teacher = await _target_teacher(requester, tenant_id, teacher_user_id)
     lessons = await cal.list_lessons(tenant_id, teacher_user_id=teacher.id)
-    return {"lessons": lessons, "timezone": teacher.timezone or "Europe/Kiev"}
+    return {"lessons": lessons, "timezone": teacher.timezone or "Europe/Kyiv"}
 
 
 @router.post("/api/teacher/lessons/{lesson_id}/cancel")
@@ -189,9 +189,9 @@ async def calendar_slots(telegram_id: int = Query(...), tenant_id: int = Query(1
         raise HTTPException(status_code=404, detail="user_not_found")
     teacher_id = await cal.get_tenant_teacher_id(tenant_id)
     if teacher_id is None:
-        return {"slots": [], "timezone": user.timezone or "Europe/Kiev", "has_teacher": False}
-    slots = await cal.free_slots(tenant_id, teacher_id, user.timezone or "Europe/Kiev")
-    return {"slots": slots, "timezone": user.timezone or "Europe/Kiev", "has_teacher": True}
+        return {"slots": [], "timezone": user.timezone or "Europe/Kyiv", "has_teacher": False}
+    slots = await cal.free_slots(tenant_id, teacher_id, user.timezone or "Europe/Kyiv")
+    return {"slots": slots, "timezone": user.timezone or "Europe/Kyiv", "has_teacher": True}
 
 
 @router.get("/api/calendar/my")
@@ -200,7 +200,7 @@ async def my_lessons(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     if not user:
         raise HTTPException(status_code=404, detail="user_not_found")
     lessons = await cal.list_lessons(tenant_id, student_user_id=user.id)
-    return {"lessons": lessons, "timezone": user.timezone or "Europe/Kiev"}
+    return {"lessons": lessons, "timezone": user.timezone or "Europe/Kyiv"}
 
 
 @router.post("/api/calendar/book")

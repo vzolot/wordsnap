@@ -1,4 +1,4 @@
-"""Щоденний адмін-звіт у Telegram о 09:00 за Europe/Kiev.
+"""Щоденний адмін-звіт у Telegram о 09:00 за Europe/Kyiv.
 
 Раз на хвилину перевіряємо чи зараз 09:xx у Києві і чи ми ще не слали
 звіт сьогодні. Якщо так — будуємо звіт через core/admin_report.py і шлемо
@@ -20,7 +20,7 @@ from core.constants import admin_telegram_id
 
 logger = logging.getLogger(__name__)
 
-REPORT_HOUR_LOCAL = 9  # 09:xx Europe/Kiev
+REPORT_HOUR_LOCAL = 9  # 09:xx Europe/Kyiv
 _STATE_KEY = "admin_report_last_sent"  # значення = ISO-дата (YYYY-MM-DD)
 
 # In-memory кеш — щоб не ходити в БД щохвилини. Джерело істини — БД; кеш
@@ -31,7 +31,7 @@ _loaded_from_db = False
 
 def _kyiv_now() -> datetime:
     try:
-        return datetime.now(ZoneInfo("Europe/Kiev"))
+        return datetime.now(ZoneInfo("Europe/Kyiv"))
     except ZoneInfoNotFoundError:
         return datetime.now(timezone.utc)
 

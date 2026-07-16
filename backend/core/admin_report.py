@@ -22,14 +22,14 @@ PeriodKind = Literal["today_live", "yesterday_full", "month_30d"]
 
 def _kyiv_today() -> date:
     try:
-        return datetime.now(ZoneInfo("Europe/Kiev")).date()
+        return datetime.now(ZoneInfo("Europe/Kyiv")).date()
     except ZoneInfoNotFoundError:
         return datetime.now(timezone.utc).date()
 
 
 def _kyiv_tz() -> ZoneInfo | timezone:
     try:
-        return ZoneInfo("Europe/Kiev")
+        return ZoneInfo("Europe/Kyiv")
     except ZoneInfoNotFoundError:
         return timezone.utc
 

@@ -710,6 +710,11 @@ MIGRATIONS: list[tuple[str, str]] = [
         "groups.is_default",
         "ALTER TABLE groups ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT FALSE",
     ),
+    # ── Kiev → Kyiv: нормалізуємо збережений часовий пояс до канонічного IANA ─
+    (
+        "users.timezone_kyiv",
+        "UPDATE users SET timezone='Europe/Kyiv' WHERE timezone='Europe/Kiev'",
+    ),
 ]
 
 

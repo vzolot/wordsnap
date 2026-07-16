@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def _fmt(dt_utc: datetime, tz_name: str) -> str:
-    dt = dt_utc.astimezone(ZoneInfo(tz_name if tz_name else "Europe/Kiev"))
+    dt = dt_utc.astimezone(ZoneInfo(tz_name if tz_name else "Europe/Kyiv"))
     wd = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"][dt.weekday()]
     return f"{wd} {dt.strftime('%d.%m %H:%M')}"
 

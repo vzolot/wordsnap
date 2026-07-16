@@ -1150,18 +1150,19 @@ async def pay_tenant_redirect(tenant_id: int = Query(...)):
     from html import escape as html_escape
     from fastapi.responses import HTMLResponse
     from core.wayforpay_client import create_tenant_payment_link
-    from core.tenant_service import get_tenant_by_id
+    from core.tenant_service import get_tenant_by_id, compute_tenant_price
 
     tenant = await get_tenant_by_id(tenant_id)
     if tenant is None:
         raise HTTPException(status_code=404, detail="tenant_not_found")
+    price = await compute_tenant_price(tenant)
     label = f"{tenant.display_name} — сервіс (30 днів)"
     try:
         payment = create_tenant_payment_link(
             tenant_id=tenant.id,
             owner_telegram_id=tenant.owner_telegram_id,
             product_label=label,
-            amount=float(tenant.sub_price_usd or 19),
+            amount=price,
         )
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))

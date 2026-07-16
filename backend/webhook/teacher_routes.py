@@ -417,7 +417,7 @@ async def teacher_billing_status_endpoint(
         )).scalar_one_or_none()
     if tenant is None:
         raise HTTPException(status_code=404, detail="tenant_not_found")
-    return tenant_billing_status(tenant)
+    return await tenant_billing_status(tenant)
 
 
 @router.post("/api/teacher/billing/pay")

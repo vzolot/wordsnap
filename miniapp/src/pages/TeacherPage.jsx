@@ -235,7 +235,7 @@ function CalendarManager() {
       <div className="tch-card">
         <h3 className="tch-h3">Вільні години</h3>
         <p className="tch-muted sm">
-          Пояс: {tz || '—'} · тривалість слота = тривалість уроку. Учні бачать ці інтервали для самостійного запису.
+          Пояс: {(tz || '—').replace('Kiev', 'Kyiv')} · тривалість слота = тривалість уроку. Учні бачать ці інтервали для самостійного запису.
         </p>
         {WEEKDAYS.map((name, wd) => (
           <div key={wd} className="tch-wdrow">
@@ -809,7 +809,12 @@ function SchoolStats() {
   useEffect(() => { getSchoolOverview().then((r) => setData(r.data)).catch(() => setData(null)); }, []);
   if (!data) return <p className="tch-muted">Завантаження…</p>;
   const teachers = data.teachers || [];
-  if (teachers.length === 0) return <div className="tch-card"><p className="tch-muted">Ще немає викладачів.</p></div>;
+  if (teachers.length === 0) return (
+    <>
+      <div className="tch-card"><p className="tch-muted">Ще немає викладачів.</p></div>
+      <TeacherBilling />
+    </>
+  );
   return (
     <>
       {teachers.map((t) => (
@@ -823,6 +828,7 @@ function SchoolStats() {
           </div>
         </div>
       ))}
+      <TeacherBilling />
     </>
   );
 }
@@ -867,6 +873,12 @@ function TeacherBilling() {
     : b.status === 'past_due' ? 'Прострочено — сервіс може призупинитись'
     : b.status === 'trial' ? 'Пробний період' : 'Неактивна';
   const statusCls = active ? '' : b.status === 'past_due' ? 'bad' : 'muted';
+  // Розшифровка ціни для школи: база (1 викладач) + $5 за кожного наступного.
+  const breakdown = b.is_school
+    ? (b.extra_teachers > 0
+        ? `$${b.base_usd} база (1 викладач) + $${b.per_extra_usd} × ${b.extra_teachers} = $${b.price_usd}`
+        : `$${b.base_usd} база — включає 1 викладача`)
+    : null;
 
   return (
     <div className="tch-card tch-billing">
@@ -879,6 +891,7 @@ function TeacherBilling() {
           {active ? 'Продовжити' : `Оплатити $${b.price_usd}`}
         </button>
       </div>
+      {breakdown && <div className="tch-billing-status muted" style={{ marginTop: 6 }}>{breakdown}</div>}
     </div>
   );
 }

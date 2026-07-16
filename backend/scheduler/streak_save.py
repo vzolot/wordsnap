@@ -27,17 +27,17 @@ SEND_HOUR_LOCAL = 22
 def _user_local_hour(user: User) -> int | None:
     """Поточна година у таймзоні юзера, або None якщо TZ некоректна."""
     try:
-        tz = ZoneInfo(user.timezone or "Europe/Kiev")
+        tz = ZoneInfo(user.timezone or "Europe/Kyiv")
     except ZoneInfoNotFoundError:
-        tz = ZoneInfo("Europe/Kiev")
+        tz = ZoneInfo("Europe/Kyiv")
     return datetime.now(tz).hour
 
 
 def _user_local_date(user: User):
     try:
-        tz = ZoneInfo(user.timezone or "Europe/Kiev")
+        tz = ZoneInfo(user.timezone or "Europe/Kyiv")
     except ZoneInfoNotFoundError:
-        tz = ZoneInfo("Europe/Kiev")
+        tz = ZoneInfo("Europe/Kyiv")
     return datetime.now(tz).date()
 
 

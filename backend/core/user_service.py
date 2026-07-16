@@ -101,7 +101,7 @@ async def get_or_create_user(
             # на години розходиться з північчю юзера.
             try:
                 from zoneinfo import ZoneInfo
-                today = datetime.now(ZoneInfo(user.timezone or "Europe/Kiev")).date()
+                today = datetime.now(ZoneInfo(user.timezone or "Europe/Kyiv")).date()
             except Exception:
                 today = date.today()
             if user.last_reset_date != today:

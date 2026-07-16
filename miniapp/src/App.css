@@ -1411,6 +1411,21 @@
 }
 .welcome-hero-spacer { flex: 1; }
 
+/* Емодзі-бейдж для рольового онбордингу (викладач/власник/учень школи) —
+ * коли для слайду немає ілюстрації, показуємо велику іконку у градієнт-колі. */
+.welcome-hero-icon { align-items: center; justify-content: center; }
+.welcome-icon-badge {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 64px;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--violet, #7C3AED), var(--pink, #EC4899));
+  box-shadow: 0 12px 32px rgba(124, 58, 237, 0.28);
+}
+
 /* SRS-roadmap для слайду "Закріплюємо надовго" — 5 рівновіддалених точок,
  * з'єднаних однією лінією. Усе в межах екрану, без overflow. */
 .welcome-hero-srs {
@@ -2809,7 +2824,7 @@
 .tch-pill.on { background: var(--gradient); color: #fff; border-color: transparent; }
 .tch-top-actions { display: flex; gap: 8px; align-items: center; }
 /* Викладацькі KPI-плитки (вкладка «Статистика»). */
-.tch-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.tch-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
 .tch-kpi { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-md, 14px); padding: 12px 6px; text-align: center; }
 .tch-kpi-n { font-size: 22px; font-weight: 800; color: var(--text-1); letter-spacing: -0.4px; }
 .tch-kpi-n.warn { color: var(--coral); }

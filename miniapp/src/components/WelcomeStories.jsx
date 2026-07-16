@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT, useLang } from '../contexts/LangContext';
+import { useTenant } from '../contexts/TenantContext';
+import { useRole } from '../contexts/RoleContext';
 import { getStats, updateSettings, writeCache, readCache } from '../api/client';
 import { track } from '../utils/analytics';
 
@@ -14,7 +16,8 @@ const LANGS = [
   { code: 'de', flag: '🇩🇪', name: 'Deutsch' },
 ];
 
-const SLIDES = [
+// Самостійний учень (базовий WordSnap): снап-фото, SRS і вибір мов.
+const DEFAULT_SLIDES = [
   {
     type: 'hero',
     photo: '/onboarding/slide_1.png',
@@ -43,6 +46,70 @@ const SLIDES = [
     bodyKey: 'welcome.target.body',
   },
 ];
+
+// Учень white-label тенанта: слова дає викладач, вибирати мову не треба —
+// пара сторінок про сам процес користування.
+const WL_STUDENT_SLIDES = [
+  {
+    type: 'icon', emoji: '📚',
+    title: 'Навчання з викладачем',
+    body: 'Ваш викладач додає вам слова та колоди — вони одразу зʼявляться тут. Нічого налаштовувати не треба.',
+  },
+  {
+    type: 'srs',
+    title: 'Повторюйте у потрібний момент',
+    body: 'Слова показуються за інтервальним повторенням — так вони закріплюються надовго.',
+  },
+  {
+    type: 'icon', emoji: '📅',
+    title: 'Записуйтесь на уроки',
+    body: 'У розділі «Уроки» оберіть вільний час і забронюйте заняття з викладачем.',
+  },
+];
+
+// Викладач: як додавати слова, вести календар і дивитись прогрес.
+const TEACHER_SLIDES = [
+  {
+    type: 'icon', emoji: '📸',
+    title: 'Додавайте слова учням',
+    body: 'Створюйте колоди вручну або сфотографуйте сторінку підручника — застосунок сам розпізнає слова й переклади.',
+  },
+  {
+    type: 'srs',
+    title: 'Учні повторюють у потрібний момент',
+    body: 'Слова показуються учням за інтервальним повторенням — вони закріплюють їх саме тоді, коли починають забувати.',
+  },
+  {
+    type: 'icon', emoji: '📅',
+    title: 'Календар і статистика',
+    body: 'Відкрийте вільні години для запису на уроки та стежте за прогресом кожного учня у вкладці «Статистика».',
+  },
+];
+
+// Власник школи: запросити команду, призначити учнів, керувати підпискою.
+const OWNER_SLIDES = [
+  {
+    type: 'icon', emoji: '🏫',
+    title: 'Запросіть команду',
+    body: 'У вкладці «Школа» надішліть посилання-запрошення викладачам, потім учням — і призначте кожному учню викладача.',
+  },
+  {
+    type: 'icon', emoji: '📅',
+    title: 'Розклади викладачів',
+    body: 'У «Календар» оберіть викладача й перегляньте або складіть його розклад — усе в одному місці.',
+  },
+  {
+    type: 'icon', emoji: '📊',
+    title: 'Статистика та оплата',
+    body: 'Дивіться статистику викладачів, а внизу «Статистика» — керуйте підпискою: $19/міс за першого викладача, +$5 за кожного наступного.',
+  },
+];
+
+function slidesFor({ isTeacher, role, is_school, isDefaultTenant }) {
+  if (isTeacher) return (role === 'owner' && is_school) ? OWNER_SLIDES : TEACHER_SLIDES;
+  if (!isDefaultTenant) return WL_STUDENT_SLIDES;
+  return DEFAULT_SLIDES;
+}
 
 export function shouldShowWelcome() {
   try {
@@ -84,7 +151,14 @@ function SrsTimeline() {
 function WelcomeStories({ onClose }) {
   const { t } = useT();
   const { setLang } = useLang();
-  const [index, setIndex] = useState(0);
+  const { is_school, isDefaultTenant, display_name } = useTenant();
+  const { role, isTeacher } = useRole();
+  const SLIDES = slidesFor({ isTeacher, role, is_school, isDefaultTenant });
+  const brandName = display_name || 'WordSnap';
+  const [rawIndex, setIndex] = useState(0);
+  // Роль/тенант можуть дозавантажитись після відкриття — набір слайдів
+  // змінюється реактивно, тож затискаємо індекс у межах поточного набору.
+  const index = Math.min(rawIndex, SLIDES.length - 1);
   const [selections, setSelections] = useState(() => {
     // Префіл з кешу stats — користувач який пройшов /start у боті побачить
     // обрану мову одразу і просто пройде далі.
@@ -177,7 +251,7 @@ function WelcomeStories({ onClose }) {
           {!isFirst && (
             <button className="welcome-back" onClick={back} aria-label="Back" type="button">←</button>
           )}
-          <span className="welcome-brand-text">WordSnap</span>
+          <span className="welcome-brand-text">{brandName}</span>
         </div>
         {/* "Skip" доступний тільки на perевих 2 explainer-слайдах. На lang-pickerах
             юзер мусить вибрати — це частина онбордингу, не косметика. */}
@@ -210,6 +284,12 @@ function WelcomeStories({ onClose }) {
         </div>
       )}
 
+      {slide.type === 'icon' && (
+        <div className="welcome-hero welcome-hero-icon">
+          <div className="welcome-icon-badge">{slide.emoji}</div>
+        </div>
+      )}
+
       {slide.type === 'lang-picker' && (
         <div className="welcome-hero welcome-hero-picker">
           <div className="welcome-lang-grid">
@@ -230,8 +310,8 @@ function WelcomeStories({ onClose }) {
       )}
 
       <div className="welcome-content">
-        <h1 className="welcome-display">{t(slide.titleKey)}</h1>
-        <p className="welcome-sub">{t(slide.bodyKey)}</p>
+        <h1 className="welcome-display">{slide.titleKey ? t(slide.titleKey) : slide.title}</h1>
+        <p className="welcome-sub">{slide.bodyKey ? t(slide.bodyKey) : slide.body}</p>
       </div>
 
       <div className="welcome-bottom">
