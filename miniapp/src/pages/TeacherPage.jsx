@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppBar from '../components/AppBar';
 import CameraCapture from '../components/CameraCapture';
+import { replayWelcome } from '../components/WelcomeStories';
 import { useTenant } from '../contexts/TenantContext';
 import { useRole } from '../contexts/RoleContext';
 import {
@@ -902,6 +903,10 @@ function TeacherBilling() {
 // Викладацька статистика: зведені KPI + детальний прогрес по ОБРАНИХ учнях
 // (перевикористовує StudentPicker для вибору і StudentDetail для показу).
 function TeacherStats({ students }) {
+  const { role, ownerAsTeacher } = useRole();
+  // Оплату сервісу бачить лише власник (адмін) — не звичайний викладач і не
+  // власник у режимі викладача. За доданих викладачів платить адміністратор.
+  const showBilling = role === 'owner' && !ownerAsTeacher;
   const [sel, setSel] = useState(new Set());
   const toggle = (id) => setSel((prev) => {
     const n = new Set(prev);
@@ -915,7 +920,7 @@ function TeacherStats({ students }) {
         <div className="tch-card">
           <p className="tch-muted">Статистика по учнях зʼявиться, коли вони приєднаються.</p>
         </div>
-        <TeacherBilling />
+        {showBilling && <TeacherBilling />}
       </>
     );
   }
@@ -944,7 +949,7 @@ function TeacherStats({ students }) {
         <StudentDetail key={id} studentId={id} onClose={() => toggle(id)} />
       ))}
 
-      <TeacherBilling />
+      {showBilling && <TeacherBilling />}
     </>
   );
 }
@@ -1075,6 +1080,16 @@ export default function TeacherPage() {
               </button>
             ))}
           </>
+        )}
+
+        {mode === 'list' && (
+          <button
+            className="link-back"
+            style={{ marginTop: 22, color: 'var(--text-2)', display: 'block' }}
+            onClick={replayWelcome}
+          >
+            Переглянути онбординг
+          </button>
         )}
       </div>
     </div>
