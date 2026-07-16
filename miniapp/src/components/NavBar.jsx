@@ -31,14 +31,23 @@ const BASE_TEACHER_TABS = [
   { tab: 'stats',    icon: ICONS.stats,   label: 'Статистика' },
 ];
 
+const OWNER_TABS = [
+  { tab: 'school',   icon: ICONS.school,  label: 'Школа' },
+  { tab: 'calendar', icon: ICONS.lessons, label: 'Календар' },
+  { tab: 'decks',    icon: ICONS.book,    label: 'Колоди' },
+  { tab: 'stats',    icon: ICONS.stats,   label: 'Статистика' },
+];
+
 function TeacherNav() {
   const loc = useLocation();
   const { is_school } = useTenant();
+  const { role } = useRole();
   const onTeacher = loc.pathname === '/teacher';
-  const tab = new URLSearchParams(loc.search).get('tab') || 'students';
-  const tabs = is_school
-    ? [...BASE_TEACHER_TABS, { tab: 'school', icon: ICONS.school, label: 'Школа' }]
-    : BASE_TEACHER_TABS;
+  // Власник школи керує → без «Учні» (це у «Школа»); порядок Школа/Календар/…
+  const isOwnerSchool = is_school && role === 'owner';
+  const tabs = isOwnerSchool ? OWNER_TABS : BASE_TEACHER_TABS;
+  const defaultTab = isOwnerSchool ? 'school' : 'students';
+  const tab = new URLSearchParams(loc.search).get('tab') || defaultTab;
   return (
     <nav className="navbar">
       {tabs.map((it) => (

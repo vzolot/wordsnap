@@ -243,3 +243,85 @@ async def redeem_student_invite(tenant_id: int, token: str, user_id: int) -> int
         ).on_conflict_do_nothing(index_elements=["group_id", "user_id"]))
         await s.commit()
         return g.teacher_user_id
+
+
+async def assign_student_to_teacher(tenant_id: int, student_user_id: int, teacher_user_id: int) -> bool:
+    """Призначає учня викладачу: додає в дефолтну групу викладача і прибирає з
+    дефолтних груп інших викладачів (один основний викладач на учня)."""
+    g = await ensure_default_group(tenant_id, teacher_user_id)
+    async with SessionLocal() as s:
+        st = (await s.execute(select(User.id).where(
+            User.id == student_user_id, User.tenant_id == tenant_id, User.role == "student",
+        ))).scalar_one_or_none()
+        if st is None:
+            return False
+        others = (await s.execute(select(Group.id).where(
+            Group.tenant_id == tenant_id, Group.is_default.is_(True), Group.id != g.id,
+        ))).scalars().all()
+        if others:
+            await s.execute(delete(GroupMember).where(
+                GroupMember.user_id == student_user_id, GroupMember.group_id.in_(others),
+            ))
+        await s.execute(pg_insert(GroupMember).values(
+            group_id=g.id, user_id=student_user_id,
+        ).on_conflict_do_nothing(index_elements=["group_id", "user_id"]))
+        await s.commit()
+    return True
+
+
+async def students_with_teacher(tenant_id: int) -> list[dict]:
+    """Усі учні школи + їхній поточний викладач (за дефолтною групою)."""
+    async with SessionLocal() as s:
+        students = (await s.execute(select(User).where(
+            User.tenant_id == tenant_id, User.role == "student",
+        ).order_by(User.id))).scalars().all()
+        rows = (await s.execute(
+            select(GroupMember.user_id, Group.teacher_user_id)
+            .join(Group, Group.id == GroupMember.group_id)
+            .where(Group.tenant_id == tenant_id, Group.is_default.is_(True))
+        )).all()
+        tmap = {uid: tid for uid, tid in rows}
+        return [
+            {"id": u.id, "name": u.first_name or (f"@{u.username}" if u.username else f"id{u.telegram_id}"),
+             "teacher_id": tmap.get(u.id)}
+            for u in students
+        ]
+
+
+async def school_teacher_stats(tenant_id: int) -> list[dict]:
+    """Per-teacher: учнів, занять проведено (всього + цього місяця), заплановано,
+    + invite_token дефолтної групи."""
+    from datetime import datetime, timezone
+    from .models import Lesson
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    async with SessionLocal() as s:
+        teachers = (await s.execute(select(User).where(
+            User.tenant_id == tenant_id, User.role.in_(("teacher", "owner")),
+        ).order_by(User.role.desc(), User.id))).scalars().all()
+        out = []
+        for t in teachers:
+            students = (await s.execute(
+                select(func.count(func.distinct(GroupMember.user_id)))
+                .select_from(GroupMember).join(Group, Group.id == GroupMember.group_id)
+                .where(Group.tenant_id == tenant_id, Group.teacher_user_id == t.id)
+            )).scalar() or 0
+
+            def _lc(*conds):
+                return select(func.count(Lesson.id)).where(
+                    Lesson.tenant_id == tenant_id, Lesson.teacher_user_id == t.id,
+                    Lesson.status.in_(("booked", "completed")), *conds,
+                )
+            done_total = (await s.execute(_lc(Lesson.starts_at_utc < now))).scalar() or 0
+            done_month = (await s.execute(_lc(Lesson.starts_at_utc < now, Lesson.starts_at_utc >= month_start))).scalar() or 0
+            scheduled = (await s.execute(_lc(Lesson.starts_at_utc >= now))).scalar() or 0
+            g = (await s.execute(select(Group).where(
+                Group.tenant_id == tenant_id, Group.teacher_user_id == t.id, Group.is_default.is_(True),
+            ))).scalar_one_or_none()
+            out.append({
+                "id": t.id, "name": t.first_name or f"id{t.telegram_id}", "role": t.role,
+                "students": int(students), "lessons_done_total": int(done_total),
+                "lessons_done_month": int(done_month), "lessons_scheduled": int(scheduled),
+                "invite_token": (g.invite_token if g else None),
+            })
+        return out

@@ -10,7 +10,8 @@ import {
   getAvailability, putAvailability, getTeacherLessons, teacherCancelLesson,
   teacherCreateLesson,
   createDeckFromPhoto, assignHomework,
-  getSchoolInfo, getSchoolInvites, getTeachers, addTeacher, setTeacherActive,
+  getSchoolInfo, getSchoolInvites, getSchoolOverview, assignStudentToTeacher,
+  getTeachers, addTeacher, setTeacherActive,
   getGroups, createGroup, setGroupMembers,
   getTeacherBilling, teacherBillingPay,
 } from '../api/client';
@@ -36,14 +37,25 @@ function shareInvite(url, text) {
 }
 
 function ShareBotButton({ block }) {
-  const { bot_username } = useTenant();
+  const { bot_username, is_school } = useTenant();
+  const [inviteUrl, setInviteUrl] = useState(null);
+  useEffect(() => {
+    if (!is_school) return;
+    getSchoolInvites().then((r) => setInviteUrl(r.data?.student_invite_url || null)).catch(() => {});
+  }, [is_school]);
+  // У школі — інвайт-посилання (учень кріпиться саме до цього викладача);
+  // у соло — просто поділитися ботом.
+  const useInvite = is_school && inviteUrl;
+  const onClick = () => (useInvite
+    ? shareInvite(inviteUrl, 'Приєднуйся — вчимо слова разом 📚')
+    : shareBot(bot_username));
   return (
     <button
       className={`tch-btn${block ? '' : ' sm'}`}
       style={block ? { width: '100%', marginTop: 10 } : undefined}
-      onClick={() => shareBot(bot_username)}
+      onClick={onClick}
     >
-      🔗 Поділитися ботом
+      🔗 {useInvite ? 'Запросити учнів' : 'Поділитися ботом'}
     </button>
   );
 }
@@ -712,109 +724,105 @@ function GroupEditor({ group, students, onDone }) {
 }
 
 function SchoolManager() {
-  const [info, setInfo] = useState(null);
-  const [teachers, setTeachers] = useState([]);
-  const [groups, setGroups] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [newTeacher, setNewTeacher] = useState('');
-  const [newGroup, setNewGroup] = useState('');
-  const [editGroup, setEditGroup] = useState(null);
-  const [invites, setInvites] = useState(null);
-  const [msg, setMsg] = useState('');
+  const [ov, setOv] = useState(null);
+  const [teacherInvite, setTeacherInvite] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const inf = (await getSchoolInfo()).data;
-    setInfo(inf);
-    const [g, s, inv] = await Promise.all([
-      getGroups(), getTeacherStudents(),
+    const [o, inv] = await Promise.all([
+      getSchoolOverview().then((r) => r.data).catch(() => null),
       getSchoolInvites().then((r) => r.data).catch(() => null),
     ]);
-    setGroups(g.data.groups || []);
-    setStudents(s.data.students || []);
-    setInvites(inv);
-    if (inf.role === 'owner') setTeachers((await getTeachers()).data.teachers || []);
+    setOv(o);
+    setTeacherInvite(inv?.teacher_invite_url || null);
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  if (!info) return <p className="tch-muted">Завантаження…</p>;
-  if (!info.is_school) return <div className="tch-card"><p className="tch-muted">
-    Це репетиторський тенант (не школа). Режим школи вмикає оператор.</p></div>;
-  if (editGroup) return <GroupEditor group={editGroup} students={students}
-    onDone={() => { setEditGroup(null); load(); }} />;
+  if (!ov) return <p className="tch-muted">Завантаження…</p>;
+  const teachers = ov.teachers || [];
+  const students = ov.students || [];
 
-  const addT = async () => {
-    setMsg('');
-    try { await addTeacher(Number(newTeacher)); setNewTeacher(''); await load(); setMsg('Викладача додано ✅'); }
-    catch (e) { setMsg(e?.response?.data?.detail === 'user_not_found' ? 'Спершу викладач має натиснути Start у боті.' : 'Помилка.'); }
-  };
-  const addG = async () => {
-    if (!newGroup.trim()) return;
-    await createGroup(newGroup.trim()); setNewGroup(''); await load();
+  const assign = async (studentId, teacherId) => {
+    if (!teacherId) return;
+    setBusy(true);
+    try { await assignStudentToTeacher(studentId, Number(teacherId)); await load(); }
+    finally { setBusy(false); }
   };
 
   return (
     <>
-      {info.role === 'owner' && (
-        <div className="tch-card">
-          <h3 className="tch-h3">Викладачі</h3>
-          {invites?.teacher_invite_url && (
-            <>
-              <p className="tch-muted sm" style={{ marginTop: 0 }}>
-                Надішли це посилання викладачу — він приєднається до школи одним тапом.
-              </p>
-              <button className="tch-btn" style={{ width: '100%', marginBottom: 10 }}
-                      onClick={() => shareInvite(invites.teacher_invite_url, 'Приєднуйся як викладач 👩‍🏫')}>
-                🔗 Запросити викладача
-              </button>
-            </>
-          )}
-          {teachers.map((t) => (
-            <div key={t.id} className="tch-word">
-              <span>{t.name} · {t.role === 'owner' ? 'власник' : (t.is_active ? 'активний' : 'вимкнено')}</span>
-              {t.role === 'teacher' && (
-                <button className="tch-btn ghost sm" onClick={async () => { await setTeacherActive(t.id, !t.is_active); load(); }}>
-                  {t.is_active ? 'Вимкнути' : 'Увімкнути'}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {invites?.student_invite_url && (
-        <div className="tch-card">
-          <h3 className="tch-h3">Запросити учнів</h3>
-          <p className="tch-muted sm" style={{ marginTop: 0 }}>
-            {info.role === 'owner'
-              ? 'Учні, що приєднаються за цим посиланням, стануть вашими (як власника). Кожен викладач має своє посилання у власному кабінеті.'
-              : 'Надішли це посилання своїм учням — вони приєднаються саме до тебе.'}
-          </p>
-          <button className="tch-btn" style={{ width: '100%' }}
-                  onClick={() => shareInvite(invites.student_invite_url, 'Приєднуйся — вчимо слова разом 📚')}>
-            🔗 Запросити учнів
-          </button>
-        </div>
-      )}
-
+      {/* Викладачі: запросити + список зі своїм учнівським посиланням. */}
       <div className="tch-card">
-        <h3 className="tch-h3">Групи <span className="tch-muted" style={{ fontWeight: 400, fontSize: 12 }}>— опційно</span></h3>
-        <p className="tch-muted sm" style={{ marginTop: 0 }}>
-          Створювати групи не обовʼязково: учень, що приєднався за посиланням-запрошенням,
-          одразу кріпиться до викладача. Групи — лише щоб ділити учнів на класи.
-        </p>
-        {groups.length === 0 && <p className="tch-muted">Ще немає груп.</p>}
-        {groups.map((g) => (
-          <div key={g.id} className="tch-word">
-            <span>👥 <b>{g.name}</b> — {g.members} учнів</span>
-            <button className="tch-btn ghost sm" onClick={() => setEditGroup(g)}>Склад</button>
+        <h3 className="tch-h3">Викладачі</h3>
+        {teacherInvite && (
+          <>
+            <p className="tch-muted sm" style={{ marginTop: 0 }}>
+              Надішли посилання викладачу — він приєднається до школи одним тапом.
+            </p>
+            <button className="tch-btn" style={{ width: '100%', marginBottom: 10 }}
+                    onClick={() => shareInvite(teacherInvite, 'Приєднуйся як викладач 👩‍🏫')}>
+              🔗 Запросити викладача
+            </button>
+          </>
+        )}
+        {teachers.map((t) => (
+          <div key={t.id} className="tch-word" style={{ flexWrap: 'wrap', gap: 6 }}>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              {t.name}{t.role === 'owner' ? ' · власник' : ''} · {t.students} учн.
+            </span>
+            {t.invite_url && (
+              <button className="tch-btn ghost sm"
+                      onClick={() => shareInvite(t.invite_url, `Приєднуйся до викладача ${t.name} 📚`)}>
+                🔗 Учні
+              </button>
+            )}
           </div>
         ))}
-        <div className="tch-range" style={{ flexWrap: 'wrap', marginTop: 8 }}>
-          <input className="tch-input" style={{ flex: 1 }} placeholder="Назва групи (напр. «Польська B1»)"
-                 value={newGroup} onChange={(e) => setNewGroup(e.target.value)} />
-          <button className="tch-btn sm" onClick={addG}>Створити групу</button>
-        </div>
       </div>
+
+      {/* Призначення учнів викладачам. */}
+      <div className="tch-card">
+        <h3 className="tch-h3">Учні → викладач</h3>
+        <p className="tch-muted sm" style={{ marginTop: 0 }}>
+          Оберіть кожному учню викладача. Або просто поділись посиланням «🔗 Учні»
+          потрібного викладача вище — тоді учень кріпиться до нього автоматично.
+        </p>
+        {students.length === 0 && <p className="tch-muted">Ще немає учнів. Запроси їх посиланням.</p>}
+        {students.map((s) => (
+          <div key={s.id} className="tch-word" style={{ gap: 8 }}>
+            <span style={{ flex: 1, minWidth: 0 }}>{s.name}</span>
+            <select className="tch-input" style={{ maxWidth: 170 }} value={s.teacher_id || ''}
+                    onChange={(e) => assign(s.id, e.target.value)} disabled={busy}>
+              <option value="">— викладач —</option>
+              {teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+// Статистика власника школи — по кожному викладачу.
+function SchoolStats() {
+  const [data, setData] = useState(null);
+  useEffect(() => { getSchoolOverview().then((r) => setData(r.data)).catch(() => setData(null)); }, []);
+  if (!data) return <p className="tch-muted">Завантаження…</p>;
+  const teachers = data.teachers || [];
+  if (teachers.length === 0) return <div className="tch-card"><p className="tch-muted">Ще немає викладачів.</p></div>;
+  return (
+    <>
+      {teachers.map((t) => (
+        <div key={t.id} className="tch-card">
+          <div className="tch-billing-title">{t.name}{t.role === 'owner' ? ' (ви)' : ''}</div>
+          <div className="tch-kpis" style={{ marginTop: 8 }}>
+            <Kpi value={t.students} label="учнів" />
+            <Kpi value={t.lessons_done_month} label="занять/міс" />
+            <Kpi value={t.lessons_done_total} label="усього" />
+            <Kpi value={t.lessons_scheduled} label="заплановано" />
+          </div>
+        </div>
+      ))}
     </>
   );
 }
@@ -929,10 +937,12 @@ export default function TeacherPage() {
   // Активна вкладка — з URL (?tab=), щоб нижня викладацька навігація й
   // внутрішні пігулки були одним джерелом істини.
   const [sp, setSp] = useSearchParams();
-  const view = sp.get('tab') || 'students'; // students | decks | calendar | stats | school
+  const { setStudentPreview, role } = useRole();
+  const { is_school } = useTenant();
+  const isOwnerSchool = is_school && role === 'owner';
+  const view = sp.get('tab') || (isOwnerSchool ? 'school' : 'students');
   const setView = (v) => setSp({ tab: v }, { replace: true });
 
-  const { setStudentPreview } = useRole();
   const navigate = useNavigate();
   const previewAsStudent = () => { setStudentPreview(true); navigate('/'); };
 
@@ -987,7 +997,7 @@ export default function TeacherPage() {
 
         {view === 'students' && <StudentsList />}
         {view === 'calendar' && <CalendarManager />}
-        {view === 'stats' && <TeacherStats students={students} />}
+        {view === 'stats' && (isOwnerSchool ? <SchoolStats /> : <TeacherStats students={students} />)}
         {view === 'school' && <SchoolManager />}
 
         {view === 'decks' && mode === 'create' && (

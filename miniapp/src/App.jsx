@@ -56,13 +56,15 @@ const RouteFallback = () => (
 // (WordSnap, id=1). Для white-label тенантів маршрут відсутній → будь-який
 // перехід на /pro редіректить на home, і жодних цін учні не бачать.
 function AppRoutes() {
-  const { billingEnabled } = useTenant();
-  const { teacherMode } = useRole();
+  const { billingEnabled, is_school } = useTenant();
+  const { teacherMode, role } = useRole();
+  // Власник школи заходить на «Школа», викладач — на «Учні».
+  const teacherHome = (is_school && role === 'owner') ? '/teacher?tab=school' : '/teacher?tab=students';
   return (
     <Routes>
       {/* Викладач заходить одразу в кабінет, а не на учнівську головну.
           У режимі «перегляд як учень» teacherMode=false → звичайна головна. */}
-      <Route path="/" element={teacherMode ? <Navigate to="/teacher?tab=students" replace /> : <HomePage />} />
+      <Route path="/" element={teacherMode ? <Navigate to={teacherHome} replace /> : <HomePage />} />
       <Route path="/words" element={<WordsPage />} />
       <Route path="/review" element={<ReviewPage />} />
       <Route path="/songs" element={<SongsPage />} />

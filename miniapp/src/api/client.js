@@ -118,6 +118,10 @@ export const getHomework = () => api.get('/api/homework');
 export const getSchoolInfo = () => api.get('/api/teacher/school');
 // Інвайт-посилання школи (викладач/учні).
 export const getSchoolInvites = () => api.get('/api/teacher/school/invites');
+// Owner: огляд по викладачах (учні/заняття/інвайт) + учні з викладачем.
+export const getSchoolOverview = () => api.get('/api/teacher/school/overview');
+export const assignStudentToTeacher = (studentUserId, teacherUserId) =>
+  api.post('/api/teacher/school/assign', { student_user_id: studentUserId, teacher_user_id: teacherUserId });
 export const getTeachers = () => api.get('/api/teacher/teachers');
 export const addTeacher = (telegramId) => api.post('/api/teacher/teachers', { telegram_id: telegramId });
 export const setTeacherActive = (id, active) => api.post(`/api/teacher/teachers/${id}/active`, { active });

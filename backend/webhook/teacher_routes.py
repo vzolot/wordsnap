@@ -456,3 +456,44 @@ async def school_invites(telegram_id: int = Query(...), tenant_id: int = Query(1
         token = await get_teacher_invite_token(tenant_id)
         out["teacher_invite_url"] = f"https://t.me/{bot}?start=t_{token}"
     return out
+
+
+# ─── Школа: огляд по викладачах + призначення учнів (owner) ───────────────────
+
+class AssignStudentRequest(BaseModel):
+    student_user_id: int
+    teacher_user_id: int
+
+
+@router.get("/api/teacher/school/overview")
+async def school_overview(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+    """Owner: по кожному викладачу — учнів, занять (всього/місяць/заплановано) +
+    посилання-запрошення учнів до нього; плюс усі учні з поточним викладачем."""
+    await _require_owner(telegram_id, tenant_id)
+    from core import group_service as gs
+    async with SessionLocal() as session:
+        tenant = (await session.execute(
+            select(Tenant).where(Tenant.id == tenant_id)
+        )).scalar_one_or_none()
+    bot = (tenant.bot_username if tenant else None) or "WordSnapBot"
+    # Гарантуємо дефолтні групи (щоб були invite-токени).
+    for t in await gs.list_teachers(tenant_id):
+        await gs.ensure_default_group(tenant_id, t["id"], t["name"])
+    stats = await gs.school_teacher_stats(tenant_id)
+    for t in stats:
+        tok = t.pop("invite_token", None)
+        t["invite_url"] = f"https://t.me/{bot}?start=s_{tok}" if tok else None
+    return {"teachers": stats, "students": await gs.students_with_teacher(tenant_id)}
+
+
+@router.post("/api/teacher/school/assign")
+async def school_assign(
+    data: AssignStudentRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """Owner призначає учня викладачу (переносить у дефолтну групу викладача)."""
+    await _require_owner(telegram_id, tenant_id)
+    from core.group_service import assign_student_to_teacher
+    ok = await assign_student_to_teacher(tenant_id, data.student_user_id, data.teacher_user_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail="assign_failed")
+    return {"ok": True}
