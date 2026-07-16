@@ -19,14 +19,14 @@ from .models import AiSnapUsage, Tenant, User
 logger = logging.getLogger(__name__)
 
 # Тарифікація сервісу для тенанта.
-# База $19/міс включає ОДНОГО викладача; кожен наступний викладач у школі — +$5.
-# Для соло-тенанта (не школа) — завжди база (один викладач = власник).
+# База $19/міс покриває власника-адміністратора (він сам може викладати);
+# кожен ДОДАНИЙ викладач у школі — +$5. Для соло-тенанта — завжди база.
 TENANT_BASE_PRICE = 19.0
 TENANT_EXTRA_TEACHER_PRICE = 5.0
 
 
 async def count_school_teachers(tenant_id: int) -> int:
-    """Кількість викладачів у школі (role='teacher', без owner-адміністратора)."""
+    """Кількість доданих викладачів у школі (role='teacher', без owner-адміна)."""
     from sqlalchemy import func
     async with SessionLocal() as session:
         n = (await session.execute(
@@ -38,13 +38,13 @@ async def count_school_teachers(tenant_id: int) -> int:
 
 
 async def compute_tenant_price(tenant: Tenant) -> float:
-    """Актуальна місячна ціна: база + $5 за кожного викладача понад першого.
-    $19 включає одного викладача (у школі — це перший доданий; для соло — власник)."""
+    """Актуальна місячна ціна: база (власник як викладач) + $5 за кожного
+    доданого викладача. Для соло-тенанта (не школа) — завжди база."""
     base = float(tenant.sub_price_usd or TENANT_BASE_PRICE)
     if not tenant.is_school:
         return base
     n = await count_school_teachers(tenant.id)
-    return base + TENANT_EXTRA_TEACHER_PRICE * max(0, n - 1)
+    return base + TENANT_EXTRA_TEACHER_PRICE * n
 
 DEFAULT_TENANT_ID = 1
 
@@ -231,7 +231,7 @@ async def tenant_billing_status(tenant: Tenant) -> dict:
     active = bool(tenant.sub_status == "active" and exp and exp > now)
     days_left = max(0, (exp - now).days) if exp and exp > now else 0
     price = await compute_tenant_price(tenant)
-    teachers = await count_school_teachers(tenant.id) if tenant.is_school else 1
+    teachers = await count_school_teachers(tenant.id) if tenant.is_school else 0
     return {
         "status": tenant.sub_status,
         "active": active,
@@ -239,8 +239,7 @@ async def tenant_billing_status(tenant: Tenant) -> dict:
         "base_usd": float(tenant.sub_price_usd or TENANT_BASE_PRICE),
         "per_extra_usd": TENANT_EXTRA_TEACHER_PRICE,
         "is_school": bool(tenant.is_school),
-        "teachers": teachers,
-        "extra_teachers": max(0, teachers - 1) if tenant.is_school else 0,
+        "teachers": teachers,  # додані викладачі (role='teacher'), кожен по $5
         "expires_at": exp.isoformat() if exp else None,
         "days_left": days_left,
         "auto_renew": bool(tenant.sub_auto_renew),

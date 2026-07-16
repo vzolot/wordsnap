@@ -109,9 +109,10 @@ const dayLabel = (d) => `${_WD_SHORT[d.getDay()]}, ${String(d.getDate()).padStar
 const hhmmLocal = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
 function CalendarManager() {
-  const { role } = useRole();
+  const { role, ownerAsTeacher } = useRole();
   const { is_school } = useTenant();
-  const isOwnerSchool = role === 'owner' && is_school;
+  // Лише в адмін-режимі власник обирає викладача; у режимі викладача — свій календар.
+  const isOwnerSchool = role === 'owner' && is_school && !ownerAsTeacher;
   // Власник школи керує календарем ОБРАНОГО викладача.
   const [teachers, setTeachers] = useState([]);
   const [teacherId, setTeacherId] = useState(null);
@@ -143,7 +144,7 @@ function CalendarManager() {
   const load = useCallback(async () => {
     if (isOwnerSchool && !teacherId) return;  // власник ще не обрав викладача
     const [a, l, st] = await Promise.all([
-      getAvailability(teacherId), getTeacherLessons(teacherId), getTeacherStudents(),
+      getAvailability(teacherId), getTeacherLessons(teacherId), getTeacherStudents(ownerAsTeacher),
     ]);
     const r = {};
     (a.data.availability || []).forEach((s) => {
@@ -663,12 +664,13 @@ function StudentDetail({ studentId, onClose }) {
 }
 
 function StudentsList() {
+  const { ownerAsTeacher } = useRole();
   const [students, setStudents] = useState(null);
   const [sel, setSel] = useState(null);
 
   useEffect(() => {
-    getTeacherStudents().then((r) => setStudents(r.data.students || [])).catch(() => setStudents([]));
-  }, []);
+    getTeacherStudents(ownerAsTeacher).then((r) => setStudents(r.data.students || [])).catch(() => setStudents([]));
+  }, [ownerAsTeacher]);
 
   if (sel != null) return <StudentDetail studentId={sel} onClose={() => setSel(null)} />;
   if (students === null) return <p className="tch-muted">Завантаження…</p>;
@@ -873,11 +875,12 @@ function TeacherBilling() {
     : b.status === 'past_due' ? 'Прострочено — сервіс може призупинитись'
     : b.status === 'trial' ? 'Пробний період' : 'Неактивна';
   const statusCls = active ? '' : b.status === 'past_due' ? 'bad' : 'muted';
-  // Розшифровка ціни для школи: база (1 викладач) + $5 за кожного наступного.
+  // Розшифровка ціни для школи: база покриває власника-викладача,
+  // кожен доданий викладач — +$5.
   const breakdown = b.is_school
-    ? (b.extra_teachers > 0
-        ? `$${b.base_usd} база (1 викладач) + $${b.per_extra_usd} × ${b.extra_teachers} = $${b.price_usd}`
-        : `$${b.base_usd} база — включає 1 викладача`)
+    ? (b.teachers > 0
+        ? `$${b.base_usd} база (ви) + $${b.per_extra_usd} × ${b.teachers} викл. = $${b.price_usd}`
+        : `$${b.base_usd} база — ви як викладач`)
     : null;
 
   return (
@@ -950,14 +953,22 @@ export default function TeacherPage() {
   // Активна вкладка — з URL (?tab=), щоб нижня викладацька навігація й
   // внутрішні пігулки були одним джерелом істини.
   const [sp, setSp] = useSearchParams();
-  const { setStudentPreview, role } = useRole();
+  const { setStudentPreview, role, ownerAsTeacher, setOwnerAsTeacher } = useRole();
   const { is_school } = useTenant();
-  const isOwnerSchool = is_school && role === 'owner';
+  const isOwner = is_school && role === 'owner';
+  // Адмін-вигляд (керування школою) активний, лише коли власник НЕ в режимі викладача.
+  const isOwnerSchool = isOwner && !ownerAsTeacher;
   const view = sp.get('tab') || (isOwnerSchool ? 'school' : 'students');
   const setView = (v) => setSp({ tab: v }, { replace: true });
 
   const navigate = useNavigate();
   const previewAsStudent = () => { setStudentPreview(true); navigate('/'); };
+  // Власник ⇄ викладач: у режимі викладача власник керує лише своїми учнями.
+  const toggleOwnerMode = () => {
+    const next = !ownerAsTeacher;
+    setOwnerAsTeacher(next);
+    setSp({ tab: next ? 'students' : 'school' }, { replace: true });
+  };
 
   const [decks, setDecks] = useState(null);
   const [students, setStudents] = useState([]);
@@ -972,14 +983,16 @@ export default function TeacherPage() {
 
   const load = useCallback(async () => {
     try {
-      const [d, s] = await Promise.all([getTeacherDecks(), getTeacherStudents()]);
+      const [d, s] = await Promise.all([
+        getTeacherDecks(ownerAsTeacher), getTeacherStudents(ownerAsTeacher),
+      ]);
       setDecks(d.data.decks || []);
       setStudents(s.data.students || []);
     } catch (e) {
       if (e?.response?.status === 403) setForbidden(true);
       else setDecks([]);
     }
-  }, []);
+  }, [ownerAsTeacher]);
   useEffect(() => { load(); }, [load]);
 
   if (forbidden) {
@@ -1004,7 +1017,13 @@ export default function TeacherPage() {
             {view === 'decks' && mode === 'list' && (
               <button className="tch-btn" onClick={() => setMode('create')}>+ Колода</button>
             )}
-            <button className="tch-btn ghost sm" onClick={previewAsStudent}>👁 Як учень</button>
+            {isOwner ? (
+              <button className="tch-btn ghost sm" onClick={toggleOwnerMode}>
+                {ownerAsTeacher ? '🛠 Адміністратор' : '👩‍🏫 Як викладач'}
+              </button>
+            ) : (
+              <button className="tch-btn ghost sm" onClick={previewAsStudent}>👁 Як учень</button>
+            )}
           </div>
         </div>
 

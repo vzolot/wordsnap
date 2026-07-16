@@ -57,9 +57,11 @@ const RouteFallback = () => (
 // перехід на /pro редіректить на home, і жодних цін учні не бачать.
 function AppRoutes() {
   const { billingEnabled, is_school } = useTenant();
-  const { teacherMode, role } = useRole();
-  // Власник школи заходить на «Школа», викладач — на «Учні».
-  const teacherHome = (is_school && role === 'owner') ? '/teacher?tab=school' : '/teacher?tab=students';
+  const { teacherMode, role, ownerAsTeacher } = useRole();
+  // Власник школи заходить на «Школа» (в адмін-режимі), викладач / власник-у-режимі-
+  // викладача — на «Учні».
+  const teacherHome = (is_school && role === 'owner' && !ownerAsTeacher)
+    ? '/teacher?tab=school' : '/teacher?tab=students';
   return (
     <Routes>
       {/* Викладач заходить одразу в кабінет, а не на учнівську головну.

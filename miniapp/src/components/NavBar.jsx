@@ -41,10 +41,11 @@ const OWNER_TABS = [
 function TeacherNav() {
   const loc = useLocation();
   const { is_school } = useTenant();
-  const { role } = useRole();
+  const { role, ownerAsTeacher } = useRole();
   const onTeacher = loc.pathname === '/teacher';
   // Власник школи керує → без «Учні» (це у «Школа»); порядок Школа/Календар/…
-  const isOwnerSchool = is_school && role === 'owner';
+  // У «режимі викладача» власник отримує звичайну викладацьку навігацію.
+  const isOwnerSchool = is_school && role === 'owner' && !ownerAsTeacher;
   const tabs = isOwnerSchool ? OWNER_TABS : BASE_TEACHER_TABS;
   const defaultTab = isOwnerSchool ? 'school' : 'students';
   const tab = new URLSearchParams(loc.search).get('tab') || defaultTab;

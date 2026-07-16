@@ -95,8 +95,11 @@ export const getTeacherLeaderboard = (groupId = null) =>
 export const updateSettings = (patch) => api.patch('/api/user/settings', patch);
 
 // ── Режим викладача (white-label M5) ──────────────────────────────────────
-export const getTeacherDecks = () => api.get('/api/teacher/decks');
-export const getTeacherStudents = () => api.get('/api/teacher/students');
+// asTeacher — власник школи у «режимі викладача» бачить лише свої колоди/учнів.
+export const getTeacherDecks = (asTeacher = false) =>
+  api.get('/api/teacher/decks', { params: asTeacher ? { as_teacher: 1 } : {} });
+export const getTeacherStudents = (asTeacher = false) =>
+  api.get('/api/teacher/students', { params: asTeacher ? { as_teacher: 1 } : {} });
 export const getTeacherStudentDetail = (id) => api.get(`/api/teacher/students/${id}`);
 export const getTeacherDeck = (deckId) => api.get(`/api/teacher/decks/${deckId}`);
 export const createTeacherDeck = (payload) => api.post('/api/teacher/decks', payload);

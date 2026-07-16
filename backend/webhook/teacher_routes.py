@@ -49,15 +49,18 @@ async def _require_owner(telegram_id: int, tenant_id: int) -> User:
     return user
 
 
-async def _school_scope(teacher: User, tenant_id: int) -> tuple[list[int] | None, int | None]:
-    """(restrict_student_ids, deck_owner_id) для ізоляції в школі. owner і
-    solo-режим → (None, None) = бачить усе. Викладач у школі → лише свої."""
+async def _school_scope(
+    teacher: User, tenant_id: int, as_teacher: bool = False,
+) -> tuple[list[int] | None, int | None]:
+    """(restrict_student_ids, deck_owner_id) для ізоляції в школі. Соло-режим →
+    (None, None) = бачить усе. Викладач у школі → лише свої. owner-адмін бачить
+    усе, АЛЕ коли перемкнувся в «режим викладача» (as_teacher) — теж лише своє."""
     from core.group_service import is_school, student_ids_for_teacher
-    if teacher.role == "owner":
+    if not await is_school(tenant_id):
         return None, None
-    if await is_school(tenant_id):
-        return await student_ids_for_teacher(tenant_id, teacher.id), teacher.id
-    return None, None
+    if teacher.role == "owner" and not as_teacher:
+        return None, None
+    return await student_ids_for_teacher(tenant_id, teacher.id), teacher.id
 
 
 class DeckCreateRequest(BaseModel):
@@ -76,20 +79,26 @@ class DeckPatchRequest(BaseModel):
 
 
 @router.get("/api/teacher/decks")
-async def teacher_list_decks(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+async def teacher_list_decks(
+    telegram_id: int = Query(...), tenant_id: int = Query(1),
+    as_teacher: bool = Query(False),
+):
     teacher = await _require_teacher(telegram_id, tenant_id)
-    _, deck_owner = await _school_scope(teacher, tenant_id)
+    _, deck_owner = await _school_scope(teacher, tenant_id, as_teacher=as_teacher)
     return {"decks": await ds.list_teacher_decks(tenant_id, owner_user_id=deck_owner)}
 
 
 @router.get("/api/teacher/students")
-async def teacher_list_students(telegram_id: int = Query(...), tenant_id: int = Query(1)):
+async def teacher_list_students(
+    telegram_id: int = Query(...), tenant_id: int = Query(1),
+    as_teacher: bool = Query(False),
+):
     """Дашборд учнів з агрегатами (стрік, 7д повторень, останній візит, %
     вивчених, ризик). Неактивні зверху. Містить id+display_name — тому годиться
     і як пікер адресатів у формі створення колоди. У школі викладач бачить лише
     своїх учнів (owner — усіх)."""
     teacher = await _require_teacher(telegram_id, tenant_id)
-    restrict, _ = await _school_scope(teacher, tenant_id)
+    restrict, _ = await _school_scope(teacher, tenant_id, as_teacher=as_teacher)
     return {"students": await tstats.students_overview(tenant_id, restrict_ids=restrict)}
 
 

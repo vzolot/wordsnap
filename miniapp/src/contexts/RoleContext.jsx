@@ -15,14 +15,21 @@ import { getStats, readCache } from '../api/client';
 const RoleContext = createContext({
   role: null, isTeacher: false, teacherMode: false,
   studentPreview: false, setStudentPreview: () => {},
+  ownerAsTeacher: false, setOwnerAsTeacher: () => {},
 });
 
 const PREVIEW_KEY = 'wordsnap.teacher_preview';
+// Власник школи може тимчасово діяти як звичайний викладач (свої учні/колоди/
+// календар), а не як адміністратор. Зберігаємо в межах сесії.
+const OWNER_TEACHER_KEY = 'wordsnap.owner_teacher_mode';
 
 export function RoleProvider({ children }) {
   const [role, setRole] = useState(() => readCache('stats', { ignoreTtl: true })?.role || null);
   const [studentPreview, setPreviewState] = useState(() => {
     try { return sessionStorage.getItem(PREVIEW_KEY) === '1'; } catch { return false; }
+  });
+  const [ownerTeacher, setOwnerTeacherState] = useState(() => {
+    try { return sessionStorage.getItem(OWNER_TEACHER_KEY) === '1'; } catch { return false; }
   });
 
   useEffect(() => {
@@ -39,6 +46,14 @@ export function RoleProvider({ children }) {
     } catch { /* noop */ }
   }, []);
 
+  const setOwnerAsTeacher = useCallback((v) => {
+    setOwnerTeacherState(v);
+    try {
+      if (v) sessionStorage.setItem(OWNER_TEACHER_KEY, '1');
+      else sessionStorage.removeItem(OWNER_TEACHER_KEY);
+    } catch { /* noop */ }
+  }, []);
+
   const isTeacher = role === 'teacher' || role === 'owner';
   const value = useMemo(() => ({
     role,
@@ -46,7 +61,9 @@ export function RoleProvider({ children }) {
     teacherMode: isTeacher && !studentPreview,
     studentPreview: isTeacher && studentPreview,
     setStudentPreview,
-  }), [role, isTeacher, studentPreview, setStudentPreview]);
+    ownerAsTeacher: role === 'owner' && ownerTeacher,
+    setOwnerAsTeacher,
+  }), [role, isTeacher, studentPreview, setStudentPreview, ownerTeacher, setOwnerAsTeacher]);
 
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>;
 }
