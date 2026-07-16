@@ -1355,6 +1355,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 0 0;
+  flex: 0 0 auto;
 }
 .welcome-brand {
   display: inline-flex;
@@ -1396,7 +1397,7 @@
   position: relative;
   width: 100%;
   flex: 1 1 auto;
-  min-height: 320px;
+  min-height: 0;            /* дозволяємо стискатись на низьких екранах */
   margin-top: 8px;
   display: flex;
   align-items: center;
@@ -1413,14 +1414,17 @@
 
 /* Емодзі-бейдж для рольового онбордингу (викладач/власник/учень школи) —
  * коли для слайду немає ілюстрації, показуємо велику іконку у градієнт-колі. */
-.welcome-hero-icon { align-items: center; justify-content: center; }
+/* Іконкові слайди мають короткий контент — hero не має «розпирати» екран,
+ * інакше довгий заголовок+опис виштовхують CTA за межі. Робимо його компактним
+ * і нерозтяжним, а контент — з можливістю прокрутки. */
+.welcome-hero-icon { flex: 0 1 auto; align-items: center; justify-content: center; padding: 8px 0; }
 .welcome-icon-badge {
-  width: 132px;
-  height: 132px;
+  width: clamp(96px, 26vw, 128px);
+  aspect-ratio: 1;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 64px;
+  font-size: clamp(46px, 13vw, 62px);
   line-height: 1;
   background: linear-gradient(135deg, var(--violet, #7C3AED), var(--pink, #EC4899));
   box-shadow: 0 12px 32px rgba(124, 58, 237, 0.28);
@@ -1576,9 +1580,12 @@
 /* Content — display headline + body */
 .welcome-content {
   padding: 18px 0 0;
+  flex: 0 1 auto;          /* може стискатись */
+  min-height: 0;
+  overflow-y: auto;        /* дуже довгий опис прокручується тут, не ховаючи CTA */
 }
 .welcome-display {
-  font-size: clamp(40px, 11vw, 56px);
+  font-size: clamp(34px, 9.5vw, 56px);
   font-weight: 900;
   letter-spacing: -1.5px;
   line-height: 0.95;
@@ -1595,9 +1602,10 @@
   margin: 0;
 }
 
-/* Bottom — dots + CTA */
+/* Bottom — dots + CTA. Завжди видимий: не стискається. */
 .welcome-bottom {
   padding: 18px 0 8px;
+  flex: 0 0 auto;
 }
 .welcome-dots {
   display: flex;
