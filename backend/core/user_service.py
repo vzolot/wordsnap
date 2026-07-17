@@ -11,6 +11,26 @@ from .db import SessionLocal
 
 logger = logging.getLogger(__name__)
 
+
+async def enforce_demo_expiry(user) -> str:
+    """Демо-тенант: якщо тимчасовий викладацький доступ (demo_expires_at)
+    прострочений — лениво повертаємо роль до 'student' і чистимо дату.
+    Повертає ефективну роль користувача."""
+    exp = getattr(user, "demo_expires_at", None)
+    if exp is None:
+        return user.role
+    if exp < datetime.now(timezone.utc):
+        if user.role in ("teacher", "owner"):
+            async with SessionLocal() as session:
+                await session.execute(
+                    update(User).where(User.id == user.id)
+                    .values(role="student", demo_expires_at=None)
+                )
+                await session.commit()
+            user.role = "student"
+        user.demo_expires_at = None
+    return user.role
+
 # Free post-trial: rolling-week «хвіст», щоб юзер не відвалився після trial
 # на нулі. 3 додавання за останні 7 днів — мінімум щоб залишити денну
 # звичку живою, але мало для повного активного користування без Pro.

@@ -32,6 +32,9 @@ class User(Base):
     role: Mapped[str] = mapped_column(
         String(20), nullable=False, default="student", server_default="student",
     )
+    # Демо-тенант: тимчасовий викладацький доступ проспекта. Після цієї дати
+    # роль лениво повертається до 'student' (кабінет блокується).
+    demo_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     username: Mapped[str | None] = mapped_column(String(100))
     first_name: Mapped[str | None] = mapped_column(String(100))
@@ -390,6 +393,11 @@ class Tenant(Base):
     )
     # M14: режим школи (кілька викладачів+групи). false = solo-репетитор.
     is_school: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # Демо-тенант: новий користувач на /start отримує викладацький доступ на 3 дні
+    # (щоб проспект протестував кабінет). Марта/Мовна школа = демо.
+    is_demo: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
     # Токен для інвайт-посилання викладачів (t.me/<bot>?start=t_<token>) —

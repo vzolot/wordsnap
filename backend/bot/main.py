@@ -115,17 +115,36 @@ async def cmd_start(message: Message):
                 )
                 await session.commit()
             user.role = "owner"
+        elif _tenant and getattr(_tenant, "is_demo", False) and user.role == "student":
+            # Демо-тенант (Марта/Мовна школа): проспект отримує ВИКЛАДАЦЬКИЙ доступ
+            # на 3 дні, щоб протестувати кабінет (не лише учнівський бік).
+            from datetime import datetime as _dt, timedelta as _td, timezone as _tzmod
+            from sqlalchemy import update as sa_update
+            from core.db import SessionLocal
+            from core.models import User as UserModel
+            _exp = _dt.now(_tzmod.utc) + _td(days=3)
+            async with SessionLocal() as session:
+                await session.execute(
+                    sa_update(UserModel).where(UserModel.id == user.id)
+                    .values(role="teacher", demo_expires_at=_exp)
+                )
+                await session.commit()
+            user.role = "teacher"
+            user.demo_expires_at = _exp
         if user.role in ("teacher", "owner"):
             brand = _tenant.display_name if _tenant else "?"
             is_owner = user.role == "owner"
             manage = "викладачами й учнями" if (is_owner and _tenant and _tenant.is_school) \
                 else "колодами, учнями й розкладом"
             role_word = "адміністратор" if is_owner and _tenant and _tenant.is_school else "викладач"
+            demo_hint = ""
+            if getattr(_tenant, "is_demo", False) and getattr(user, "demo_expires_at", None):
+                demo_hint = "\n\n🧪 Демо-режим: викладацький доступ на 3 дні — тестуйте кабінет."
             kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
                 text="📱 Відкрити кабінет", web_app=WebAppInfo(url=MINI_APP_URL),
             )]])
             await message.answer(
-                f"👋 <b>{brand}</b>\n\nВи {role_word}. Відкрийте кабінет, щоб керувати {manage}.",
+                f"👋 <b>{brand}</b>\n\nВи {role_word}. Відкрийте кабінет, щоб керувати {manage}.{demo_hint}",
                 reply_markup=kb,
             )
             logger.info(f"Teacher/owner {tg_user.id} started ({user.role}, tenant {tid}) — onboarding skipped")

@@ -37,6 +37,8 @@ async def _require_teacher(telegram_id: int, tenant_id: int) -> User:
         )).scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="user_not_found")
+    from core.user_service import enforce_demo_expiry
+    await enforce_demo_expiry(user)  # демо-доступ прострочений → знову 'student'
     if user.role not in ("teacher", "owner"):
         raise HTTPException(status_code=403, detail="not_a_teacher")
     return user

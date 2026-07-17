@@ -720,6 +720,19 @@ MIGRATIONS: list[tuple[str, str]] = [
         "tenants.sub_teacher_seats",
         "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS sub_teacher_seats INTEGER NOT NULL DEFAULT 0",
     ),
+    # ── Демо-тенанти: проспект отримує викладацький доступ на 3 дні ───────────
+    (
+        "tenants.is_demo",
+        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE",
+    ),
+    (
+        "users.demo_expires_at",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS demo_expires_at TIMESTAMPTZ",
+    ),
+    (
+        "tenants.mark_demo",
+        "UPDATE tenants SET is_demo = TRUE WHERE id IN (2, 3) AND is_demo = FALSE",
+    ),
 ]
 
 

@@ -335,6 +335,8 @@ async def get_stats(telegram_id: int = Query(...), tenant_id: int = Query(1)):
         xp = user.total_xp or 0
         tier = current_tier(xp)
         nxt = next_tier(xp)
+        from core.user_service import enforce_demo_expiry
+        effective_role = await enforce_demo_expiry(user)  # демо прострочено → 'student'
         tiers_payload = [
             {"xp": t[0], "key": t[1], "reward_key": t[2], "achieved": xp >= t[0]}
             for t in TIERS
@@ -365,7 +367,7 @@ async def get_stats(telegram_id: int = Query(...), tenant_id: int = Query(1)):
             "native_lang": user.native_lang,
             "lang_explicit": user.lang_explicit,
             "target_lang": user.target_lang,
-            "role": user.role,  # 'student' | 'teacher' | 'owner' → вкладка «Викладач»
+            "role": effective_role,  # демо-доступ прострочений → 'student'
             "reminders_enabled": user.reminders_enabled,
             "timezone": user.timezone,
             "avatar_emoji": user.avatar_emoji,
