@@ -203,6 +203,19 @@ class DeckFromPhotoRequest(BaseModel):
     image_mime: str = "image/jpeg"
 
 
+class DeckFromVoiceRequest(BaseModel):
+    audio_b64: str            # base64 без data-URL префіксу
+    audio_mime: str = "audio/webm"
+
+
+# MediaRecorder-mime → розширення для Whisper (той детектить формат по імені файлу).
+_AUDIO_EXT = {
+    "audio/webm": "webm", "audio/ogg": "ogg", "audio/oga": "ogg",
+    "audio/mp4": "mp4", "audio/x-m4a": "m4a", "audio/mp4a-latm": "mp4",
+    "audio/mpeg": "mp3", "audio/wav": "wav", "audio/x-wav": "wav",
+}
+
+
 @router.post("/api/teacher/decks/from_photo")
 async def teacher_deck_from_photo(
     data: DeckFromPhotoRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
@@ -237,6 +250,52 @@ async def teacher_deck_from_photo(
         "tenant_id": tenant_id, "pairs": len(pairs),
     })
     return {"ok": True, "pairs": pairs}
+
+
+@router.post("/api/teacher/decks/from_voice")
+async def teacher_deck_from_voice(
+    data: DeckFromVoiceRequest, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """Викладач диктує слова голосом → Whisper-транскрипт → пари «слово–переклад»
+    (превʼю для редагування). Слова беруться мовою, яку викладає (target_lang),
+    переклади підставляються автоматично. Колоду НЕ зберігає — повертає пари."""
+    import base64
+    from core.openai_client import transcribe_voice, extract_words_from_transcript
+    from core.tenant_service import get_tenant_by_id, ai_snap_available, incr_ai_snap_usage
+
+    teacher = await _require_teacher(telegram_id, tenant_id)
+    if not _rl_allow(f"deckwrite:{tenant_id}:{telegram_id}", _DECK_WRITE_LIMIT, _DECK_WRITE_WINDOW):
+        raise HTTPException(status_code=429, detail="rate_limited")
+
+    tenant = await get_tenant_by_id(tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="tenant_not_found")
+    if not await ai_snap_available(tenant):
+        raise HTTPException(status_code=429, detail="ai_snap_limit_reached")
+
+    b64 = (data.audio_b64 or "").strip()
+    if not b64:
+        raise HTTPException(status_code=400, detail="no_audio")
+    try:
+        audio_bytes = base64.b64decode(b64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad_audio")
+
+    ext = _AUDIO_EXT.get((data.audio_mime or "").split(";")[0].strip(), "webm")
+    transcript, _lang = await transcribe_voice(audio_bytes, filename=f"voice.{ext}")
+    target = teacher.target_lang or "en"
+    native = teacher.native_lang or "uk"
+    words = await extract_words_from_transcript(transcript, target_lang=target, native_lang=native)
+    pairs_t = await ds.autofill_translations(
+        [(w, None) for w in words], target_lang=target, native_lang=native,
+    )
+    pairs = [{"word": w, "translation": tr} for (w, tr) in pairs_t]
+
+    await incr_ai_snap_usage(tenant_id)
+    analytics.capture(telegram_id, "teacher_deck_voice_extracted", {
+        "tenant_id": tenant_id, "pairs": len(pairs),
+    })
+    return {"ok": True, "pairs": pairs, "transcript": transcript}
 
 
 @router.delete("/api/teacher/decks/{deck_id}")

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppBar from '../components/AppBar';
 import CameraCapture from '../components/CameraCapture';
@@ -10,7 +10,7 @@ import {
   createTeacherDeck, updateTeacherDeck, deleteTeacherDeck, getTeacherStudentDetail,
   getAvailability, putAvailability, getTeacherLessons, teacherCancelLesson,
   teacherCreateLesson,
-  createDeckFromPhoto, assignHomework,
+  createDeckFromPhoto, createDeckFromVoice, assignHomework,
   getSchoolInfo, getSchoolInvites, getSchoolOverview, assignStudentToTeacher,
   getTeachers, addTeacher, setTeacherActive,
   getGroups, createGroup, setGroupMembers,
@@ -103,6 +103,16 @@ function fileToB64(file) {
     };
     r.onerror = reject;
     r.readAsDataURL(file);
+  });
+}
+
+// Blob (аудіозапис) → чистий base64 (без data-URL префіксу).
+function blobToB64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => { const s = String(r.result); resolve(s.slice(s.indexOf(',') + 1)); };
+    r.onerror = reject;
+    r.readAsDataURL(blob);
   });
 }
 
@@ -364,9 +374,18 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
   const [err, setErr] = useState('');
   const [photoBusy, setPhotoBusy] = useState(false);
   const [camOpen, setCamOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const mrRef = useRef(null);
+  const chunksRef = useRef([]);
   const assignAll = target === 'all';
 
   useEffect(() => { getGroups().then((r) => setGroups(r.data.groups || [])).catch(() => {}); }, []);
+
+  const appendPairs = (pairs) => {
+    const lines = pairs.map((p) => `${p.word} - ${p.translation}`).join('\n');
+    setText((prev) => (prev.trim() ? prev.trim() + '\n' : '') + lines);
+  };
 
   // Спільний пайплайн: base64-зображення → AI-розпізнавання пар → у текст.
   const recognize = async (b64, mime) => {
@@ -375,8 +394,7 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
       const r = await createDeckFromPhoto(b64, mime);
       const pairs = r.data.pairs || [];
       if (pairs.length === 0) { setErr('Не вдалося розпізнати слова на фото.'); return; }
-      const lines = pairs.map((p) => `${p.word} - ${p.translation}`).join('\n');
-      setText((prev) => (prev.trim() ? prev.trim() + '\n' : '') + lines);
+      appendPairs(pairs);
     } catch (ex) {
       const d = ex?.response?.data?.detail;
       setErr(d === 'ai_snap_limit_reached'
@@ -384,6 +402,48 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
         : 'Не вдалося обробити фото.');
     } finally { setPhotoBusy(false); }
   };
+
+  // Голос: диктуємо слова → Whisper-транскрипт → пари → у текст.
+  const recognizeVoice = async (b64, mime) => {
+    setErr(''); setVoiceBusy(true);
+    try {
+      const r = await createDeckFromVoice(b64, mime);
+      const pairs = r.data.pairs || [];
+      if (pairs.length === 0) { setErr('Не почув слів. Продиктуйте чіткіше, по одному.'); return; }
+      appendPairs(pairs);
+    } catch (ex) {
+      const d = ex?.response?.data?.detail;
+      setErr(d === 'ai_snap_limit_reached'
+        ? 'Ліміт розпізнавання на цей місяць вичерпано.'
+        : 'Не вдалося обробити запис.');
+    } finally { setVoiceBusy(false); }
+  };
+
+  const startVoice = async () => {
+    setErr('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+      const mimeType = types.find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || '';
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach((tr) => tr.stop());
+        setRecording(false);
+        const type = mr.mimeType || 'audio/webm';
+        const blob = new Blob(chunksRef.current, { type });
+        const b64 = await blobToB64(blob);
+        await recognizeVoice(b64, type.split(';')[0]);
+      };
+      mrRef.current = mr;
+      mr.start();
+      setRecording(true);
+    } catch {
+      setErr('Немає доступу до мікрофона. Дозвольте доступ і спробуйте ще раз.');
+    }
+  };
+  const stopVoice = () => { try { mrRef.current?.stop(); } catch { /* noop */ } };
 
   const onPhoto = async (e) => {
     const file = e.target.files?.[0];
@@ -457,8 +517,14 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
           🖼 З файлу
           <input type="file" accept="image/*" onChange={onPhoto} disabled={photoBusy} hidden />
         </label>
+        <button type="button" className={`tch-photo-btn${recording ? ' rec' : ''}`}
+                onClick={recording ? stopVoice : startVoice} disabled={voiceBusy}>
+          {recording ? '⏹ Стоп' : '🎤 Диктувати'}
+        </button>
       </div>
       {photoBusy && <p className="tch-muted sm">📷 Розпізнаю слова…</p>}
+      {recording && <p className="tch-muted sm">● Запис… продиктуйте слова (по одному) і натисніть «Стоп».</p>}
+      {voiceBusy && <p className="tch-muted sm">🎤 Розпізнаю запис…</p>}
       {camOpen && (
         <CameraCapture onCapture={onCameraCapture} onClose={() => setCamOpen(false)} busy={photoBusy} />
       )}

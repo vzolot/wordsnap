@@ -114,6 +114,9 @@ export const setTeacherSeats = (seats) => api.post('/api/teacher/billing/seats',
 // M11: фото сторінки → пари «слово–переклад» (превʼю для редагування).
 export const createDeckFromPhoto = (imageB64, imageMime) =>
   api.post('/api/teacher/decks/from_photo', { image_b64: imageB64, image_mime: imageMime });
+// Викладач диктує слова голосом → Whisper → пари «слово–переклад».
+export const createDeckFromVoice = (audioB64, audioMime) =>
+  api.post('/api/teacher/decks/from_voice', { audio_b64: audioB64, audio_mime: audioMime });
 // M13: домашнє завдання з дедлайном.
 export const assignHomework = (deckId, dueAtUtc, userIds = null) =>
   api.post(`/api/teacher/decks/${deckId}/homework`, { due_at_utc: dueAtUtc, user_ids: userIds });
