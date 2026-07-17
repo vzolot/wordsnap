@@ -30,7 +30,7 @@ class TestTranslateFn:
 
 
 class TestAllLangsCoverage:
-    """Перевіряємо що ключові рядки є у всіх 5 мовах."""
+    """Перевіряємо що ключові рядки є у всіх 6 мовах."""
 
     @pytest.mark.parametrize("lang", SUPPORTED_LANGS)
     def test_setup_saved(self, lang):

@@ -694,7 +694,7 @@ async def setup_bot_commands():
     description_uk = (
         "WordSnap — слова, які ти зустрічаєш у житті за кордоном.\n\n"
         "Не вчу мову з нуля. Просто не даю забути слова, які ти вже чуєш на вулиці чи бачиш у листах.\n\n"
-        "✅ 5 мов: 🇬🇧 🇪🇸 🇵🇱 🇩🇪 🇺🇦\n"
+        "✅ 6 мов: 🇬🇧 🇪🇸 🇫🇷 🇵🇱 🇩🇪 🇺🇦\n"
         "✅ Інтервальне повторення (нагадаю через 1, 3, 7, 14 днів)\n"
         "✅ Набори слів з пісень\n"
         "✅ XP-система і нагороди\n\n"
@@ -704,14 +704,14 @@ async def setup_bot_commands():
         "WordSnap — for words you meet in real life abroad.\n\n"
         "I don't teach you a language from scratch. I just stop you from forgetting words "
         "you already hear on the street or read in messages.\n\n"
-        "✅ 5 languages: 🇬🇧 🇪🇸 🇵🇱 🇩🇪 🇺🇦\n"
+        "✅ 6 languages: 🇬🇧 🇪🇸 🇫🇷 🇵🇱 🇩🇪 🇺🇦\n"
         "✅ Spaced repetition (1, 3, 7, 14 days)\n"
         "✅ Word packs from popular songs\n"
         "✅ XP system & rewards\n\n"
         "Tap START — done in 60 seconds."
     )
-    short_uk = "Слова, що ти чуєш за кордоном. 5 мов. Інтервальне повторення. Набори з пісень."
-    short_en = "Words you meet abroad. 5 languages. Spaced repetition. Songs vocab."
+    short_uk = "Слова, що ти чуєш за кордоном. 6 мов. Інтервальне повторення. Набори з пісень."
+    short_en = "Words you meet abroad. 6 languages. Spaced repetition. Songs vocab."
 
     try:
         await bot.set_my_description(description=description_uk, language_code="uk")
