@@ -17,6 +17,20 @@ import {
   getTeacherBilling, teacherBillingPay, setTeacherSeats,
 } from '../api/client';
 
+// Мова, яку вивчає учень → прапор + назва (для картки/списку учнів).
+const LANG_META = {
+  uk: { flag: '🇺🇦', name: 'Українська' },
+  en: { flag: '🇬🇧', name: 'English' },
+  fr: { flag: '🇫🇷', name: 'Français' },
+  es: { flag: '🇪🇸', name: 'Español' },
+  pl: { flag: '🇵🇱', name: 'Polski' },
+  de: { flag: '🇩🇪', name: 'Deutsch' },
+};
+function langLabel(code) {
+  const m = LANG_META[code];
+  return m ? `${m.flag} ${m.name}` : (code ? code.toUpperCase() : null);
+}
+
 // ── Спільні хелпери для «поділитися ботом» ────────────────────────────────
 function botLink(username) {
   return `https://t.me/${(username || 'WordSnapBot').replace(/^@/, '')}`;
@@ -616,7 +630,12 @@ function StudentDetail({ studentId, onClose }) {
   return (
     <div className="tch-card">
       <div className="tch-edit-head">
-        <h3 className="tch-h3">{d.display_name}</h3>
+        <div style={{ minWidth: 0 }}>
+          <h3 className="tch-h3">{d.display_name}</h3>
+          {langLabel(d.target_lang) && (
+            <div className="tch-muted sm">Вивчає: {langLabel(d.target_lang)}</div>
+          )}
+        </div>
         <button className="tch-btn ghost sm" onClick={onClose}>← Назад</button>
       </div>
       <div className="tch-metrics">
@@ -693,7 +712,11 @@ function StudentsList() {
         <button key={s.id} className="tch-deck" onClick={() => setSel(s.id)}>
           <div className="tch-deck-main">
             <div className="tch-deck-title">
-              {s.display_name}{s.at_risk && <span className="tch-risk">в ризику</span>}
+              {s.display_name}
+              {langLabel(s.target_lang) && (
+                <span className="tch-lang">{langLabel(s.target_lang)}</span>
+              )}
+              {s.at_risk && <span className="tch-risk">в ризику</span>}
             </div>
             <div className="tch-deck-sub">
               ⭐ {s.total_xp || 0} XP · 🔥 {s.streak} · {s.learned_pct}% вивчено · {relTime(s.last_visit)}

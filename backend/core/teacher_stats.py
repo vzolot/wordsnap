@@ -138,6 +138,7 @@ async def students_overview(tenant_id: int, restrict_ids: list[int] | None = Non
             "display_name": (
                 (u.first_name or "").strip() + (f" @{u.username}" if u.username else "")
             ).strip() or (f"@{u.username}" if u.username else f"id{u.telegram_id}"),
+            "target_lang": u.target_lang,   # мова, яку учень вивчає
             "streak": _streak_from_dates(dates),
             "reviews_7d": reviews_7d.get(u.id, 0),
             "total_xp": u.total_xp or 0,
@@ -253,6 +254,8 @@ async def student_detail(tenant_id: int, user_id: int) -> dict | None:
         "display_name": (
             (user.first_name or "").strip() + (f" @{user.username}" if user.username else "")
         ).strip() or f"id{user.telegram_id}",
+        "target_lang": user.target_lang,   # мова, яку учень вивчає
+        "native_lang": user.native_lang,   # рідна мова учня
         "streak": streak,
         "reviews_7d": int(reviews_7d),
         "reviews_30d": reviews_30d,
