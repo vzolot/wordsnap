@@ -13,7 +13,7 @@ import { getStats, readCache } from '../api/client';
  */
 
 const RoleContext = createContext({
-  role: null, isTeacher: false, teacherMode: false,
+  role: null, isTeacher: false, teacherMode: false, roleLoaded: false,
   studentPreview: false, setStudentPreview: () => {},
   ownerAsTeacher: false, setOwnerAsTeacher: () => {},
 });
@@ -31,11 +31,32 @@ export function RoleProvider({ children }) {
   const [ownerTeacher, setOwnerTeacherState] = useState(() => {
     try { return sessionStorage.getItem(OWNER_TEACHER_KEY) === '1'; } catch { return false; }
   });
+  // Роль підтверджена для ПОТОЧНОГО тенанта (не з чужого кешу). Редірект у
+  // викладацький кабінет робимо лише після цього — інакше роль owner зі школи,
+  // що лишилась у спільному localStorage, хибно кидає учня WordSnap на /teacher.
+  const [roleLoaded, setRoleLoaded] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    getStats().then((r) => { if (alive && r?.data?.role) setRole(r.data.role); }).catch(() => {});
-    return () => { alive = false; };
+    const load = () => {
+      getStats().then((r) => {
+        if (!alive) return;
+        setRole(r?.data?.role || 'student');
+        setRoleLoaded(true);
+      }).catch(() => { /* лишаємо як є; не підтверджуємо роль */ });
+    };
+    load();
+    // Тенант змінився (спільний origin для всіх ботів) → скидаємо роль/режими
+    // й перечитуємо для нового тенанта.
+    const onTenantChanged = () => {
+      setRoleLoaded(false);
+      setRole('student');
+      setPreviewState(false);
+      setOwnerTeacherState(false);
+      load();
+    };
+    window.addEventListener('wordsnap:tenant-changed', onTenantChanged);
+    return () => { alive = false; window.removeEventListener('wordsnap:tenant-changed', onTenantChanged); };
   }, []);
 
   const setStudentPreview = useCallback((v) => {
@@ -58,12 +79,13 @@ export function RoleProvider({ children }) {
   const value = useMemo(() => ({
     role,
     isTeacher,
+    roleLoaded,
     teacherMode: isTeacher && !studentPreview,
     studentPreview: isTeacher && studentPreview,
     setStudentPreview,
     ownerAsTeacher: role === 'owner' && ownerTeacher,
     setOwnerAsTeacher,
-  }), [role, isTeacher, studentPreview, setStudentPreview, ownerTeacher, setOwnerAsTeacher]);
+  }), [role, isTeacher, roleLoaded, studentPreview, setStudentPreview, ownerTeacher, setOwnerAsTeacher]);
 
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>;
 }

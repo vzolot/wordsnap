@@ -57,16 +57,19 @@ const RouteFallback = () => (
 // перехід на /pro редіректить на home, і жодних цін учні не бачать.
 function AppRoutes() {
   const { billingEnabled, is_school } = useTenant();
-  const { teacherMode, role, ownerAsTeacher } = useRole();
+  const { teacherMode, role, ownerAsTeacher, roleLoaded } = useRole();
   // Власник школи заходить на «Школа» (в адмін-режимі), викладач / власник-у-режимі-
   // викладача — на «Учні».
   const teacherHome = (is_school && role === 'owner' && !ownerAsTeacher)
     ? '/teacher?tab=school' : '/teacher?tab=students';
+  // Редіректимо в кабінет ЛИШЕ коли роль підтверджена для поточного тенанта —
+  // інакше чужа роль owner зі спільного кешу кидає учня WordSnap на /teacher.
+  const redirectTeacher = teacherMode && roleLoaded;
   return (
     <Routes>
       {/* Викладач заходить одразу в кабінет, а не на учнівську головну.
           У режимі «перегляд як учень» teacherMode=false → звичайна головна. */}
-      <Route path="/" element={teacherMode ? <Navigate to={teacherHome} replace /> : <HomePage />} />
+      <Route path="/" element={redirectTeacher ? <Navigate to={teacherHome} replace /> : <HomePage />} />
       <Route path="/words" element={<WordsPage />} />
       <Route path="/review" element={<ReviewPage />} />
       <Route path="/songs" element={<SongsPage />} />

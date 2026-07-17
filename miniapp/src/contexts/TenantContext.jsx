@@ -25,6 +25,29 @@ const DEFAULTS = {
 };
 
 const CACHE_KEY = 'wordsnap.tenant_config';
+const TENANT_ID_KEY = 'wordsnap.tenant_id';
+
+/**
+ * Усі боти-тенанти відкривають ОДИН і той самий Mini App URL → спільний
+ * localStorage/sessionStorage. Тому дані одного тенанта (кеш stats/слів, роль,
+ * режими) можуть протекти в інший. Коли резолвиться інший tenant_id, ніж був
+ * минулого разу — чистимо чужий кеш і сигналимо про зміну тенанта.
+ */
+function wipeStaleTenantState(newTenantId) {
+  try {
+    const prev = localStorage.getItem(TENANT_ID_KEY);
+    if (prev !== null && String(newTenantId) !== prev) {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('wordsnap.cache.')) localStorage.removeItem(k);
+      }
+      try { sessionStorage.removeItem('wordsnap.teacher_preview'); } catch { /* noop */ }
+      try { sessionStorage.removeItem('wordsnap.owner_teacher_mode'); } catch { /* noop */ }
+      window.dispatchEvent(new CustomEvent('wordsnap:tenant-changed'));
+    }
+    localStorage.setItem(TENANT_ID_KEY, String(newTenantId));
+  } catch { /* noop */ }
+}
 
 function readCachedConfig() {
   try {
@@ -85,6 +108,7 @@ export function TenantProvider({ children }) {
       .then((r) => {
         if (!alive || !r?.data) return;
         const c = { ...DEFAULTS, ...r.data };
+        wipeStaleTenantState(c.tenant_id);   // очистити чужий кеш при зміні тенанта
         applyBrand(c.color_primary, c.color_accent);
         setSentryTenant(c.tenant_id, c.slug);
         setConfig(c);

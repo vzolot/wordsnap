@@ -1010,7 +1010,7 @@ export default function TeacherPage() {
   // Активна вкладка — з URL (?tab=), щоб нижня викладацька навігація й
   // внутрішні пігулки були одним джерелом істини.
   const [sp, setSp] = useSearchParams();
-  const { setStudentPreview, role, ownerAsTeacher, setOwnerAsTeacher } = useRole();
+  const { setStudentPreview, role, ownerAsTeacher, setOwnerAsTeacher, isTeacher, roleLoaded } = useRole();
   const { is_school } = useTenant();
   const isOwner = is_school && role === 'owner';
   // Адмін-вигляд (керування школою) активний, лише коли власник НЕ в режимі викладача.
@@ -1019,6 +1019,11 @@ export default function TeacherPage() {
   const setView = (v) => setSp({ tab: v }, { replace: true });
 
   const navigate = useNavigate();
+  // Підтверджений НЕ-викладач на /teacher (напр. учень WordSnap, якого сюди
+  // завела чужа роль зі спільного кешу) → назад на головну, без «forbidden».
+  useEffect(() => {
+    if (roleLoaded && !isTeacher) navigate('/', { replace: true });
+  }, [roleLoaded, isTeacher, navigate]);
   const previewAsStudent = () => { setStudentPreview(true); navigate('/'); };
   // Власник ⇄ викладач: у режимі викладача власник керує лише своїми учнями.
   const toggleOwnerMode = () => {
