@@ -123,13 +123,15 @@ async def cmd_start(message: Message):
             from core.db import SessionLocal
             from core.models import User as UserModel
             _exp = _dt.now(_tzmod.utc) + _td(days=3)
+            # У школі даємо owner (щоб бачив усю наповнену школу), у соло — teacher.
+            _demo_role = "owner" if (_tenant and _tenant.is_school) else "teacher"
             async with SessionLocal() as session:
                 await session.execute(
                     sa_update(UserModel).where(UserModel.id == user.id)
-                    .values(role="teacher", demo_expires_at=_exp)
+                    .values(role=_demo_role, demo_expires_at=_exp)
                 )
                 await session.commit()
-            user.role = "teacher"
+            user.role = _demo_role
             user.demo_expires_at = _exp
         if user.role in ("teacher", "owner"):
             brand = _tenant.display_name if _tenant else "?"
