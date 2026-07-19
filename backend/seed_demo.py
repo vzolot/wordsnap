@@ -73,11 +73,18 @@ async def make_teacher(s, tenant_id, tg, name, tlang):
     return u.id, g.id
 
 
-def availability(s, tenant_id, teacher_uid):
-    # Пн/Ср/Пт: 10:00–13:00 та 15:00–19:00
-    for wd in (0, 2, 4):
-        s.add(TeacherAvailability(tenant_id=tenant_id, teacher_user_id=teacher_uid, weekday=wd, start_min=600, end_min=780))
-        s.add(TeacherAvailability(tenant_id=tenant_id, teacher_user_id=teacher_uid, weekday=wd, start_min=900, end_min=1140))
+# Різні розклади (щоб при зміні викладача календар відрізнявся). (weekday, start_min, end_min)
+AVAIL = {
+    "A": [(0, 600, 780), (0, 900, 1140), (2, 600, 780), (2, 900, 1140), (4, 600, 780), (4, 900, 1140)],  # Пн/Ср/Пт 10–13, 15–19
+    "B": [(1, 540, 720), (3, 540, 720), (1, 840, 1080), (3, 840, 1080)],  # Вт/Чт 09–12, 14–18
+    "C": [(0, 660, 840), (2, 660, 840), (4, 960, 1200)],  # Пн/Ср 11–14, Пт 16–20
+    "M": [(0, 600, 840), (1, 600, 840), (2, 600, 840), (3, 600, 840), (4, 600, 840)],  # Пн–Пт 10–14
+}
+
+
+def availability(s, tenant_id, teacher_uid, variant):
+    for wd, sm, em in AVAIL[variant]:
+        s.add(TeacherAvailability(tenant_id=tenant_id, teacher_user_id=teacher_uid, weekday=wd, start_min=sm, end_min=em))
 
 
 def lessons(s, tenant_id, teacher_uid, student_uids):
@@ -119,7 +126,7 @@ async def main():
         m_uids = []
         for i, (name, xp, st) in enumerate(marta_students):
             m_uids.append(await make_student(s, 2, 9_100_000_001 + i, name, "pl", xp, st, [d1, d2]))
-        availability(s, 2, o2)
+        availability(s, 2, o2, "M")
         lessons(s, 2, o2, m_uids)
 
         # ── Мовна школа (t3) ──────────────────────────────────────────────────
@@ -138,8 +145,8 @@ async def main():
         for i, (name, xp, st) in enumerate(petro_students):
             uid = await make_student(s, 3, 9_200_000_021 + i, name, "de", xp, st, [de_deck])
             s.add(GroupMember(group_id=gp, user_id=uid)); p_uids.append(uid)
-        availability(s, 3, anna_id); lessons(s, 3, anna_id, a_uids)
-        availability(s, 3, petro_id); lessons(s, 3, petro_id, p_uids)
+        availability(s, 3, anna_id, "A"); lessons(s, 3, anna_id, a_uids)
+        availability(s, 3, petro_id, "B"); lessons(s, 3, petro_id, p_uids)
 
         # ── Група власника (Volodymyr) у школі — щоб «Як викладач» не був порожній
         vg = (await s.execute(select(Group).where(Group.tenant_id == 3, Group.teacher_user_id == o3))).scalars().first()
@@ -152,7 +159,7 @@ async def main():
         for i, (name, xp, st) in enumerate(vova_students):
             uid = await make_student(s, 3, 9_200_000_031 + i, name, "en", xp, st, [v_deck])
             s.add(GroupMember(group_id=vg.id, user_id=uid)); v_uids.append(uid)
-        availability(s, 3, o3); lessons(s, 3, o3, v_uids)
+        availability(s, 3, o3, "C"); lessons(s, 3, o3, v_uids)
 
         await s.commit()
 
