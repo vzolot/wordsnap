@@ -283,6 +283,7 @@ async def students_with_teacher(tenant_id: int) -> list[dict]:
         tmap = {uid: tid for uid, tid in rows}
         return [
             {"id": u.id, "name": u.first_name or (f"@{u.username}" if u.username else f"id{u.telegram_id}"),
+             "target_lang": u.target_lang,  # мова, яку вивчає
              "teacher_id": tmap.get(u.id)}
             for u in students
         ]
@@ -320,6 +321,7 @@ async def school_teacher_stats(tenant_id: int) -> list[dict]:
             ))).scalar_one_or_none()
             out.append({
                 "id": t.id, "name": t.first_name or f"id{t.telegram_id}", "role": t.role,
+                "target_lang": t.target_lang,  # мова, яку викладає
                 "students": int(students), "lessons_done_total": int(done_total),
                 "lessons_done_month": int(done_month), "lessons_scheduled": int(scheduled),
                 "invite_token": (g.invite_token if g else None),

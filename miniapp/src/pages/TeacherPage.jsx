@@ -861,6 +861,7 @@ function SchoolManager() {
           <div key={t.id} className="tch-word" style={{ flexWrap: 'wrap', gap: 6 }}>
             <span style={{ flex: 1, minWidth: 0 }}>
               {t.name}{t.role === 'owner' ? ' · власник' : ''} · {t.students} учн.
+              {langLabel(t.target_lang) && <span className="tch-lang">викладає {langLabel(t.target_lang)}</span>}
             </span>
             {t.invite_url && (
               <button className="tch-btn ghost sm"
@@ -882,7 +883,7 @@ function SchoolManager() {
         {students.length === 0 && <p className="tch-muted">Ще немає учнів. Запроси їх посиланням.</p>}
         {students.map((s) => (
           <div key={s.id} className="tch-word" style={{ gap: 8 }}>
-            <span style={{ flex: 1, minWidth: 0 }}>{s.name}</span>
+            <span style={{ flex: 1, minWidth: 0 }}>{s.name}{langLabel(s.target_lang) && <span className="tch-lang">{langLabel(s.target_lang)}</span>}</span>
             <select className="tch-input" style={{ maxWidth: 170 }} value={s.teacher_id || ''}
                     onChange={(e) => assign(s.id, e.target.value)} disabled={busy}>
               <option value="">— викладач —</option>
@@ -909,14 +910,20 @@ function SchoolStats() {
   );
   return (
     <>
+      <p className="tch-muted sm" style={{ margin: '0 0 6px' }}>
+        Уроки: <b>проведено</b> (цього місяця / усього) та <b>заплановано</b> наперед.
+      </p>
       {teachers.map((t) => (
         <div key={t.id} className="tch-card">
-          <div className="tch-billing-title">{t.name}{t.role === 'owner' ? ' (ви)' : ''}</div>
+          <div className="tch-billing-title">
+            {t.name}{t.role === 'owner' ? ' (ви)' : ''}
+            {langLabel(t.target_lang) && <span className="tch-lang">викладає {langLabel(t.target_lang)}</span>}
+          </div>
           <div className="tch-kpis" style={{ marginTop: 8 }}>
             <Kpi value={t.students} label="учнів" />
-            <Kpi value={t.lessons_done_month} label="занять/міс" />
-            <Kpi value={t.lessons_done_total} label="усього" />
-            <Kpi value={t.lessons_scheduled} label="заплановано" />
+            <Kpi value={t.lessons_done_month} label="уроків цей міс" />
+            <Kpi value={t.lessons_done_total} label="проведено всього" />
+            <Kpi value={t.lessons_scheduled} label="заплановано наперед" />
           </div>
         </div>
       ))}
