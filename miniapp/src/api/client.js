@@ -101,6 +101,7 @@ export const getTeacherDecks = (asTeacher = false) =>
 export const getTeacherStudents = (asTeacher = false) =>
   api.get('/api/teacher/students', { params: asTeacher ? { as_teacher: 1 } : {} });
 export const getTeacherStudentDetail = (id) => api.get(`/api/teacher/students/${id}`);
+export const deleteTeacherStudent = (id) => api.delete(`/api/teacher/students/${id}`);
 export const getTeacherDeck = (deckId) => api.get(`/api/teacher/decks/${deckId}`);
 export const createTeacherDeck = (payload) => api.post('/api/teacher/decks', payload);
 export const updateTeacherDeck = (deckId, patch) =>

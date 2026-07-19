@@ -249,6 +249,29 @@ async def student_detail(tenant_id: int, user_id: int) -> dict | None:
                         "error_rate": round(rate, 2), "reviews": total,
                     })
 
+        # усі слова та фрази учня зі «силою» (сильне / вчиться / слабке)
+        all_words = (await s.execute(
+            select(Word.id, Word.word, Word.translation, Word.status, Word.review_count)
+            .where(Word.user_id == user_id).order_by(Word.word)
+        )).all()
+        words = []
+        for wid, w, tr, status, rc in all_words:
+            a = agg.get(wid, {"total": 0, "err": 0})
+            err_rate = round(a["err"] / a["total"], 2) if a["total"] else 0.0
+            if a["total"] and a["err"] > 0:
+                strength = "weak"
+            elif status == "mastered":
+                strength = "strong"
+            else:
+                strength = "learning"
+            words.append({
+                "word_id": wid, "word": w, "translation": tr, "status": status,
+                "reviews": int(a["total"]), "error_rate": err_rate, "strength": strength,
+            })
+        # сильні спершу, слабкі — в кінці (щоб одразу бачити проблемні)
+        _order = {"weak": 0, "learning": 1, "strong": 2}
+        words.sort(key=lambda x: (_order.get(x["strength"], 1), -x["error_rate"]))
+
     return {
         "id": user.id,
         "display_name": (
@@ -261,5 +284,6 @@ async def student_detail(tenant_id: int, user_id: int) -> dict | None:
         "reviews_30d": reviews_30d,
         "activity": activity,               # {'YYYY-MM-DD': count}
         "decks": list(decks.values()),
+        "words": words,                     # усі слова/фрази зі «силою»
         "weak_words": weak,
     }

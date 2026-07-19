@@ -116,6 +116,20 @@ async def teacher_student_detail(
     return detail
 
 
+@router.delete("/api/teacher/students/{student_id}")
+async def teacher_remove_student(
+    student_id: int, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    """Видалити учня. Owner/соло-репетитор — повністю; викладач у школі —
+    відкріплює зі своїх груп."""
+    teacher = await _require_teacher(telegram_id, tenant_id)
+    from core.group_service import is_school, remove_student
+    ok = await remove_student(tenant_id, student_id, teacher.id, teacher.role, await is_school(tenant_id))
+    if not ok:
+        raise HTTPException(status_code=404, detail="student_not_found")
+    return {"ok": True}
+
+
 @router.get("/api/teacher/decks/{deck_id}")
 async def teacher_deck_detail(
     deck_id: int, telegram_id: int = Query(...), tenant_id: int = Query(1),

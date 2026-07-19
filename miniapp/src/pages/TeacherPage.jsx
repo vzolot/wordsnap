@@ -7,7 +7,7 @@ import { useTenant } from '../contexts/TenantContext';
 import { useRole } from '../contexts/RoleContext';
 import {
   getTeacherDecks, getTeacherStudents, getTeacherDeck,
-  createTeacherDeck, updateTeacherDeck, deleteTeacherDeck, getTeacherStudentDetail,
+  createTeacherDeck, updateTeacherDeck, deleteTeacherDeck, getTeacherStudentDetail, deleteTeacherStudent,
   getAvailability, putAvailability, getTeacherLessons, teacherCancelLesson,
   teacherCreateLesson,
   createDeckFromPhoto, createDeckFromVoice, assignHomework,
@@ -70,7 +70,7 @@ function ShareBotButton({ block }) {
       style={block ? { width: '100%', marginTop: 10 } : undefined}
       onClick={onClick}
     >
-      🔗 {useInvite ? 'Запросити учнів' : 'Поділитися ботом'}
+      🔗 {useInvite ? 'Запросити учнів' : 'Поділитися застосунком'}
     </button>
   );
 }
@@ -357,7 +357,7 @@ function StudentPicker({ students, selected, onToggle }) {
         </label>
       ))}
       {students.length === 0 && (
-        <p className="tch-muted">Ще немає учнів. Поділіться посиланням на бота.</p>
+        <p className="tch-muted">Ще немає учнів. Поділіться посиланням на застосунок.</p>
       )}
     </div>
   );
@@ -671,15 +671,25 @@ function DeadlineAssign({ deckId }) {
   );
 }
 
-function StudentDetail({ studentId, onClose }) {
+function StudentDetail({ studentId, onClose, onDeleted }) {
   const [d, setD] = useState(null);
   const [err, setErr] = useState(false);
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     getTeacherStudentDetail(studentId).then((r) => setD(r.data)).catch(() => setErr(true));
   }, [studentId]);
 
+  const removeStudent = async () => {
+    if (!window.confirm('Видалити цього учня? Прогрес і слова буде видалено.')) return;
+    setBusy(true);
+    try { await deleteTeacherStudent(studentId); (onDeleted || onClose)?.(); }
+    catch { setBusy(false); }
+  };
+
   if (err) return <div className="tch-card"><p className="tch-muted">Не вдалося завантажити.</p></div>;
   if (!d) return <div className="tch-card"><p className="tch-muted">Завантаження…</p></div>;
+
+  const STR = { strong: 'сильне', learning: 'вчиться', weak: 'слабке' };
 
   // Мінібар активності за 30 днів
   const today = new Date();
@@ -702,7 +712,10 @@ function StudentDetail({ studentId, onClose }) {
             <div className="tch-muted sm">Вивчає: {langLabel(d.target_lang)}</div>
           )}
         </div>
-        <button className="tch-btn ghost sm" onClick={onClose}>← Назад</button>
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <button className="tch-btn ghost sm" onClick={removeStudent} disabled={busy}>🗑 Видалити</button>
+          <button className="tch-btn ghost sm" onClick={onClose}>← Назад</button>
+        </div>
       </div>
       <div className="tch-metrics">
         <div className="tch-metric"><b>{d.streak}</b><span>днів поспіль</span></div>
@@ -737,12 +750,14 @@ function StudentDetail({ studentId, onClose }) {
         );
       })}
 
-      <h4 className="tch-h4">Слабкі слова</h4>
-      {d.weak_words.length === 0 && <p className="tch-muted">Замало даних або немає помилок.</p>}
-      {d.weak_words.map((w) => (
+      <h4 className="tch-h4">Слова та фрази</h4>
+      {(!d.words || d.words.length === 0) && <p className="tch-muted">Ще немає слів у цього учня.</p>}
+      {(d.words || []).map((w) => (
         <div key={w.word_id} className="tch-word">
-          <span><b>{w.word}</b> — {w.translation}</span>
-          <span className="tch-weak">{Math.round(w.error_rate * 100)}% помилок</span>
+          <span style={{ minWidth: 0 }}><b>{w.word}</b> — {w.translation}</span>
+          <span className={`tch-strength ${w.strength}`}>
+            {STR[w.strength] || 'вчиться'}{w.strength === 'weak' && w.error_rate > 0 ? ` · ${Math.round(w.error_rate * 100)}%` : ''}
+          </span>
         </div>
       ))}
     </div>
@@ -754,15 +769,16 @@ function StudentsList() {
   const [students, setStudents] = useState(null);
   const [sel, setSel] = useState(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     getTeacherStudents(ownerAsTeacher).then((r) => setStudents(r.data.students || [])).catch(() => setStudents([]));
   }, [ownerAsTeacher]);
+  useEffect(() => { load(); }, [load]);
 
-  if (sel != null) return <StudentDetail studentId={sel} onClose={() => setSel(null)} />;
+  if (sel != null) return <StudentDetail studentId={sel} onClose={() => setSel(null)} onDeleted={() => { setSel(null); load(); }} />;
   if (students === null) return <p className="tch-muted">Завантаження…</p>;
   if (students.length === 0) return (
     <div className="tch-card">
-      <p className="tch-muted">Ще немає учнів. Поділіться посиланням на бота, щоб вони приєдналися.</p>
+      <p className="tch-muted">Ще немає учнів. Поділіться посиланням на застосунок, щоб вони приєдналися.</p>
       <ShareBotButton block />
     </div>
   );
@@ -1071,7 +1087,7 @@ function TeacherStats({ students }) {
       </div>
 
       {[...sel].map((id) => (
-        <StudentDetail key={id} studentId={id} onClose={() => toggle(id)} />
+        <StudentDetail key={id} studentId={id} onClose={() => toggle(id)} onDeleted={() => toggle(id)} />
       ))}
 
       {showBilling && <TeacherBilling />}

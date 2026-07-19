@@ -45,6 +45,7 @@ async def make_student(s, tenant_id, tg, name, tlang, xp, streak, decks):
              last_active_at=NOW - timedelta(hours=3))
     s.add(u); await s.flush()
     rev_ids = []
+    last_wid = None
     for deck_id, pairs, tl in decks:
         for i, (w, tr) in enumerate(pairs):
             mastered = i < (len(pairs) * 3) // 5
@@ -54,12 +55,18 @@ async def make_student(s, tenant_id, tg, name, tlang, xp, streak, decks):
                         review_count=(5 if mastered else 1), correct_count=(5 if mastered else 1),
                         source="deck", last_reviewed_at=NOW - timedelta(hours=5))
             s.add(word); await s.flush()
+            last_wid = word.id
             if len(rev_ids) < 3:
                 rev_ids.append(word.id)
     for d in range(min(max(streak, 1), 6)):
         for wid in rev_ids:
             s.add(Review(word_id=wid, user_id=u.id, tenant_id=tenant_id, result="knew",
                          reviewed_at=NOW - timedelta(days=d, hours=1)))
+    # кілька помилок на одному слові → «слабке» в статистиці
+    if last_wid:
+        for d in range(2):
+            s.add(Review(word_id=last_wid, user_id=u.id, tenant_id=tenant_id, result="struggled",
+                         reviewed_at=NOW - timedelta(days=d, hours=2)))
     return u.id
 
 

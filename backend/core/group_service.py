@@ -289,6 +289,31 @@ async def students_with_teacher(tenant_id: int) -> list[dict]:
         ]
 
 
+async def remove_student(tenant_id: int, student_user_id: int, requester_id: int,
+                         requester_role: str, is_school_tenant: bool) -> bool:
+    """Видаляє учня. Owner або соло-репетитор — повністю з тенанта (каскад слів/
+    повторень). Викладач у школі — лише відкріплює зі СВОЇХ груп."""
+    async with SessionLocal() as s:
+        u = (await s.execute(select(User).where(
+            User.id == student_user_id, User.tenant_id == tenant_id, User.role == "student",
+        ))).scalar_one_or_none()
+        if u is None:
+            return False
+        if requester_role == "owner" or not is_school_tenant:
+            await s.execute(delete(User).where(User.id == student_user_id))
+        else:
+            await s.execute(delete(GroupMember).where(
+                GroupMember.user_id == student_user_id,
+                GroupMember.group_id.in_(
+                    select(Group.id).where(
+                        Group.tenant_id == tenant_id, Group.teacher_user_id == requester_id,
+                    )
+                ),
+            ))
+        await s.commit()
+        return True
+
+
 async def school_teacher_stats(tenant_id: int) -> list[dict]:
     """Per-teacher: учнів, занять проведено (всього + цього місяця), заплановано,
     + invite_token дефолтної групи."""
