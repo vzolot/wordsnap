@@ -391,6 +391,20 @@ async def update_user_languages(
             logger.info(f"Updated languages for user {telegram_id}: {native_lang} → {target_lang}")
 
 
+async def set_native_lang_explicit(telegram_id: int, native_lang: str, tenant_id: int = 1) -> None:
+    """Ставить ЛИШЕ мову інтерфейсу (native_lang) як явний вибір — без target_lang.
+    Для викладача/адміна, який обирає мову застосунку в боті перед відкриттям."""
+    async with SessionLocal() as session:
+        user = (await session.execute(
+            select(User).where(User.telegram_id == telegram_id, User.tenant_id == tenant_id)
+        )).scalar_one_or_none()
+        if user:
+            user.native_lang = native_lang
+            user.lang_explicit = True
+            await session.commit()
+            logger.info(f"Set UI lang for user {telegram_id} (tenant {tenant_id}): {native_lang}")
+
+
 async def expire_subscription(telegram_id: int) -> User | None:
     """
     Деактивує Pro коли підписка закінчилась і автопродовження не вдалось.

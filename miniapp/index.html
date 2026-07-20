@@ -16,9 +16,32 @@
     <link rel="preload" as="image" href="/onboarding/slide_1.png" fetchpriority="high" />
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Boot-loader: показуємо миттєво, поки вантажиться JS-бандл (інакше перший
+         екран порожній кілька секунд). React при монтуванні замінює #root. -->
+    <style>
+      #boot-loader {
+        position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+        background: var(--tg-theme-bg-color, #0C0D12);
+      }
+      #boot-loader .bw {
+        width: 56px; height: 56px; border-radius: 16px;
+        background: linear-gradient(135deg, #7C6CFF, #A78BFA);
+        display: flex; align-items: center; justify-content: center;
+        color: #0b0b10; font: 800 30px system-ui, -apple-system, sans-serif;
+        animation: bootpulse 1.1s ease-in-out infinite;
+      }
+      @keyframes bootpulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(0.88); opacity: 0.65; }
+      }
+      @media (prefers-reduced-motion: reduce) { #boot-loader .bw { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot-loader" aria-hidden="true"><div class="bw">W</div></div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

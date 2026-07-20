@@ -136,18 +136,29 @@ async def cmd_start(message: Message):
             user.demo_expires_at = _exp
         if user.role in ("teacher", "owner"):
             brand = _tenant.display_name if _tenant else "?"
+            _is_demo = bool(getattr(_tenant, "is_demo", False) and getattr(user, "demo_expires_at", None))
+            if _is_demo:
+                # Демо: спершу даємо обрати мову застосунку, далі (в callback)
+                # — покрокова інструкція «як тестити» + кнопка кабінету.
+                picker = InlineKeyboardMarkup(inline_keyboard=[[
+                    InlineKeyboardButton(text="🇺🇦 Українська", callback_data="demolang:uk"),
+                    InlineKeyboardButton(text="🇬🇧 English", callback_data="demolang:en"),
+                ]])
+                await message.answer(
+                    f"👋 <b>{brand}</b>\n\nОберіть мову застосунку · Choose the app language:",
+                    reply_markup=picker,
+                )
+                logger.info(f"Demo teacher/owner {tg_user.id} (tenant {tid}) — language picker shown")
+                return
             is_owner = user.role == "owner"
             manage = "викладачами й учнями" if (is_owner and _tenant and _tenant.is_school) \
                 else "колодами, учнями й розкладом"
             role_word = "адміністратор" if is_owner and _tenant and _tenant.is_school else "викладач"
-            demo_hint = ""
-            if getattr(_tenant, "is_demo", False) and getattr(user, "demo_expires_at", None):
-                demo_hint = "\n\n🧪 Демо-режим: викладацький доступ на 3 дні — тестуйте кабінет."
             kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
                 text="📱 Відкрити кабінет", web_app=WebAppInfo(url=MINI_APP_URL),
             )]])
             await message.answer(
-                f"👋 <b>{brand}</b>\n\nВи {role_word}. Відкрийте кабінет, щоб керувати {manage}.{demo_hint}",
+                f"👋 <b>{brand}</b>\n\nВи {role_word}. Відкрийте кабінет, щоб керувати {manage}.",
                 reply_markup=kb,
             )
             logger.info(f"Teacher/owner {tg_user.id} started ({user.role}, tenant {tid}) — onboarding skipped")
@@ -309,6 +320,73 @@ async def cmd_start(message: Message):
     ])
     await message.answer(welcome_text, reply_markup=keyboard)
     logger.info(f"User {tg_user.id} ({tg_user.username}) started the bot")
+
+
+## ─── Демо: вибір мови застосунку + покрокова інструкція ──────────────────
+_OPEN_APP_LABEL = {"uk": "📱 Відкрити застосунок", "en": "📱 Open the app"}
+_DEMO_STEPS = {
+    ("uk", "teacher"): (
+        "✅ <b>Мову встановлено!</b>\n\n"
+        "<b>Як протестувати демо (2 хв):</b>\n"
+        "1️⃣ Відкрийте застосунок кнопкою нижче.\n"
+        "2️⃣ Вкладка «Учні» — наповнені картки учнів і їхній прогрес.\n"
+        "3️⃣ «Колоди» — додайте слова вручну або сфотографуйте сторінку підручника.\n"
+        "4️⃣ «Календар» — відкрийте вільні години й перегляньте заплановані уроки.\n"
+        "5️⃣ «Статистика» — прогрес кожного учня + слабкі/сильні слова.\n\n"
+        "Це демо на реальних даних — усе працює як у справжньому застосунку 👇"
+    ),
+    ("uk", "admin"): (
+        "✅ <b>Мову встановлено!</b>\n\n"
+        "<b>Як протестувати демо школи (2 хв):</b>\n"
+        "1️⃣ Відкрийте застосунок кнопкою нижче.\n"
+        "2️⃣ «Школа» — викладачі, запрошення, розподіл учнів.\n"
+        "3️⃣ «Статистика» — показники по кожному викладачу.\n"
+        "4️⃣ «Календар» — оберіть викладача й перегляньте його розклад.\n"
+        "5️⃣ Кнопка «Як викладач» вгорі — побачите бік викладача.\n\n"
+        "Це демо на реальних даних — уся школа вже наповнена 👇"
+    ),
+    ("en", "teacher"): (
+        "✅ <b>Language set!</b>\n\n"
+        "<b>How to test the demo (2 min):</b>\n"
+        "1️⃣ Open the app with the button below.\n"
+        "2️⃣ “Students” tab — real student cards and their progress.\n"
+        "3️⃣ “Decks” — add words manually or snap a textbook page.\n"
+        "4️⃣ “Calendar” — open free slots and view booked lessons.\n"
+        "5️⃣ “Stats” — each student’s progress + weak/strong words.\n\n"
+        "It’s a demo on real data — everything works like the real app 👇"
+    ),
+    ("en", "admin"): (
+        "✅ <b>Language set!</b>\n\n"
+        "<b>How to test the school demo (2 min):</b>\n"
+        "1️⃣ Open the app with the button below.\n"
+        "2️⃣ “School” — teachers, invites, assigning students.\n"
+        "3️⃣ “Stats” — per-teacher metrics.\n"
+        "4️⃣ “Calendar” — pick a teacher and view their schedule.\n"
+        "5️⃣ “As teacher” button on top — see the teacher side.\n\n"
+        "It’s a demo on real data — the whole school is populated 👇"
+    ),
+}
+
+
+@dp.callback_query(F.data.startswith("demolang:"))
+async def demo_language(callback: CallbackQuery):
+    lang = callback.data.split(":", 1)[1]
+    if lang not in ("uk", "en"):
+        await callback.answer()
+        return
+    tid = tenant_id_for_bot(callback.bot)
+    from core.user_service import set_native_lang_explicit
+    from core.tenant_service import get_tenant_by_id
+    await set_native_lang_explicit(callback.from_user.id, lang, tenant_id=tid)
+    user = await get_or_create_user(telegram_id=callback.from_user.id, tenant_id=tid)
+    _t = await get_tenant_by_id(tid)
+    is_admin = user.role == "owner" and _t is not None and _t.is_school
+    text = _DEMO_STEPS[(lang, "admin" if is_admin else "teacher")]
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
+        text=_OPEN_APP_LABEL[lang], web_app=WebAppInfo(url=MINI_APP_URL),
+    )]])
+    await callback.message.edit_text(text, reply_markup=kb)
+    await callback.answer()
 
 
 # ─── Telegram Stars payments (currency=XTR) ──────────────────────────────
