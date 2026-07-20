@@ -152,8 +152,10 @@ function WelcomeStories({ onClose }) {
   const { t } = useT();
   const { setLang } = useLang();
   const { is_school, isDefaultTenant, display_name } = useTenant();
-  const { role, isTeacher } = useRole();
-  const SLIDES = slidesFor({ isTeacher, role, is_school, isDefaultTenant });
+  // teacherMode = викладач І НЕ в режимі «як учень». У прев'ю учня показуємо
+  // саме учнівський онборд, а не вчительський.
+  const { role, teacherMode } = useRole();
+  const SLIDES = slidesFor({ isTeacher: teacherMode, role, is_school, isDefaultTenant });
   const brandName = display_name || 'WordSnap';
   const [rawIndex, setIndex] = useState(0);
   // Роль/тенант можуть дозавантажитись після відкриття — набір слайдів
