@@ -1,5 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+// Unbounded — заголовковий шрифт сайту, для онбордингу в стилі лендингу.
+import '@fontsource/unbounded/latin-700.css'
+import '@fontsource/unbounded/latin-800.css'
+import '@fontsource/unbounded/cyrillic-700.css'
+import '@fontsource/unbounded/cyrillic-800.css'
 import './index.css'
 import App from './App.jsx'
 import { initSentry, SentryErrorBoundary } from './sentry.js'
