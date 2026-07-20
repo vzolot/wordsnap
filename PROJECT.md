@@ -51,6 +51,51 @@ Three review modes feed the same SM-2 scheduler:
 - Free-tier daily limit is 0 (post-trial blocks adds entirely) — by design, but creates `paywall_hit` spike. Watch the funnel.
 - Sentry / PostHog keys must be set in Railway and Vercel envs (already done).
 
+### Changelog — 2026-07-20 (Demo polish, teacher-cabinet i18n, landing SEO, B2B campaign)
+
+Big session across the ecosystem — mini-app + backend (`wordsnap`), marketing
+landing (`wordsnap-landing`, now on **`wordsnap.app`**), and social autoposting
+(`wordsnap-threads-bot`). All shipped to prod unless noted.
+
+**White-label teacher cabinet (see §7):**
+- **Delete student** (Marta/school-teacher/admin): `DELETE /api/teacher/students/{id}` + `group_service.remove_student`; the stats list now reloads on delete.
+- **Per-word/phrase strength** in student detail (`teacher_stats.student_detail` → `words[]` with strong/learning/weak).
+- **Delete teacher** (admin): `DELETE /api/teacher/teachers/{id}` + `group_service.remove_teacher` (drops that teacher's groups/decks/lessons, keeps students).
+- **Marta billing regression fixed** — solo (non-school) tenant always shows billing; in a school only owner/admin (`showBilling = is_school ? owner&!ownerAsTeacher : true`).
+- **Group-deck student count** = group members (was "0"; `list_teacher_decks` counts `GroupMember` for decks with `group_id`).
+- **Full localization of the teacher cabinet to 6 languages** (en/uk/es/pl/de/fr): ~170 `teacher.*` keys × 6 in `i18n.js`; `TeacherPage.jsx` (15 components, 171 `t()`), `NavBar`, `AppBar` refactored. Fallback `dict[key] ?? T.en[key] ?? key`. Long dashes (—) → short (–) across mini-app UI.
+- «бот» → «застосунок» everywhere.
+
+**Demo flow (t2 Marta / t3 School), see §7:**
+- `/start` for a demo teacher/admin now offers an **app-language picker (6 langs)** then a **per-language step-by-step "how to test"** message (× teacher/admin, 12 variants). `set_native_lang_explicit()` sets UI lang only.
+- **Language via `?lang=` in the app URL** — the "Open app" button links to `MINI_APP_URL?lang=<code>`; `LangContext.getInitialLang` reads it with top priority (overrides a stale local pick). Fixes "picked English → cabinet in Ukrainian".
+- **Populated teacher side in a school** — `demo_seeded_owner_id()` routes a demo-owner in "as teacher" mode to the seeded owner's data (students/decks/calendar); injected in `_school_scope` + `_target_teacher`. Seed enriched: school owner now 5 students + 2 decks + Mon–Fri schedule.
+- **Conversion bridge**: `scheduler/demo_conversion.py` DMs the prospect ~4 min in ("want this under your brand?" + Instagram button, @vzolottop). Once per prospect (`users.demo_pitch_sent`).
+- **Bilingual bot description** (`bot_menu.py`): default uk+en; en-client gets clean English.
+- Demo deck titles «Демо:» → **«Demo:»** (Latin reads in all langs; `cleanup` removes both prefixes).
+- School avatar pulled from @language_schoolbot's Telegram photo → `tenants.logo_url`.
+
+**Onboarding:**
+- Reskinned to the **landing's dark theme** (bg #0C0D12, purple→lavender badges, amber CTA, Unbounded headings; added `@fontsource/unbounded`).
+- Fix: "as student" preview shows the **student** onboarding (`teacherMode`, not `isTeacher`, in `slidesFor`).
+
+**Mini-app load UX:**
+- **Boot-loader** in `index.html` (branded W in Telegram theme) — instant first paint instead of a blank screen.
+- **Seamless loading** — Suspense `RouteFallback` = the same W loader (boot → Suspense → page is one continuous load, not "different screens").
+
+**Landing + SEO (`wordsnap.app`) — done end-to-end:**
+- Custom domain (Namecheap A `76.76.21.21` + CNAME `www`), HTTPS.
+- **Body prerender** (`prerender.mjs`, Playwright + system Chrome) → crawlers/no-JS see full content. Deploy: `vercel build → node prerender.mjs .vercel/output/static → vercel deploy --prebuilt --prod`.
+- Static meta/OG/Twitter + canonical + **OG image 1200×630** (`creatives/og-render.mjs` → `public/og.png`); robots.txt + sitemap.xml.
+- **Google Search Console** verified, sitemap submitted, **page indexed**. Vercel Web Analytics code shipped (enable toggle pending).
+- Premium redesign + many copy/mobile fixes (pricing centred, "за добу" unified, FAQ churn Q, section reorder, mark-highlight/FAQ-accordion/header-CTA fixes).
+
+**B2B Instagram/Threads campaign (`wordsnap-threads-bot`):**
+- 15 landing-styled creatives (`creatives/posts.js` + `render.mjs`), 3/day×5. `campaign_pipeline.py` (IG w/ TG approval) + `threads_dup_pipeline.py` (mirror to Threads). Posts to **@vzolottop** via dedicated `CAMPAIGN_IG_*` / `CAMPAIGN_THREADS_*` creds. **9/15 done** (Days 1–3).
+- Consumer word-card autoposting on @vzolottop (`wordsnap-personal-bot`) **disabled** (`gh workflow disable daily-content.yml` + `publish-approved.yml`). Old posts can't be API-deleted (IG unsupported; Threads needs `threads_delete`).
+
+**Open follow-ups:** enable Vercel Analytics (dashboard toggle); campaign Days 4–5 (6 posts); old @vzolottop posts (API-blocked).
+
 ### Changelog — 2026-07-06 (White-Label multi-tenant platform, M1–M17)
 
 Built the white-label platform — WordSnap becomes a multi-tenant base on which
