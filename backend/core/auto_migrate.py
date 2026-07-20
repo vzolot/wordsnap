@@ -98,6 +98,10 @@ MIGRATIONS: list[tuple[str, str]] = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS referrals_count INTEGER NOT NULL DEFAULT 0",
     ),
     (
+        "users.demo_pitch_sent",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS demo_pitch_sent BOOLEAN NOT NULL DEFAULT FALSE",
+    ),
+    (
         "users.referral_code idx",
         "CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)",
     ),

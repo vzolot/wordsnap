@@ -35,6 +35,8 @@ class User(Base):
     # Демо-тенант: тимчасовий викладацький доступ проспекта. Після цієї дати
     # роль лениво повертається до 'student' (кабінет блокується).
     demo_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Чи вже надіслано конверсійний пітч демо-проспекту («хочете такий застосунок?»).
+    demo_pitch_sent: Mapped[bool] = mapped_column(default=False, server_default="false")
     telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     username: Mapped[str | None] = mapped_column(String(100))
     first_name: Mapped[str | None] = mapped_column(String(100))
