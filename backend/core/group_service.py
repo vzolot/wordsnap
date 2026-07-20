@@ -314,6 +314,26 @@ async def remove_student(tenant_id: int, student_user_id: int, requester_id: int
         return True
 
 
+async def demo_seeded_owner_id(requester, tenant_id: int) -> int:
+    """Для ДЕМО-власника (проспект: role=owner + demo_expires_at у демо-тенанті,
+    але НЕ реальний owner_telegram_id) повертає id ПОСІЯНОГО власника тенанта —
+    щоб бік «як викладач» був наповнений тестовими даними (у проспекта своїх
+    груп/колод/розкладу немає). Інакше — id самого requester."""
+    if not (requester.role == "owner" and getattr(requester, "demo_expires_at", None)):
+        return requester.id
+    from core.tenant_service import get_tenant_by_id
+    t = await get_tenant_by_id(tenant_id)
+    if not (t and getattr(t, "is_demo", False) and t.owner_telegram_id):
+        return requester.id
+    if t.owner_telegram_id == requester.telegram_id:
+        return requester.id  # це і є реальний власник — має власні посіяні дані
+    async with SessionLocal() as s:
+        seeded = (await s.execute(select(User).where(
+            User.tenant_id == tenant_id, User.telegram_id == t.owner_telegram_id,
+        ))).scalar_one_or_none()
+    return seeded.id if seeded else requester.id
+
+
 async def remove_teacher(tenant_id: int, teacher_user_id: int) -> bool:
     """Видаляє викладача школи (owner видалити не можна). Прибирає його групи
     (каскадом — членства учнів у них), його колоди, його уроки та саму особу

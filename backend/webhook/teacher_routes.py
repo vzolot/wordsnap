@@ -57,12 +57,14 @@ async def _school_scope(
     """(restrict_student_ids, deck_owner_id) для ізоляції в школі. Соло-режим →
     (None, None) = бачить усе. Викладач у школі → лише свої. owner-адмін бачить
     усе, АЛЕ коли перемкнувся в «режим викладача» (as_teacher) — теж лише своє."""
-    from core.group_service import is_school, student_ids_for_teacher
+    from core.group_service import is_school, student_ids_for_teacher, demo_seeded_owner_id
     if not await is_school(tenant_id):
         return None, None
     if teacher.role == "owner" and not as_teacher:
         return None, None
-    return await student_ids_for_teacher(tenant_id, teacher.id), teacher.id
+    # Демо-власник у режимі викладача → скоуп на ПОСІЯНОГО власника (наповнено).
+    eff_id = await demo_seeded_owner_id(teacher, tenant_id)
+    return await student_ids_for_teacher(tenant_id, eff_id), eff_id
 
 
 class DeckCreateRequest(BaseModel):

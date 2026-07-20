@@ -21,6 +21,8 @@ PL_B = [("dom", "дім"), ("książka", "книга"), ("okno", "вікно"), 
         ("do zobaczenia", "до побачення"), ("miło mi", "дуже приємно")]
 EN_A = [("hello", "привіт"), ("water", "вода"), ("book", "книга"), ("window", "вікно"),
         ("how are you?", "як справи?"), ("see you soon", "до зустрічі")]
+EN_B = [("morning", "ранок"), ("evening", "вечір"), ("street", "вулиця"), ("money", "гроші"),
+        ("thank you", "дякую"), ("good luck", "щасти")]
 DE_A = [("Hallo", "привіт"), ("Wasser", "вода"), ("Buch", "книга"), ("Tisch", "стіл"),
         ("wie geht's?", "як справи?"), ("bis bald", "до зустрічі")]
 
@@ -161,12 +163,14 @@ async def main():
             vg = Group(tenant_id=3, name="Група — Volodymyr", teacher_user_id=o3, is_default=True)
             s.add(vg); await s.flush()
         v_deck = await make_deck(s, 3, o3, "Демо: English A2", EN_A, "en", group_id=vg.id)
-        vova_students = [("Наталя", 560, 8), ("Олексій", 990, 16)]
+        await make_deck(s, 3, o3, "Демо: Travel English", EN_B, "en", group_id=vg.id)  # 2-га колода
+        vova_students = [("Наталя", 560, 8), ("Олексій", 990, 16), ("Дмитро", 720, 11),
+                         ("Вікторія", 1240, 22), ("Тарас", 340, 5)]
         v_uids = []
         for i, (name, xp, st) in enumerate(vova_students):
             uid = await make_student(s, 3, 9_200_000_031 + i, name, "en", xp, st, [v_deck])
             s.add(GroupMember(group_id=vg.id, user_id=uid)); v_uids.append(uid)
-        availability(s, 3, o3, "C"); lessons(s, 3, o3, v_uids)
+        availability(s, 3, o3, "M"); lessons(s, 3, o3, v_uids)
 
         await s.commit()
 

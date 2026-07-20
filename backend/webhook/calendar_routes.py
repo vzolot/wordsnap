@@ -83,6 +83,17 @@ async def _target_teacher(requester: User, tenant_id: int, teacher_user_id: int 
             ))).scalar_one_or_none()
         if u is not None:
             return u
+    # Демо-власник у режимі викладача (без teacher_user_id): показуємо календар
+    # ПОСІЯНОГО власника, щоб не був порожнім.
+    from core.group_service import demo_seeded_owner_id
+    eff_id = await demo_seeded_owner_id(requester, tenant_id)
+    if eff_id != requester.id:
+        async with SessionLocal() as s:
+            u = (await s.execute(select(User).where(
+                User.id == eff_id, User.tenant_id == tenant_id,
+            ))).scalar_one_or_none()
+        if u is not None:
+            return u
     return requester
 
 
