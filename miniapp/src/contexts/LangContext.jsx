@@ -16,6 +16,17 @@ const STORAGE_KEY = 'wordsnap.lang.v2';
 const EXPLICIT_KEY = 'wordsnap.lang.explicit';
 
 function getInitialLang() {
+  // Найвищий пріоритет: явний ?lang=<code> у URL. Демо-кнопка бота «Відкрити
+  // застосунок» передає обрану мову напряму — і вона має перекривати навіть
+  // застарілий локальний вибір. Зберігаємо як explicit, щоб трималась далі.
+  try {
+    const urlLang = new URLSearchParams(window.location.search).get('lang');
+    if (urlLang && SUPPORTED_LANGS.includes(urlLang)) {
+      persistExplicitLang(urlLang);
+      return urlLang;
+    }
+  } catch { /* ignore */ }
+
   // First check whether the user has EXPLICITLY chosen a lang via Settings.
   // We only honour localStorage when it's marked explicit – otherwise it's
   // a stale auto-detection from a past visit that would mask their current

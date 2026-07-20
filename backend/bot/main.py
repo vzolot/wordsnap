@@ -471,8 +471,11 @@ async def demo_language(callback: CallbackQuery):
     _t = await get_tenant_by_id(tid)
     is_admin = user.role == "owner" and _t is not None and _t.is_school
     text = _DEMO_STEPS[(lang, "admin" if is_admin else "teacher")]
+    # Передаємо обрану мову прямо в URL — app застосує її з найвищим пріоритетом
+    # (надійніше за native_lang, що може блокуватись локальним вибором у app).
+    app_url = MINI_APP_URL + ("&" if "?" in MINI_APP_URL else "?") + f"lang={lang}"
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
-        text=_OPEN_APP_LABEL[lang], web_app=WebAppInfo(url=MINI_APP_URL),
+        text=_OPEN_APP_LABEL[lang], web_app=WebAppInfo(url=app_url),
     )]])
     await callback.message.edit_text(text, reply_markup=kb)
     await callback.answer()
