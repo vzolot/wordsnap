@@ -714,6 +714,26 @@
   padding: 60px 0;
 }
 
+/* Брендований лоадер — ІДЕНТИЧНИЙ boot-loader з index.html, щоб перехід
+   boot → Suspense → сторінка виглядав одним безперервним завантаженням,
+   а не «різними екранами». */
+.brand-boot {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: var(--tg-theme-bg-color, #0C0D12); z-index: 50;
+}
+.brand-boot .bw {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: linear-gradient(135deg, #7C6CFF, #A78BFA);
+  display: flex; align-items: center; justify-content: center;
+  color: #0b0b10; font: 800 30px system-ui, -apple-system, sans-serif;
+  animation: bootpulse 1.1s ease-in-out infinite;
+}
+@keyframes bootpulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.88); opacity: 0.65; }
+}
+@media (prefers-reduced-motion: reduce) { .brand-boot .bw { animation: none; } }
+
 /* ── Pro page ───────────────────────────────────────── */
 .pro-eyebrow {
   display: inline-flex;

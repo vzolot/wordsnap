@@ -48,8 +48,10 @@ function getInitialTheme() {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+// Той самий брендований W-лоадер, що й boot-loader у index.html — щоб перехід
+// boot → Suspense → сторінка був безшовним (не «різні екрани»).
 const RouteFallback = () => (
-  <div className="page"><div className="center-loader"><span className="spinner" /></div></div>
+  <div className="brand-boot"><div className="bw">W</div></div>
 );
 
 // Роути. /pro (білінг/підписка) існує ЛИШЕ для тенанта з billing_ui_enabled
