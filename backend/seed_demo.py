@@ -5,7 +5,7 @@
 """
 import asyncio
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, or_
 from core.db import SessionLocal
 from core.models import (User, Word, Review, Deck, DeckWord, Group, GroupMember,
                          Lesson, TeacherAvailability)
@@ -116,7 +116,8 @@ def lessons(s, tenant_id, teacher_uid, student_uids):
 async def cleanup(s):
     await s.execute(delete(Lesson).where(Lesson.tenant_id.in_([2, 3])))
     await s.execute(delete(TeacherAvailability).where(TeacherAvailability.tenant_id.in_([2, 3])))
-    await s.execute(delete(Deck).where(Deck.title.like("Демо:%"), Deck.tenant_id.in_([2, 3])))
+    await s.execute(delete(Deck).where(
+        or_(Deck.title.like("Demo:%"), Deck.title.like("Демо:%")), Deck.tenant_id.in_([2, 3])))
     await s.execute(delete(User).where(User.telegram_id >= 9_100_000_000, User.tenant_id.in_([2, 3])))
     await s.execute(delete(Group).where(Group.name.like("Група — %"), Group.tenant_id == 3))
     await s.commit()
@@ -128,8 +129,8 @@ async def main():
 
         # ── Марта (t2, соло-репетитор, польська) ──────────────────────────────
         o2 = await owner_uid(s, 2)
-        d1 = await make_deck(s, 2, o2, "Демо: Побут A1", PL_A, "pl")
-        d2 = await make_deck(s, 2, o2, "Демо: Фрази і дім", PL_B, "pl")
+        d1 = await make_deck(s, 2, o2, "Demo: Побут A1", PL_A, "pl")
+        d2 = await make_deck(s, 2, o2, "Demo: Фрази і дім", PL_B, "pl")
         marta_students = [("Олена", 980, 21), ("Іван", 420, 7), ("Катерина", 1540, 33),
                           ("Марко", 260, 4), ("Софія", 730, 12)]
         m_uids = []
@@ -142,8 +143,8 @@ async def main():
         o3 = await owner_uid(s, 3)
         anna_id, ga = await make_teacher(s, 3, 9_200_000_001, "Анна", "en")
         petro_id, gp = await make_teacher(s, 3, 9_200_000_002, "Петро", "de")
-        en_deck = await make_deck(s, 3, anna_id, "Демо: English Starter", EN_A, "en", group_id=ga)
-        de_deck = await make_deck(s, 3, petro_id, "Демо: Deutsch A1", DE_A, "de", group_id=gp)
+        en_deck = await make_deck(s, 3, anna_id, "Demo: English Starter", EN_A, "en", group_id=ga)
+        de_deck = await make_deck(s, 3, petro_id, "Demo: Deutsch A1", DE_A, "de", group_id=gp)
         anna_students = [("Дарина", 640, 9), ("Богдан", 1120, 18), ("Юлія", 300, 5)]
         a_uids = []
         for i, (name, xp, st) in enumerate(anna_students):
@@ -162,8 +163,8 @@ async def main():
         if vg is None:
             vg = Group(tenant_id=3, name="Група — Volodymyr", teacher_user_id=o3, is_default=True)
             s.add(vg); await s.flush()
-        v_deck = await make_deck(s, 3, o3, "Демо: English A2", EN_A, "en", group_id=vg.id)
-        await make_deck(s, 3, o3, "Демо: Travel English", EN_B, "en", group_id=vg.id)  # 2-га колода
+        v_deck = await make_deck(s, 3, o3, "Demo: English A2", EN_A, "en", group_id=vg.id)
+        await make_deck(s, 3, o3, "Demo: Travel English", EN_B, "en", group_id=vg.id)  # 2-га колода
         vova_students = [("Наталя", 560, 8), ("Олексій", 990, 16), ("Дмитро", 720, 11),
                          ("Вікторія", 1240, 22), ("Тарас", 340, 5)]
         v_uids = []
