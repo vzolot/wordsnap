@@ -38,7 +38,7 @@ function AppBar({ showProLink = true, isPro: isProProp = null }) {
         {/* Явна кнопка «закрити додаток» (white-label). WordSnap (тенант 1)
             лишається без змін – там працює нативне закриття Telegram. */}
         {!isDefaultTenant && (
-          <button className="app-bar-settings" onClick={closeApp} aria-label="Закрити додаток">
+          <button className="app-bar-settings" onClick={closeApp} aria-label={t('teacher.close_app')}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>

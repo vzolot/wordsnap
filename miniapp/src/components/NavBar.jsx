@@ -25,20 +25,21 @@ const ICONS = {
 // Викладацька навігація. Активна вкладка – за ?tab= (усі ведуть на /teacher).
 // У школі додається вкладка «Школа». Верхніх пігулок більше немає – усе тут.
 const BASE_TEACHER_TABS = [
-  { tab: 'students', icon: ICONS.users,   label: 'Учні' },
-  { tab: 'decks',    icon: ICONS.book,    label: 'Колоди' },
-  { tab: 'calendar', icon: ICONS.lessons, label: 'Календар' },
-  { tab: 'stats',    icon: ICONS.stats,   label: 'Статистика' },
+  { tab: 'students', icon: ICONS.users,   key: 'teacher.tab.students' },
+  { tab: 'decks',    icon: ICONS.book,    key: 'teacher.tab.decks' },
+  { tab: 'calendar', icon: ICONS.lessons, key: 'teacher.tab.calendar' },
+  { tab: 'stats',    icon: ICONS.stats,   key: 'teacher.tab.stats' },
 ];
 
 const OWNER_TABS = [
-  { tab: 'school',   icon: ICONS.school,  label: 'Школа' },
-  { tab: 'calendar', icon: ICONS.lessons, label: 'Календар' },
-  { tab: 'decks',    icon: ICONS.book,    label: 'Колоди' },
-  { tab: 'stats',    icon: ICONS.stats,   label: 'Статистика' },
+  { tab: 'school',   icon: ICONS.school,  key: 'teacher.tab.school' },
+  { tab: 'calendar', icon: ICONS.lessons, key: 'teacher.tab.calendar' },
+  { tab: 'decks',    icon: ICONS.book,    key: 'teacher.tab.decks' },
+  { tab: 'stats',    icon: ICONS.stats,   key: 'teacher.tab.stats' },
 ];
 
 function TeacherNav() {
+  const { t } = useT();
   const loc = useLocation();
   const { is_school } = useTenant();
   const { role, ownerAsTeacher } = useRole();
@@ -58,7 +59,7 @@ function TeacherNav() {
           className={onTeacher && tab === it.tab ? 'nav-item active' : 'nav-item'}
         >
           <Icon d={it.icon} />
-          <span className="nav-label">{it.label}</span>
+          <span className="nav-label">{t(it.key)}</span>
         </NavLink>
       ))}
     </nav>
@@ -83,7 +84,7 @@ function NavBar() {
   if (!isDefaultTenant) {
     // White-label учень: «Пісні» → «Уроки» (бронювання уроків із викладачем).
     items.splice(1, 1);
-    items.push({ to: '/lessons', key: null, icon: ICONS.lessons, label: 'Уроки' });
+    items.push({ to: '/lessons', key: 'nav.lessons', icon: ICONS.lessons, label: null });
   }
 
   return (
