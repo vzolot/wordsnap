@@ -434,6 +434,18 @@ async def set_teacher_active(
     return {"ok": True}
 
 
+@router.delete("/api/teacher/teachers/{teacher_user_id}")
+async def delete_teacher(
+    teacher_user_id: int, telegram_id: int = Query(...), tenant_id: int = Query(1),
+):
+    await _require_owner(telegram_id, tenant_id)
+    from core.group_service import remove_teacher as _rt
+    ok = await _rt(tenant_id, teacher_user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="teacher_not_found")
+    return {"ok": True}
+
+
 @router.get("/api/teacher/groups")
 async def list_groups(telegram_id: int = Query(...), tenant_id: int = Query(1)):
     teacher = await _require_teacher(telegram_id, tenant_id)

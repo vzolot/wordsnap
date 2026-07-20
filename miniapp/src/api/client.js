@@ -134,6 +134,7 @@ export const assignStudentToTeacher = (studentUserId, teacherUserId) =>
 export const getTeachers = () => api.get('/api/teacher/teachers');
 export const addTeacher = (telegramId) => api.post('/api/teacher/teachers', { telegram_id: telegramId });
 export const setTeacherActive = (id, active) => api.post(`/api/teacher/teachers/${id}/active`, { active });
+export const deleteTeacher = (id) => api.delete(`/api/teacher/teachers/${id}`);
 export const getGroups = () => api.get('/api/teacher/groups');
 export const createGroup = (name) => api.post('/api/teacher/groups', { name });
 export const setGroupMembers = (groupId, userIds) =>

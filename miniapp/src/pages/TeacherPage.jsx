@@ -12,7 +12,7 @@ import {
   teacherCreateLesson,
   createDeckFromPhoto, createDeckFromVoice, assignHomework,
   getSchoolInfo, getSchoolInvites, getSchoolOverview, assignStudentToTeacher,
-  getTeachers, addTeacher, setTeacherActive,
+  getTeachers, addTeacher, setTeacherActive, deleteTeacher,
   getGroups, createGroup, setGroupMembers,
   getTeacherBilling, teacherBillingPay, setTeacherSeats,
 } from '../api/client';
@@ -857,6 +857,12 @@ function SchoolManager() {
     finally { setBusy(false); }
   };
 
+  const removeTeacher = async (id, name) => {
+    if (!window.confirm(`Видалити викладача «${name}»?\nЙого групи, колоди й розклад буде видалено. Учні лишаться в школі — їх можна перепризначити іншому викладачу.`)) return;
+    setBusy(true);
+    try { await deleteTeacher(id); await load(); } finally { setBusy(false); }
+  };
+
   return (
     <>
       {/* Викладачі: запросити + список зі своїм учнівським посиланням. */}
@@ -884,6 +890,10 @@ function SchoolManager() {
                       onClick={() => shareInvite(t.invite_url, `Приєднуйся до викладача ${t.name} 📚`)}>
                 🔗 Учні
               </button>
+            )}
+            {t.role !== 'owner' && (
+              <button className="tch-btn ghost sm" title="Видалити викладача"
+                      onClick={() => removeTeacher(t.id, t.name)} disabled={busy}>🗑</button>
             )}
           </div>
         ))}
@@ -1043,11 +1053,13 @@ function TeacherBilling() {
 
 // Викладацька статистика: зведені KPI + детальний прогрес по ОБРАНИХ учнях
 // (перевикористовує StudentPicker для вибору і StudentDetail для показу).
-function TeacherStats({ students }) {
+function TeacherStats({ students, onReload }) {
   const { role, ownerAsTeacher } = useRole();
-  // Оплату сервісу бачить лише власник (адмін) — не звичайний викладач і не
-  // власник у режимі викладача. За доданих викладачів платить адміністратор.
-  const showBilling = role === 'owner' && !ownerAsTeacher;
+  const { is_school } = useTenant();
+  // Соло-репетитор (не-шкільний тенант) завжди платить за себе. У школі оплату
+  // бачить лише власник (адмін) — не звичайний викладач і не власник у режимі
+  // викладача (за доданих викладачів платить адміністратор).
+  const showBilling = is_school ? (role === 'owner' && !ownerAsTeacher) : true;
   const [sel, setSel] = useState(new Set());
   const toggle = (id) => setSel((prev) => {
     const n = new Set(prev);
@@ -1087,7 +1099,8 @@ function TeacherStats({ students }) {
       </div>
 
       {[...sel].map((id) => (
-        <StudentDetail key={id} studentId={id} onClose={() => toggle(id)} onDeleted={() => toggle(id)} />
+        <StudentDetail key={id} studentId={id} onClose={() => toggle(id)}
+                       onDeleted={() => { toggle(id); onReload?.(); }} />
       ))}
 
       {showBilling && <TeacherBilling />}
@@ -1180,7 +1193,7 @@ export default function TeacherPage() {
 
         {view === 'students' && <StudentsList />}
         {view === 'calendar' && <CalendarManager />}
-        {view === 'stats' && (isOwnerSchool ? <SchoolStats /> : <TeacherStats students={students} />)}
+        {view === 'stats' && (isOwnerSchool ? <SchoolStats /> : <TeacherStats students={students} onReload={load} />)}
         {view === 'school' && <SchoolManager />}
 
         {view === 'decks' && mode === 'create' && (

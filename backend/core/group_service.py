@@ -314,6 +314,29 @@ async def remove_student(tenant_id: int, student_user_id: int, requester_id: int
         return True
 
 
+async def remove_teacher(tenant_id: int, teacher_user_id: int) -> bool:
+    """Видаляє викладача школи (owner видалити не можна). Прибирає його групи
+    (каскадом — членства учнів у них), його колоди, його уроки та саму особу
+    (каскадом — його слова/повторення/доступність). УЧНІВ не видаляє — вони
+    лишаються в тенанті без викладача, адмін може перепризначити."""
+    from .models import Deck, Lesson
+    async with SessionLocal() as s:
+        u = (await s.execute(select(User).where(
+            User.id == teacher_user_id, User.tenant_id == tenant_id, User.role == "teacher",
+        ))).scalar_one_or_none()
+        if u is None:
+            return False
+        await s.execute(delete(Group).where(
+            Group.tenant_id == tenant_id, Group.teacher_user_id == teacher_user_id))
+        await s.execute(delete(Deck).where(
+            Deck.tenant_id == tenant_id, Deck.owner_user_id == teacher_user_id))
+        await s.execute(delete(Lesson).where(
+            Lesson.tenant_id == tenant_id, Lesson.teacher_user_id == teacher_user_id))
+        await s.execute(delete(User).where(User.id == teacher_user_id))
+        await s.commit()
+        return True
+
+
 async def school_teacher_stats(tenant_id: int) -> list[dict]:
     """Per-teacher: учнів, занять проведено (всього + цього місяця), заплановано,
     + invite_token дефолтної групи."""
