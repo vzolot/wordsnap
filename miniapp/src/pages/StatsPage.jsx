@@ -62,7 +62,7 @@ function StatsPage() {
     { label: t('stats.mastered'),       value: stats?.learned_words || 0,  color: 'lime'   },
     { label: t('stats.learning'),       value: learning,                   color: 'violet' },
     { label: t('stats.reviewed_today'), value: stats?.reviewed_today || 0, color: ''       },
-    // Днів серії + Витрачено всього — тільки для WordSnap (тенант 1). У
+    // Днів серії + Витрачено всього – тільки для WordSnap (тенант 1). У
     // white-label серій/оплати немає (billing вимкнено), тож ці плитки ховаємо.
     ...(isDefaultTenant ? [
       { label: t('stats.streak_days'),  value: stats?.streak || 0,         color: 'coral'  },
@@ -82,13 +82,13 @@ function StatsPage() {
           </Link>
         </div>
 
-        {/* Monthly XP — resets on subscription cycle (Pro) or 1st of month
+        {/* Monthly XP – resets on subscription cycle (Pro) or 1st of month
             (free). Lifetime tier card below stays the trophy/achievement
             view. Two metrics serve two different psychological functions:
             monthly = "how am I growing right now", lifetime = "how far have
             I come overall". 2026-06-09 product change. */}
         {/* XP-цикл + lifetime-hero прив'язані до Pro (розблоковують знижки на
-            Pro). У white-label оплати/Pro немає — ховаємо весь цей блок і
+            Pro). У white-label оплати/Pro немає – ховаємо весь цей блок і
             показуємо замість нього кільце прогресу вивчення (нижче). */}
         {isDefaultTenant && (
           <>

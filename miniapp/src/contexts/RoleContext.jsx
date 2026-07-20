@@ -9,7 +9,7 @@ import { getStats, readCache } from '../api/client';
  * Статистика) замість учнівського. studentPreview дозволяє викладачу тимчасово
  * побачити досвід учня (скидається в межах сесії).
  *
- * Роль беремо з /api/stats (там є `role`) — миттєво з кешу, потім освіжаємо.
+ * Роль беремо з /api/stats (там є `role`) – миттєво з кешу, потім освіжаємо.
  */
 
 const RoleContext = createContext({
@@ -32,7 +32,7 @@ export function RoleProvider({ children }) {
     try { return sessionStorage.getItem(OWNER_TEACHER_KEY) === '1'; } catch { return false; }
   });
   // Роль підтверджена для ПОТОЧНОГО тенанта (не з чужого кешу). Редірект у
-  // викладацький кабінет робимо лише після цього — інакше роль owner зі школи,
+  // викладацький кабінет робимо лише після цього – інакше роль owner зі школи,
   // що лишилась у спільному localStorage, хибно кидає учня WordSnap на /teacher.
   const [roleLoaded, setRoleLoaded] = useState(false);
 

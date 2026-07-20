@@ -18,7 +18,7 @@ const greetingKey = () => {
 
 function HomePage() {
   // Stale-while-revalidate: одразу рендеримось з cached даних, потім фоном тягнемо свіжі.
-  // ignoreTtl=true — навіть прострочений кеш краще ніж 0/0 при холодному старті.
+  // ignoreTtl=true – навіть прострочений кеш краще ніж 0/0 при холодному старті.
   const [stats, setStats] = useState(() => readCache('stats', { ignoreTtl: true }));
   const [dueCount, setDueCount] = useState(() => {
     const cached = readCache('review', { ignoreTtl: true });
@@ -26,7 +26,7 @@ function HomePage() {
   });
   const navigate = useNavigate();
   const { t, plural } = useT();
-  const { isDefaultTenant } = useTenant(); // білінг/ліміти — лише WordSnap (тенант 1)
+  const { isDefaultTenant } = useTenant(); // білінг/ліміти – лише WordSnap (тенант 1)
   const tg = window.Telegram?.WebApp;
   const userName = tg?.initDataUnsafe?.user?.first_name || '';
 
@@ -58,19 +58,19 @@ function HomePage() {
   const prevUsedRef = useRef(null);
 
   useEffect(() => {
-    // Модалка «денний ліміт досягнуто» — тільки для WordSnap (у white-label
+    // Модалка «денний ліміт досягнуто» – тільки для WordSnap (у white-label
     // лімітів немає, оплати немає). Для тенантів-викладачів не тригеримо.
     if (!stats || dailyLimit <= 0 || !isDefaultTenant) return;
     const prev = prevUsedRef.current;
     prevUsedRef.current = usedToday;
-    if (prev === null) return; // перший рендер після завантаження stats — не тригеримо
+    if (prev === null) return; // перший рендер після завантаження stats – не тригеримо
     if (prev < dailyLimit && usedToday >= dailyLimit) {
       const today = new Date().toISOString().slice(0, 10);
       const flagKey = `wordsnap.day_completed.${today}`;
       if (!localStorage.getItem(flagKey)) {
         localStorage.setItem(flagKey, '1');
         track('day_completed', { streak, used_today: usedToday, daily_limit: dailyLimit });
-        // Тягнемо саме сьогоднішні слова — getWords сортує за created_at desc
+        // Тягнемо саме сьогоднішні слова – getWords сортує за created_at desc
         getWords().then(r => {
           setTodayWords((r.data || []).slice(0, usedToday));
           setDayModalOpen(true);

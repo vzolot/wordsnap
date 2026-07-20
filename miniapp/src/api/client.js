@@ -36,7 +36,7 @@ api.interceptors.request.use((config) => {
   } else {
     return Promise.reject(new Error('NO_TELEGRAM_ID'));
   }
-  // Signed Telegram WebApp initData — the backend validates this HMAC and
+  // Signed Telegram WebApp initData – the backend validates this HMAC and
   // derives telegram_id from it (the query param above is ignored when a
   // valid header is present). Without it the API returns 401. Raw initData
   // lives on Telegram.WebApp.initData.
@@ -49,13 +49,13 @@ api.interceptors.request.use((config) => {
 });
 
 // White-label: бренд/конфіг тенанта (назва, лого, кольори, billing-UI прапор,
-// доступність AI-снапу). tenant_id виводиться бекендом з підпису initData —
+// доступність AI-снапу). tenant_id виводиться бекендом з підпису initData –
 // клієнт його не передає й не може підмінити.
 export const getTenantConfig = () => api.get('/api/tenant/config');
 export const getWords = () => api.get('/api/words');
 export const getStats = () => api.get('/api/stats');
 export const getReviewWords = () => api.get('/api/review');
-// Слабкі слова учня — для кнопки «Повторити слабкі слова» з дайджесту (M10).
+// Слабкі слова учня – для кнопки «Повторити слабкі слова» з дайджесту (M10).
 export const getWeakReviewWords = () => api.get('/api/review/weak');
 export const submitReview = (wordId, quality, mode = 'cards') =>
   api.post('/api/review', { word_id: wordId, quality, mode });
@@ -70,10 +70,10 @@ export const updateWordTranslation = (wordId, translation) =>
 export const getSongs = () => api.get('/api/songs');
 export const getThemes = () => api.get('/api/themes');
 export const createBuyLink = (period = 'monthly') => api.post('/api/buy', null, { params: { period } });
-// Telegram Stars (XTR) — secondary payment option. Backend → bot.create_invoice_link →
+// Telegram Stars (XTR) – secondary payment option. Backend → bot.create_invoice_link →
 // returns a tg-invoice URL we feed to `Telegram.WebApp.openInvoice(link, cb)`.
 // One-time payment (Stars don't support recurring), so backend marks
-// subscription_status="one_time" — scheduler skips re-charge attempts.
+// subscription_status="one_time" – scheduler skips re-charge attempts.
 export const createStarsInvoice = (period = 'monthly') =>
   api.post('/api/buy/stars', null, { params: { period } });
 export const cancelSubscription = () => api.post('/api/cancel_subscription');
@@ -95,7 +95,7 @@ export const getTeacherLeaderboard = (groupId = null) =>
 export const updateSettings = (patch) => api.patch('/api/user/settings', patch);
 
 // ── Режим викладача (white-label M5) ──────────────────────────────────────
-// asTeacher — власник школи у «режимі викладача» бачить лише свої колоди/учнів.
+// asTeacher – власник школи у «режимі викладача» бачить лише свої колоди/учнів.
 export const getTeacherDecks = (asTeacher = false) =>
   api.get('/api/teacher/decks', { params: asTeacher ? { as_teacher: 1 } : {} });
 export const getTeacherStudents = (asTeacher = false) =>
@@ -142,7 +142,7 @@ export const setGroupMembers = (groupId, userIds) =>
 
 // ── Календар уроків (M9) ──────────────────────────────────────────────────
 // Викладач
-// teacherId (опційно) — owner школи керує календарем ОБРАНОГО викладача.
+// teacherId (опційно) – owner школи керує календарем ОБРАНОГО викладача.
 const _tp = (teacherId) => (teacherId ? { teacher_user_id: teacherId } : {});
 export const getAvailability = (teacherId) => api.get('/api/teacher/availability', { params: _tp(teacherId) });
 export const putAvailability = (slots, teacherId) => api.put('/api/teacher/availability', { slots }, { params: _tp(teacherId) });
@@ -163,10 +163,10 @@ export const cancelMyLesson = (id) => api.post(`/api/calendar/lessons/${id}/canc
 
 /**
  * Stale-while-revalidate fetch.
- * - Якщо є cached дані не старші TTL — повертає одразу + фоновий refresh
+ * - Якщо є cached дані не старші TTL – повертає одразу + фоновий refresh
  * - Інакше робить нормальний запит та кешує
  *
- * useCached(key, fetcher, onFresh) — onFresh викликається коли свіжі дані прийшли
+ * useCached(key, fetcher, onFresh) – onFresh викликається коли свіжі дані прийшли
  */
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 хв
 
@@ -198,7 +198,7 @@ export function clearCache(key) {
 }
 
 /**
- * Запускає префетч для головних endpoints — викликається при відкритті
+ * Запускає префетч для головних endpoints – викликається при відкритті
  * додатку, щоб дані вже були готові коли користувач переходить між екранами.
  */
 export function prefetchAll() {

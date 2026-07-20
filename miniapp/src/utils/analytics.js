@@ -1,6 +1,6 @@
 // PostHog wrapper для міні-апи. No-op якщо VITE_POSTHOG_KEY не встановлений.
 //
-// posthog-js НЕ імпортується eагерно — лише через dynamic import коли ключ є.
+// posthog-js НЕ імпортується eагерно – лише через dynamic import коли ключ є.
 // Так на iOS Telegram WebView без ключа жодного байта PostHog-бібліотеки не
 // вантажиться, і її код не може зламати ініціалізацію міні-апи.
 
@@ -23,14 +23,14 @@ function flushQueue() {
 }
 
 export function initAnalytics(distinctId, opts = {}) {
-  // opts.superProps — приклеяться до КОЖНОЇ події (через register())
-  // opts.personOnceProps — first-touch person props (через $set_once на identify)
+  // opts.superProps – приклеяться до КОЖНОЇ події (через register())
+  // opts.personOnceProps – first-touch person props (через $set_once на identify)
   if (opts.superProps) pendingSuperProps = { ...(pendingSuperProps || {}), ...opts.superProps };
   if (opts.personOnceProps) pendingPersonOnceProps = { ...(pendingPersonOnceProps || {}), ...opts.personOnceProps };
 
   if (!KEY || initStarted) {
     pendingDistinctId = distinctId || pendingDistinctId;
-    // Якщо PostHog вже піднявся — застосовуємо одразу
+    // Якщо PostHog вже піднявся – застосовуємо одразу
     if (posthog) {
       if (opts.superProps) {
         try { posthog.register(opts.superProps); } catch {}

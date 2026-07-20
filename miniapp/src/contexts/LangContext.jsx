@@ -9,7 +9,7 @@ const LangContext = createContext({ lang: 'en', setLang: () => {}, loaded: false
 // indefinitely, which made the mini-app ignore the user's current Telegram
 // language preference. tApps Center moderator flagged this on 2026-06-16
 // ("Currently app ignores user language preferences set in Telegram
-// settings and show up in Ukrainian") — the v2 scheme follows the tApps
+// settings and show up in Ukrainian") – the v2 scheme follows the tApps
 // Center requirement: respect the live Telegram `language_code` on every
 // load, override only if the user has explicitly chosen otherwise.
 const STORAGE_KEY = 'wordsnap.lang.v2';
@@ -17,7 +17,7 @@ const EXPLICIT_KEY = 'wordsnap.lang.explicit';
 
 function getInitialLang() {
   // First check whether the user has EXPLICITLY chosen a lang via Settings.
-  // We only honour localStorage when it's marked explicit — otherwise it's
+  // We only honour localStorage when it's marked explicit – otherwise it's
   // a stale auto-detection from a past visit that would mask their current
   // Telegram language preference.
   try {
@@ -28,7 +28,7 @@ function getInitialLang() {
   } catch {}
 
   const tg = window.Telegram?.WebApp;
-  // tApps Center deeplink (?startapp=tapps[...]) — force EN regardless of
+  // tApps Center deeplink (?startapp=tapps[...]) – force EN regardless of
   // moderator's Telegram language. Same as before; this stays the strongest
   // possible signal for the moderator-facing entry point.
   const startParam = tg?.initDataUnsafe?.start_param || '';
@@ -36,7 +36,7 @@ function getInitialLang() {
     return 'en';
   }
 
-  // Default path — detect from Telegram language_code on every load.
+  // Default path – detect from Telegram language_code on every load.
   // tApps Center requirement: "English should be set as the default
   // language and should only switch if your app supports the language
   // detected in the user's Telegram client."
@@ -54,7 +54,7 @@ export function LangProvider({ children }) {
   const [lang, setLangState] = useState(getInitialLang);
   const [loaded, setLoaded] = useState(false);
 
-  // SettingsPage calls setLang — this is the ONLY path that marks the lang
+  // SettingsPage calls setLang – this is the ONLY path that marks the lang
   // explicit. Anywhere else flipping `lang` directly via context value would
   // be wrong; auto-detected langs should not be persisted.
   const setLang = (next) => {
@@ -63,7 +63,7 @@ export function LangProvider({ children }) {
   };
 
   // On mount we fetch stats and honour an EXPLICIT native-language choice the
-  // user made OUTSIDE this device's mini-app — e.g. they picked Ukrainian in
+  // user made OUTSIDE this device's mini-app – e.g. they picked Ukrainian in
   // the bot /start flow while their Telegram language is English. The backend
   // flags such picks with `stats.lang_explicit=true` (set only on a real user
   // choice, never on the language auto-detected from `language_code`). When
@@ -74,8 +74,8 @@ export function LangProvider({ children }) {
   // Ukrainian ignoring Telegram language"): that was caused by native_lang
   // defaulting to "uk" for everyone. It's now derived from language_code, and
   // we override the phone language ONLY on an explicit choice. Guards:
-  //   - a local in-app explicit pick (EXPLICIT_KEY) always wins — skip;
-  //   - the tApps moderator deeplink (?startapp=tapps) forces EN — skip.
+  //   - a local in-app explicit pick (EXPLICIT_KEY) always wins – skip;
+  //   - the tApps moderator deeplink (?startapp=tapps) forces EN – skip.
   useEffect(() => {
     let cancelled = false;
     const markLoaded = () => { if (!cancelled) setLoaded(true); };

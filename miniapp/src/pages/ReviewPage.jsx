@@ -66,7 +66,7 @@ function ReviewPage() {
       setWords(r.data || []);
       setLoading(false);
     }).catch(() => setLoading(false));
-    // distractor pool — кешований getWords щоб не блокувати
+    // distractor pool – кешований getWords щоб не блокувати
     const cached = readCache('words');
     if (cached) setPool(cached);
     getWords().then(r => setPool(r.data || [])).catch(() => {});
@@ -78,7 +78,7 @@ function ReviewPage() {
   // word briefly shows the PREVIOUS image (~200-500 ms) before the new one
   // paints. Two causes: (a) React reconciles the same <img> element when
   // `current` changes, so the browser keeps showing the old src until the
-  // new one loads — already mitigated by the `key={current.id}` on each
+  // new one loads – already mitigated by the `key={current.id}` on each
   // <img> (forces unmount/remount, instantly clears stale image). (b) The
   // new image still has to be downloaded fresh, which is the actual delay
   // visible to the user. Mitigate (b) by warming the browser cache: spin
@@ -104,7 +104,7 @@ function ReviewPage() {
     }));
     submitReview(current.id, quality, mode).catch(() => {});
 
-    // Оптимістично оновлюємо кеш stats — щоб HomePage при поверненні
+    // Оптимістично оновлюємо кеш stats – щоб HomePage при поверненні
     // ВІДРАЗУ показав актуальні цифри без блимання нулями.
     const cachedStats = readCache('stats', { ignoreTtl: true });
     if (cachedStats) {
@@ -239,7 +239,7 @@ function CardsMode({ current, onAnswer, t, lang }) {
 
   useEffect(() => { setRevealed(false); setSelected(null); }, [current.id]);
 
-  // До 3 прикладів із поясненням — як у картці основного WordSnap.
+  // До 3 прикладів із поясненням – як у картці основного WordSnap.
   const examples = Array.isArray(current.examples) ? current.examples.slice(0, 3) : [];
 
   const handle = (q, k) => {

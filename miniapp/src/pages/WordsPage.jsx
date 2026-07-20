@@ -65,7 +65,7 @@ function WordsPage() {
   if (sort === 'alpha') {
     visible.sort((a, b) => a.word.localeCompare(b.word));
   }
-  // 'recent' — за замовчуванням бекенд повертає сортовано за created_at desc
+  // 'recent' – за замовчуванням бекенд повертає сортовано за created_at desc
 
   const handleDeleted = (deletedId) => {
     setWords(prev => prev.filter(w => w.id !== deletedId));
@@ -82,7 +82,7 @@ function WordsPage() {
       return next;
     });
     setActive(prev => prev && prev.id === fresh.id ? { ...prev, ...fresh } : prev);
-    // /review кеш міг містити старе значення translation — інвалідуємо
+    // /review кеш міг містити старе значення translation – інвалідуємо
     clearCache('review');
   };
 

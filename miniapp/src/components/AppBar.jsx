@@ -20,7 +20,7 @@ function AppBar({ showProLink = true, isPro: isProProp = null }) {
   // Логотип: картинка бренду якщо є, інакше перша літера назви (WordSnap → «W»).
   const initial = (display_name || 'W').trim().charAt(0).toUpperCase();
   // Pro-CTA показуємо лише для тенанта з увімкненим білінгом (WordSnap).
-  // Для white-label — жодних згадок Pro/цін.
+  // Для white-label – жодних згадок Pro/цін.
   const showPro = showProLink && billingEnabled;
   return (
     <header className="app-bar">
@@ -36,7 +36,7 @@ function AppBar({ showProLink = true, isPro: isProProp = null }) {
       <div className="app-bar-actions">
         <ThemeToggle />
         {/* Явна кнопка «закрити додаток» (white-label). WordSnap (тенант 1)
-            лишається без змін — там працює нативне закриття Telegram. */}
+            лишається без змін – там працює нативне закриття Telegram. */}
         {!isDefaultTenant && (
           <button className="app-bar-settings" onClick={closeApp} aria-label="Закрити додаток">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

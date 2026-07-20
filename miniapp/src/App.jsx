@@ -12,7 +12,7 @@ import { initAnalytics, track } from './utils/analytics';
 import { getAttribution } from './utils/attribution';
 import './App.css';
 
-// Code-split важкі сторінки — кожна підвантажиться лише коли користувач переходить
+// Code-split важкі сторінки – кожна підвантажиться лише коли користувач переходить
 const WordsPage  = lazy(() => import('./pages/WordsPage'));
 const ReviewPage = lazy(() => import('./pages/ReviewPage'));
 const StatsPage  = lazy(() => import('./pages/StatsPage'));
@@ -35,7 +35,7 @@ function applyTheme(scheme) {
     const bg = dark ? '#0B0610' : '#FFFFFF';
     tg?.setHeaderColor?.(bg);
     tg?.setBackgroundColor?.(bg);
-  } catch { /* old Telegram clients can throw — non-fatal */ }
+  } catch { /* old Telegram clients can throw – non-fatal */ }
 }
 
 function getInitialTheme() {
@@ -59,10 +59,10 @@ function AppRoutes() {
   const { billingEnabled, is_school } = useTenant();
   const { teacherMode, role, ownerAsTeacher, roleLoaded } = useRole();
   // Власник школи заходить на «Школа» (в адмін-режимі), викладач / власник-у-режимі-
-  // викладача — на «Учні».
+  // викладача – на «Учні».
   const teacherHome = (is_school && role === 'owner' && !ownerAsTeacher)
     ? '/teacher?tab=school' : '/teacher?tab=students';
-  // Редіректимо в кабінет ЛИШЕ коли роль підтверджена для поточного тенанта —
+  // Редіректимо в кабінет ЛИШЕ коли роль підтверджена для поточного тенанта –
   // інакше чужа роль owner зі спільного кешу кидає учня WordSnap на /teacher.
   const redirectTeacher = teacherMode && roleLoaded;
   return (
@@ -111,8 +111,8 @@ function DeepLinkHandler() {
 // Замінює in-page «← Back» текстові кнопки у нативний жест.
 //
 // КРИТИЧНО: коли Telegram відкриває native modal (`tg.openInvoice` для Stars,
-// `tg.showPopup`, etc.) — він скидає `BackButton.onClick`. Після закриття
-// modal'а кнопка візуально лишається, але вона *мертва* — тап не робить
+// `tg.showPopup`, etc.) – він скидає `BackButton.onClick`. Після закриття
+// modal'а кнопка візуально лишається, але вона *мертва* – тап не робить
 // нічого. Підхоплюємо подію `invoiceClosed` і перевстановлюємо show + onClick.
 function TelegramBackButton() {
   const location = useLocation();
@@ -121,19 +121,19 @@ function TelegramBackButton() {
     const tg = window.Telegram?.WebApp;
     const bb = tg?.BackButton;
     if (!bb) return;
-    // Кореневі екрани — без «назад» (там Telegram показує нативну ✕ «закрити»):
-    // учнівська головна і кабінет викладача (/teacher — його «домашній» екран).
+    // Кореневі екрани – без «назад» (там Telegram показує нативну ✕ «закрити»):
+    // учнівська головна і кабінет викладача (/teacher – його «домашній» екран).
     const ROOTS = ['/', '/home', '/teacher'];
     const isRoot = ROOTS.includes(location.pathname);
     const apply = () => { if (isRoot) bb.hide(); else bb.show(); };
     // Якщо екран відкрито дип-лінком (напр. /review з нагадування, replace:true)
-    // — історії немає, і navigate(-1) «нікуди не веде». Тоді ведемо на home.
+    // – історії немає, і navigate(-1) «нікуди не веде». Тоді ведемо на home.
     const onBack = () => {
       if (window.history.length > 1) navigate(-1);
       else navigate('/', { replace: true });
     };
 
-    // Перевстановлює стан + обробник. offClick ПЕРЕД onClick — щоб не
+    // Перевстановлює стан + обробник. offClick ПЕРЕД onClick – щоб не
     // накопичувати дублікати (інакше один тап = кілька navigate(-1)).
     const restore = () => {
       apply();
@@ -142,7 +142,7 @@ function TelegramBackButton() {
     restore();
 
     // КРИТИЧНО: Telegram скидає BackButton.onClick при відкритті нативних
-    // оверлеїв — invoice/popup, А ТАКОЖ share через openTelegramLink (кнопка
+    // оверлеїв – invoice/popup, А ТАКОЖ share через openTelegramLink (кнопка
     // «Поділитися ботом»). Після повернення фокуса кнопка «назад» лишалась
     // мертвою. Перевстановлюємо обробник при поверненні видимості/фокуса.
     const onVis = () => { if (document.visibilityState === 'visible') restore(); };
@@ -162,7 +162,7 @@ function TelegramBackButton() {
   return null;
 }
 
-// Банер режиму «перегляд як учень» — щоб викладач завжди міг повернутись у кабінет.
+// Банер режиму «перегляд як учень» – щоб викладач завжди міг повернутись у кабінет.
 function StudentPreviewBanner() {
   const { studentPreview, setStudentPreview } = useRole();
   const navigate = useNavigate();
@@ -194,7 +194,7 @@ function App() {
       tg.expand();
       // Standards: запобігаємо випадковому закриттю апи свайпом униз
       // (особливо у вертикальних флоу review/snap), і просимо підтвердження
-      // при свідомому закритті — щоб не втратити прогрес.
+      // при свідомому закритті – щоб не втратити прогрес.
       try { tg.disableVerticalSwipes?.(); } catch {}
       try { tg.enableClosingConfirmation?.(); } catch {}
       tg.onEvent?.('themeChanged', () => {
@@ -229,8 +229,8 @@ function App() {
 
     try {
       const attr = getAttribution();
-      // superProps — приклеюються до кожної події (легко сегментувати funnel)
-      // personOnceProps — first-touch для cohort'а (НЕ перетирається)
+      // superProps – приклеюються до кожної події (легко сегментувати funnel)
+      // personOnceProps – first-touch для cohort'а (НЕ перетирається)
       initAnalytics(getTelegramUserId(), {
         superProps: {
           acquisition_source: attr.acquisition_source,
@@ -250,7 +250,7 @@ function App() {
       });
 
       // Реферал через direct mini-app лінк (`startapp=ref_<code>`).
-      // Перевіряємо last-touch (поточний start_param), не first-touch — інакше
+      // Перевіряємо last-touch (поточний start_param), не first-touch – інакше
       // applyReferral сипатиме на кожен open у юзера що колись прийшов за
       // ref-лінком. Бекенд все одно idempotent, але без зайвої мережі чистіше.
       if (attr.last_touch_source === 'ref' && attr.last_touch_campaign) {
@@ -264,7 +264,7 @@ function App() {
               });
             }
           })
-          .catch(() => { /* noop — мережа/повторний виклик */ });
+          .catch(() => { /* noop – мережа/повторний виклик */ });
       }
 
       // Ad-cohort з landing survey: composite payload (`igads_<camp>_<lang>_<mot>`)
@@ -304,7 +304,7 @@ function App() {
         track('save_survey_skipped_no_raw', { source: attr.last_touch_source });
       }
 
-      // Перше відкриття цієї сесії — порівнюємо з попередньою (якщо була).
+      // Перше відкриття цієї сесії – порівнюємо з попередньою (якщо була).
       fireResumed();
       stampActive();
     } catch { /* noop */ }
@@ -320,10 +320,10 @@ function App() {
     };
     document.addEventListener('visibilitychange', onVisibility);
 
-    // Префетч даних після того як Telegram готовий — Home/Stats/Words рендеряться миттєво
+    // Префетч даних після того як Telegram готовий – Home/Stats/Words рендеряться миттєво
     const prefetchTimer = setTimeout(() => prefetchAll(), 100);
 
-    // Реєструємо Service Worker — кешує тільки /assets/* (immutable hashed
+    // Реєструємо Service Worker – кешує тільки /assets/* (immutable hashed
     // chunks). index.html та /api/* проходять без втручання, тому ризику
     // зачекати stale UI на деплоях немає.
     if ('serviceWorker' in navigator && import.meta.env.PROD) {
@@ -335,7 +335,7 @@ function App() {
     // Префетч JS-чанків лазі-сторінок на idle. Перехід по табах стає миттєвим
     // (без waterfall: navigation → fetch chunk → parse → render).
     const idleCb = () => {
-      // Порядок — від найімовірніших до рідкісних. Проміси не await'имо —
+      // Порядок – від найімовірніших до рідкісних. Проміси не await'имо –
       // браузер сам кешує модулі, ми просто викликаємо завантаження.
       import('./pages/WordsPage').catch(() => {});
       import('./pages/ReviewPage').catch(() => {});

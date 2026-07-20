@@ -1,5 +1,5 @@
 // Брендовий placeholder коли у слова ще немає картинки з Unsplash.
-// Замість generic 📸-emoji показує градієнт + першу літеру слова —
+// Замість generic 📸-emoji показує градієнт + першу літеру слова –
 // виглядає premium як в Notion/Linear.
 function WordPlaceholder({ word, className = '', style = {} }) {
   const initial = (String(word || '?').trim().charAt(0) || '?').toUpperCase();

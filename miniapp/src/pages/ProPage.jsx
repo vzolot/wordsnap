@@ -6,7 +6,7 @@ import { useT } from '../contexts/LangContext';
 import AppBar from '../components/AppBar';
 
 function ProPageInner() {
-  // Початковий рендер відразу з кешу — Pro card і реферал-блок з'являються
+  // Початковий рендер відразу з кешу – Pro card і реферал-блок з'являються
   // одночасно. Свіжі дані фоном.
   const [stats, setStats] = useState(() => readCache('stats', { ignoreTtl: true }));
   const [referral, setReferral] = useState(() => readCache('referral', { ignoreTtl: true }));
@@ -40,7 +40,7 @@ function ProPageInner() {
       await navigator.clipboard.writeText(referral.link);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
-    } catch { /* no clipboard API — користувач скопіює вручну з тексту */ }
+    } catch { /* no clipboard API – користувач скопіює вручну з тексту */ }
   };
 
   const handleShare = () => {
@@ -54,7 +54,7 @@ function ProPageInner() {
 
   const isPro = stats?.plan === 'pro';
   const isCancelled = stats?.subscription_status === 'cancelled';
-  const [period, setPeriod] = useState('annual'); // дефолт — annual бо вигідніше
+  const [period, setPeriod] = useState('annual'); // дефолт – annual бо вигідніше
 
   const handleCancel = async () => {
     track('subscription_cancel_clicked');
@@ -107,10 +107,10 @@ function ProPageInner() {
     }
   };
 
-  // Telegram Stars — secondary one-time payment option (no auto-renew). Card
+  // Telegram Stars – secondary one-time payment option (no auto-renew). Card
   // (WayForPay) залишається основним (з recurring). Stars відкриваємо через
-  // native `tg.openInvoice` — юзер не покидає мініап.
-  // Stars-ціни на ~30% вище за USD-номінал картки — щоб після конвертації
+  // native `tg.openInvoice` – юзер не покидає мініап.
+  // Stars-ціни на ~30% вище за USD-номінал картки – щоб після конвертації
   // Telegram (~$0.013/star при withdraw) бот по чистому отримував стільки ж,
   // скільки з картки (~$1.45/міс і ~$8.72/рік net). Бекенд тримає ті ж самі
   // цифри в /api/buy/stars (api_routes.py:create_stars_invoice).
@@ -126,7 +126,7 @@ function ProPageInner() {
       const link = r.data?.invoice_link;
       if (!link) throw new Error('No invoice link');
       if (tg?.openInvoice) {
-        // Кнопка лишається disabled, поки відкритий нативний invoice — скидаємо
+        // Кнопка лишається disabled, поки відкритий нативний invoice – скидаємо
         // starsLoading у callback'у, не в finally, інакше повторний тап поки
         // модалка відкрита створив би другий інвойс.
         tg.openInvoice(link, (status) => {
@@ -135,7 +135,7 @@ function ProPageInner() {
           if (status === 'paid') {
             setStarsMsg(t('pro.stars_success'));
             setStarsMsgClass('ok');
-            // Pro має бути активний — перечитуємо stats, щоб UI показав isPro.
+            // Pro має бути активний – перечитуємо stats, щоб UI показав isPro.
             getStats().then(rr => {
               setStats(rr.data);
               writeCache('stats', rr.data);
@@ -144,13 +144,13 @@ function ProPageInner() {
             setStarsMsg(t('pro.stars_cancelled'));
             setStarsMsgClass('');
           } else {
-            // 'failed' | 'pending' | інші — показуємо помилку
+            // 'failed' | 'pending' | інші – показуємо помилку
             setStarsMsg(t('pro.stars_failed'));
             setStarsMsgClass('err');
           }
         });
       } else {
-        // Поза Telegram — нема openInvoice; рідкісний edge-case
+        // Поза Telegram – нема openInvoice; рідкісний edge-case
         window.open(link, '_blank');
         setStarsLoading(false);
       }
@@ -216,7 +216,7 @@ function ProPageInner() {
                 </p>
               )}
 
-              {/* Скасування підписки — обовʼязкова можливість відписатись */}
+              {/* Скасування підписки – обовʼязкова можливість відписатись */}
               {cancelMsg ? (
                 <p className="pro-finefoot" style={{ color: 'rgba(255,255,255,0.7)', marginTop: 12 }}>{cancelMsg}</p>
               ) : isCancelled ? (
@@ -260,7 +260,7 @@ function ProPageInner() {
                 })}
               </button>
 
-              {/* Telegram Stars — secondary one-time payment.
+              {/* Telegram Stars – secondary one-time payment.
                   Card stays primary (with recurring); Stars дає native UX
                   without leaving the mini-app, корисно для аудиторії tApps. */}
               <div className="pro-stars-block">

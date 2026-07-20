@@ -47,18 +47,18 @@ const DEFAULT_SLIDES = [
   },
 ];
 
-// Учень white-label тенанта: слова дає викладач, вибирати мову не треба —
+// Учень white-label тенанта: слова дає викладач, вибирати мову не треба –
 // пара сторінок про сам процес користування.
 const WL_STUDENT_SLIDES = [
   {
     type: 'icon', icon: '/onboarding/icons/onb-learn.svg',
     title: 'Навчання з викладачем',
-    body: 'Ваш викладач додає вам слова та колоди — вони одразу зʼявляться тут. Нічого налаштовувати не треба.',
+    body: 'Ваш викладач додає вам слова та колоди – вони одразу зʼявляться тут. Нічого налаштовувати не треба.',
   },
   {
     type: 'srs',
     title: 'Повторюйте у потрібний момент',
-    body: 'Слова показуються за інтервальним повторенням — так вони закріплюються надовго.',
+    body: 'Слова показуються за інтервальним повторенням – так вони закріплюються надовго.',
   },
   {
     type: 'icon', icon: '/onboarding/icons/onb-calendar.svg',
@@ -72,12 +72,12 @@ const TEACHER_SLIDES = [
   {
     type: 'icon', icon: '/onboarding/icons/onb-camera.svg',
     title: 'Додавайте слова учням',
-    body: 'Створюйте колоди вручну або сфотографуйте сторінку підручника — застосунок сам розпізнає слова й переклади.',
+    body: 'Створюйте колоди вручну або сфотографуйте сторінку підручника – застосунок сам розпізнає слова й переклади.',
   },
   {
     type: 'srs',
     title: 'Учні повторюють у потрібний момент',
-    body: 'Слова показуються учням за інтервальним повторенням — вони закріплюють їх саме тоді, коли починають забувати.',
+    body: 'Слова показуються учням за інтервальним повторенням – вони закріплюють їх саме тоді, коли починають забувати.',
   },
   {
     type: 'icon', icon: '/onboarding/icons/onb-calendar.svg',
@@ -91,17 +91,17 @@ const OWNER_SLIDES = [
   {
     type: 'icon', icon: '/onboarding/icons/onb-school.svg',
     title: 'Запросіть команду',
-    body: 'У вкладці «Школа» надішліть посилання-запрошення викладачам, потім учням — і призначте кожному учню викладача.',
+    body: 'У вкладці «Школа» надішліть посилання-запрошення викладачам, потім учням – і призначте кожному учню викладача.',
   },
   {
     type: 'icon', icon: '/onboarding/icons/onb-calendar.svg',
     title: 'Розклади викладачів',
-    body: 'У «Календар» оберіть викладача й перегляньте або складіть його розклад — усе в одному місці.',
+    body: 'У «Календар» оберіть викладача й перегляньте або складіть його розклад – усе в одному місці.',
   },
   {
     type: 'icon', icon: '/onboarding/icons/onb-stats.svg',
     title: 'Статистика та оплата',
-    body: 'Дивіться статистику викладачів, а внизу «Статистика» — керуйте підпискою: $19/міс базово (ви як викладач) + $5 за кожного доданого викладача.',
+    body: 'Дивіться статистику викладачів, а внизу «Статистика» – керуйте підпискою: $19/міс базово (ви як викладач) + $5 за кожного доданого викладача.',
   },
 ];
 
@@ -126,7 +126,7 @@ export function replayWelcome() {
 
 function SrsTimeline() {
   // Roadmap: 5 рівновіддалених точок зі з'єднувальною лінією під ними.
-  // Інтервал — у самому кружечку. Останній — checkmark у бренд-градієнті.
+  // Інтервал – у самому кружечку. Останній – checkmark у бренд-градієнті.
   const stops = [
     { label: '1d' },
     { label: '2d' },
@@ -158,11 +158,11 @@ function WelcomeStories({ onClose }) {
   const SLIDES = slidesFor({ isTeacher: teacherMode, role, is_school, isDefaultTenant });
   const brandName = display_name || 'WordSnap';
   const [rawIndex, setIndex] = useState(0);
-  // Роль/тенант можуть дозавантажитись після відкриття — набір слайдів
+  // Роль/тенант можуть дозавантажитись після відкриття – набір слайдів
   // змінюється реактивно, тож затискаємо індекс у межах поточного набору.
   const index = Math.min(rawIndex, SLIDES.length - 1);
   const [selections, setSelections] = useState(() => {
-    // Префіл з кешу stats — користувач який пройшов /start у боті побачить
+    // Префіл з кешу stats – користувач який пройшов /start у боті побачить
     // обрану мову одразу і просто пройде далі.
     const cached = readCache('stats', { ignoreTtl: true }) || {};
     return {
@@ -180,7 +180,7 @@ function WelcomeStories({ onClose }) {
     document.body.style.overflow = 'hidden';
     SLIDES.forEach(s => { const src = s.photo || s.icon; if (src) { const i = new Image(); i.src = src; } });
     track('welcome_started', { total_steps: SLIDES.length });
-    // Підкачуємо свіжі stats — якщо юзер уже мав налаштування, picker вже preselected
+    // Підкачуємо свіжі stats – якщо юзер уже мав налаштування, picker вже preselected
     getStats().then(r => {
       const data = r.data || {};
       writeCache('stats', data);
@@ -204,7 +204,7 @@ function WelcomeStories({ onClose }) {
       if (Object.keys(patch).length > 0) {
         setSaving(true);
         await updateSettings(patch);
-        // Live-оновлення UI-мови, кешу stats — не треба зайвого fetch'у
+        // Live-оновлення UI-мови, кешу stats – не треба зайвого fetch'у
         if (patch.native_lang) setLang(patch.native_lang);
         const cached = readCache('stats', { ignoreTtl: true }) || {};
         writeCache('stats', { ...cached, ...patch });
@@ -213,7 +213,7 @@ function WelcomeStories({ onClose }) {
           track('lang_selected', { lang: patch.target_lang, role: 'target', source: 'miniapp_welcome' });
         }
       }
-    } catch { /* noop — наступне відкриття знов покаже welcome бо лангу не збережено */ }
+    } catch { /* noop – наступне відкриття знов покаже welcome бо лангу не збережено */ }
     finally { setSaving(false); }
 
     try { localStorage.setItem(STORAGE_KEY, '1'); } catch {}
@@ -235,7 +235,7 @@ function WelcomeStories({ onClose }) {
   };
 
   const pickLang = (field, code) => {
-    // Тільки виставляємо вибір — без auto-advance. Юзер сам тапне "Далі"
+    // Тільки виставляємо вибір – без auto-advance. Юзер сам тапне "Далі"
     // коли готовий, або переключиться між мовами якщо передумав.
     setSelections(prev => ({ ...prev, [field]: code }));
   };
@@ -256,7 +256,7 @@ function WelcomeStories({ onClose }) {
           <span className="welcome-brand-text">{brandName}</span>
         </div>
         {/* "Skip" доступний тільки на perевих 2 explainer-слайдах. На lang-pickerах
-            юзер мусить вибрати — це частина онбордингу, не косметика. */}
+            юзер мусить вибрати – це частина онбордингу, не косметика. */}
         {slide.type !== 'lang-picker' && (
           <button className="welcome-skip" onClick={() => persistAndClose('skip')}>
             {t('welcome.skip')}

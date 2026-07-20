@@ -98,7 +98,7 @@ export default function LessonsPage() {
             <h3 className="tch-h3">Домашнє завдання</h3>
             {homework.map((h) => (
               <div key={h.id} className="tch-word">
-                <span>📝 <b>{h.title}</b> — до {fmtDay(h.due_at_utc)}</span>
+                <span>📝 <b>{h.title}</b> – до {fmtDay(h.due_at_utc)}</span>
                 <span className={`tch-hw ${h.status}`}>{HW_LABEL[h.status]} ({h.passed}/{h.total})</span>
               </div>
             ))}
@@ -138,7 +138,7 @@ export default function LessonsPage() {
             </div>
           ))}
         </div>
-        <p className="tch-muted sm">Час показано у твоєму часовому поясі. Змінити — у Налаштуваннях.</p>
+        <p className="tch-muted sm">Час показано у твоєму часовому поясі. Змінити – у Налаштуваннях.</p>
       </div>
     </div>
   );

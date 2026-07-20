@@ -46,7 +46,7 @@ function WordDetailModal({ open, word, onClose, onDeleted, onUpdated, nativeLang
     }
   }, [open, word?.id]);
 
-  // Дзеркало того ж скиду на зміну слова без close — рідко, але якщо парент
+  // Дзеркало того ж скиду на зміну слова без close – рідко, але якщо парент
   // підмінює word напряму (наприклад open ще true), теж треба чисто.
   useEffect(() => {
     setConfirming(false);

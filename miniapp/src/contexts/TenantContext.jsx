@@ -5,7 +5,7 @@ import { setSentryTenant } from '../sentry';
 /**
  * White-label бренд тенанта. Тягне /api/tenant/config при старті, застосовує
  * кольори бренду як CSS-змінні і віддає прапори (billing-UI, AI-снап) усьому
- * додатку. tenant_id обчислюється на бекенді з підпису бота — клієнт не впливає.
+ * додатку. tenant_id обчислюється на бекенді з підпису бота – клієнт не впливає.
  *
  * Для тенанта id=1 (WordSnap) конфіг повертає дефолтний бренд/кольори і
  * billing_ui_enabled=true, тож поведінка й вигляд не змінюються.
@@ -31,7 +31,7 @@ const TENANT_ID_KEY = 'wordsnap.tenant_id';
  * Усі боти-тенанти відкривають ОДИН і той самий Mini App URL → спільний
  * localStorage/sessionStorage. Тому дані одного тенанта (кеш stats/слів, роль,
  * режими) можуть протекти в інший. Коли резолвиться інший tenant_id, ніж був
- * минулого разу — чистимо чужий кеш і сигналимо про зміну тенанта.
+ * минулого разу – чистимо чужий кеш і сигналимо про зміну тенанта.
  */
 function wipeStaleTenantState(newTenantId) {
   try {
@@ -80,7 +80,7 @@ function darken(hex, factor) {
 }
 
 /** Перезаписує брендові CSS-змінні (App.css :root використовує --violet/--pink/
- *  --gradient та похідні). Для дефолтного бренду значення збігаються — no-op. */
+ *  --gradient та похідні). Для дефолтного бренду значення збігаються – no-op. */
 function applyBrand(primary, accent) {
   const root = document.documentElement;
   const set = (k, v) => { if (v) root.style.setProperty(k, v); };

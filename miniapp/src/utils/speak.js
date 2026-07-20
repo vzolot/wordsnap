@@ -1,7 +1,7 @@
 // Озвучення слів через нативний браузерний speechSynthesis API.
 // Безкоштовно, працює офлайн на більшості сучасних пристроїв.
 //
-// На iOS Telegram WebView голоси можуть зʼявитися з затримкою —
+// На iOS Telegram WebView голоси можуть зʼявитися з затримкою –
 // тому слухаємо `voiceschanged` і кешуємо при першій же доступності.
 
 const LANG_LOCALES = {
@@ -48,10 +48,10 @@ export function isSpeechSupported() {
 export function speak(text, langCode) {
   if (!isSpeechSupported() || !text) return;
   const synth = window.speechSynthesis;
-  // Голоси часто вантажаться ліниво — оновлюємо перед вибором (getVoices
+  // Голоси часто вантажаться ліниво – оновлюємо перед вибором (getVoices
   // синхронний і зазвичай уже заповнений на момент тапу користувача).
   refreshVoices();
-  // Скасовуємо ЛИШЕ якщо реально щось грає/у черзі — інакше на деяких WebKit
+  // Скасовуємо ЛИШЕ якщо реально щось грає/у черзі – інакше на деяких WebKit
   // cancel() ковтає і нову фразу (частий баг «нічого не озвучується»).
   try { if (synth.speaking || synth.pending) synth.cancel(); } catch { /* noop */ }
 
@@ -64,13 +64,13 @@ export function speak(text, langCode) {
     const locales = LANG_LOCALES[langCode] || (langCode ? [langCode] : []);
     if (locales[0]) utter.lang = locales[0];
   }
-  // Трохи повільніше — зручніше для вивчення
+  // Трохи повільніше – зручніше для вивчення
   utter.rate = 0.92;
   utter.pitch = 1;
 
   try {
     synth.speak(utter);
-    // Chrome/деякі WebKit інколи ставлять чергу на паузу — «будимо».
+    // Chrome/деякі WebKit інколи ставлять чергу на паузу – «будимо».
     setTimeout(() => { try { synth.resume(); } catch { /* noop */ } }, 60);
   } catch { /* noop */ }
 }

@@ -20,7 +20,7 @@ function fileToB64(file) {
 
 function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
   const { t } = useT();
-  const { isDefaultTenant } = useTenant(); // лічильник ліміту — лише WordSnap
+  const { isDefaultTenant } = useTenant(); // лічильник ліміту – лише WordSnap
   const navigate = useNavigate();
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -93,7 +93,7 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
         image_url: merged.image_url || data.image_url,
       });
       setValue('');
-      // Оптимістичне оновлення кешу stats — щоб поки loadAll fetcить свіжі,
+      // Оптимістичне оновлення кешу stats – щоб поки loadAll fetcить свіжі,
       // лічильник 5/10 одразу відбивав нове число (без миготіння на 0).
       const cachedStats = readCache('stats', { ignoreTtl: true });
       if (cachedStats) {
@@ -103,7 +103,7 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
           used_today: (cachedStats.used_today || 0) + 1,
         });
       }
-      // Words list однаково треба перетягнути цілком — там новий запис.
+      // Words list однаково треба перетягнути цілком – там новий запис.
       clearCache('words');
       onAdded?.();
       if (wordId) {
@@ -116,7 +116,7 @@ function SnapCard({ nativeLang, targetLang, usedToday, dailyLimit, onAdded }) {
       const detailStr = typeof detail === 'string'
         ? detail
         : detail ? JSON.stringify(detail) : err?.message || '';
-      // Деталі — лише в analytics/console, не в UI: юзер не має бачити сирий
+      // Деталі – лише в analytics/console, не в UI: юзер не має бачити сирий
       // backend-payload (напр. FastAPI-валідацію) у повідомленні про помилку.
       track('add_word_failed', { reason: 'network_or_5xx', status: status || 0, detail: detailStr.slice(0, 120), source: 'snap_card' });
       setError(t('snap.error'));

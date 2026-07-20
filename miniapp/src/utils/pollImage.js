@@ -4,8 +4,8 @@ import { getWords } from '../api/client';
 // Цей хелпер кілька разів пуллить /api/words, щоб юзер побачив картинку
 // одразу на тій же карточці без необхідності переходити в Words tab.
 //
-// onFound(url) — викликається з URL коли картинка зʼявилась.
-// isCancelled() — повертає true, щоб перервати (на unmount, новий submit,
+// onFound(url) – викликається з URL коли картинка зʼявилась.
+// isCancelled() – повертає true, щоб перервати (на unmount, новий submit,
 // reset тощо).
 export async function pollImage(wordId, onFound, isCancelled = () => false) {
   const delays = [1500, 2500, 3500];

@@ -24,9 +24,9 @@ function DebugBanner() {
 
   const initDataLen = tg?.initData?.length || 0;
   const hasUser = !!tg?.initDataUnsafe?.user;
-  const langCode = tg?.initDataUnsafe?.user?.language_code || '—';
-  const platform = tg?.platform || '—';
-  const version = tg?.version || '—';
+  const langCode = tg?.initDataUnsafe?.user?.language_code || '–';
+  const platform = tg?.platform || '–';
+  const version = tg?.version || '–';
 
   return (
     <div className="debug-banner">

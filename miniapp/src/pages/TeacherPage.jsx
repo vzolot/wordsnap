@@ -37,7 +37,7 @@ function botLink(username) {
 }
 function shareBot(username) {
   const url = botLink(username);
-  const text = 'Приєднуйся — вчимо слова разом 📚';
+  const text = 'Приєднуйся – вчимо слова разом 📚';
   const tg = window.Telegram?.WebApp;
   const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
   if (tg?.openTelegramLink) tg.openTelegramLink(shareUrl);
@@ -58,11 +58,11 @@ function ShareBotButton({ block }) {
     if (!is_school) return;
     getSchoolInvites().then((r) => setInviteUrl(r.data?.student_invite_url || null)).catch(() => {});
   }, [is_school]);
-  // У школі — інвайт-посилання (учень кріпиться саме до цього викладача);
-  // у соло — просто поділитися ботом.
+  // У школі – інвайт-посилання (учень кріпиться саме до цього викладача);
+  // у соло – просто поділитися ботом.
   const useInvite = is_school && inviteUrl;
   const onClick = () => (useInvite
-    ? shareInvite(inviteUrl, 'Приєднуйся — вчимо слова разом 📚')
+    ? shareInvite(inviteUrl, 'Приєднуйся – вчимо слова разом 📚')
     : shareBot(bot_username));
   return (
     <button
@@ -136,7 +136,7 @@ const hhmmLocal = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.ge
 function CalendarManager() {
   const { role, ownerAsTeacher } = useRole();
   const { is_school } = useTenant();
-  // Лише в адмін-режимі власник обирає викладача; у режимі викладача — свій календар.
+  // Лише в адмін-режимі власник обирає викладача; у режимі викладача – свій календар.
   const isOwnerSchool = role === 'owner' && is_school && !ownerAsTeacher;
   // Власник школи керує календарем ОБРАНОГО викладача.
   const [teachers, setTeachers] = useState([]);
@@ -245,7 +245,7 @@ function CalendarManager() {
           <h3 className="tch-h3">Календар викладача</h3>
           <select className="tch-input" value={teacherId || ''}
                   onChange={(e) => setTeacherId(Number(e.target.value) || null)}>
-            <option value="">— оберіть викладача —</option>
+            <option value="">– оберіть викладача –</option>
             {teachers.map((t) => (
               <option key={t.id} value={t.id}>{t.name}{t.role === 'owner' ? ' (ви)' : ''}</option>
             ))}
@@ -257,11 +257,11 @@ function CalendarManager() {
         <div className="tch-card"><p className="tch-muted">Оберіть викладача, щоб побачити й налаштувати його розклад.</p></div>
       ) : (
         <>
-      {/* 1. Вільні години — інтервали, з яких учні самі бронюють. Дропдауни. */}
+      {/* 1. Вільні години – інтервали, з яких учні самі бронюють. Дропдауни. */}
       <div className="tch-card">
         <h3 className="tch-h3">Вільні години</h3>
         <p className="tch-muted sm">
-          Пояс: {(tz || '—').replace('Kiev', 'Kyiv')} · тривалість слота = тривалість уроку. Учні бачать ці інтервали для самостійного запису.
+          Пояс: {(tz || '–').replace('Kiev', 'Kyiv')} · тривалість слота = тривалість уроку. Учні бачать ці інтервали для самостійного запису.
         </p>
         {WEEKDAYS.map((name, wd) => (
           <div key={wd} className="tch-wdrow">
@@ -289,7 +289,7 @@ function CalendarManager() {
       <div className="tch-card">
         <h3 className="tch-h3">Забронювати урок вручну</h3>
         {students.length === 0 ? (
-          <p className="tch-muted sm">Спершу додайте учнів — тоді зможете ставити їм уроки.</p>
+          <p className="tch-muted sm">Спершу додайте учнів – тоді зможете ставити їм уроки.</p>
         ) : (
           <>
             <div className="tch-book">
@@ -317,7 +317,7 @@ function CalendarManager() {
             <div className="tch-day-h">{day.label}</div>
             {day.items.map((l) => (
               <div key={l.id} className="tch-word">
-                <span>🕑 <b>{hhmmLocal(new Date(l.starts_at_utc))}</b> — {l.student_name || 'учень'}</span>
+                <span>🕑 <b>{hhmmLocal(new Date(l.starts_at_utc))}</b> – {l.student_name || 'учень'}</span>
                 <button className="tch-btn ghost sm" onClick={() => cancelLesson(l.id)} disabled={busy}>Скасувати</button>
               </div>
             ))}
@@ -340,8 +340,8 @@ function relTime(iso) {
   return `${Math.floor(days / 30)} міс. тому`;
 }
 
-// Режим викладача (white-label M5). Текст українською — аудиторія викладачів
-// україномовна діаспора (узгоджено з ТЗ; повний i18n — за потреби пізніше).
+// Режим викладача (white-label M5). Текст українською – аудиторія викладачів
+// україномовна діаспора (узгоджено з ТЗ; повний i18n – за потреби пізніше).
 
 function StudentPicker({ students, selected, onToggle }) {
   return (
@@ -468,7 +468,7 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
   const submit = async () => {
     setErr('');
     if (!title.trim()) { setErr('Вкажіть назву колоди'); return; }
-    if (!text.trim()) { setErr('Додайте слова — по одному на рядок (переклад необовʼязковий)'); return; }
+    if (!text.trim()) { setErr('Додайте слова – по одному на рядок (переклад необовʼязковий)'); return; }
     if (target === 'group' && !groupId) { setErr('Оберіть групу'); return; }
     setBusy(true);
     try {
@@ -493,7 +493,7 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
     <div className="tch-card">
       <h3 className="tch-h3">Нова колода</h3>
       <p className="tch-muted sm" style={{ marginTop: 0 }}>
-        Пиши слова <b>мовою, яку викладаєш</b> (напр. польською) — переклад рідною й приклади підставляться самі.
+        Пиши слова <b>мовою, яку викладаєш</b> (напр. польською) – переклад рідною й приклади підставляться самі.
       </p>
       <input
         className="tch-input"
@@ -504,7 +504,7 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
       <textarea
         className="tch-textarea"
         rows={8}
-        placeholder={'Одне слово на рядок — переклад підставиться сам:\ndom\nwoda\n\nАбо задай свій переклад: «слово - переклад».\nМожна вставити CSV (2 колонки).'}
+        placeholder={'Одне слово на рядок – переклад підставиться сам:\ndom\nwoda\n\nАбо задай свій переклад: «слово - переклад».\nМожна вставити CSV (2 колонки).'}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
@@ -543,7 +543,7 @@ function CreateDeckForm({ students, onCreated, onCancel }) {
       )}
       {target === 'group' && (
         <select className="tch-input" value={groupId} onChange={(e) => setGroupId(e.target.value)}>
-          <option value="">— оберіть групу —</option>
+          <option value="">– оберіть групу –</option>
           {groups.map((g) => <option key={g.id} value={g.id}>{g.name} ({g.members})</option>)}
         </select>
       )}
@@ -616,7 +616,7 @@ function EditDeck({ deckId, students, onClose }) {
       <div className="tch-wordlist">
         {deck.words.map((w) => (
           <div key={w.id} className="tch-word">
-            <span><b>{w.word}</b> — {w.translation}</span>
+            <span><b>{w.word}</b> – {w.translation}</span>
             <button className="tch-x" onClick={() => removeWord(w.id)} disabled={busy} aria-label="Видалити">✕</button>
           </div>
         ))}
@@ -754,7 +754,7 @@ function StudentDetail({ studentId, onClose, onDeleted }) {
       {(!d.words || d.words.length === 0) && <p className="tch-muted">Ще немає слів у цього учня.</p>}
       {(d.words || []).map((w) => (
         <div key={w.word_id} className="tch-word">
-          <span style={{ minWidth: 0 }}><b>{w.word}</b> — {w.translation}</span>
+          <span style={{ minWidth: 0 }}><b>{w.word}</b> – {w.translation}</span>
           <span className={`tch-strength ${w.strength}`}>
             {STR[w.strength] || 'вчиться'}{w.strength === 'weak' && w.error_rate > 0 ? ` · ${Math.round(w.error_rate * 100)}%` : ''}
           </span>
@@ -858,7 +858,7 @@ function SchoolManager() {
   };
 
   const removeTeacher = async (id, name) => {
-    if (!window.confirm(`Видалити викладача «${name}»?\nЙого групи, колоди й розклад буде видалено. Учні лишаться в школі — їх можна перепризначити іншому викладачу.`)) return;
+    if (!window.confirm(`Видалити викладача «${name}»?\nЙого групи, колоди й розклад буде видалено. Учні лишаться в школі – їх можна перепризначити іншому викладачу.`)) return;
     setBusy(true);
     try { await deleteTeacher(id); await load(); } finally { setBusy(false); }
   };
@@ -871,7 +871,7 @@ function SchoolManager() {
         {teacherInvite && (
           <>
             <p className="tch-muted sm" style={{ marginTop: 0 }}>
-              Надішли посилання викладачу — він приєднається до школи одним тапом.
+              Надішли посилання викладачу – він приєднається до школи одним тапом.
             </p>
             <button className="tch-btn" style={{ width: '100%', marginBottom: 10 }}
                     onClick={() => shareInvite(teacherInvite, 'Приєднуйся як викладач 👩‍🏫')}>
@@ -904,7 +904,7 @@ function SchoolManager() {
         <h3 className="tch-h3">Учні → викладач</h3>
         <p className="tch-muted sm" style={{ marginTop: 0 }}>
           Оберіть кожному учню викладача. Або просто поділись посиланням «🔗 Учні»
-          потрібного викладача вище — тоді учень кріпиться до нього автоматично.
+          потрібного викладача вище – тоді учень кріпиться до нього автоматично.
         </p>
         {students.length === 0 && <p className="tch-muted">Ще немає учнів. Запроси їх посиланням.</p>}
         {students.map((s) => (
@@ -912,7 +912,7 @@ function SchoolManager() {
             <span style={{ flex: 1, minWidth: 0 }}>{s.name}{langLabel(s.target_lang) && <span className="tch-lang">{langLabel(s.target_lang)}</span>}</span>
             <select className="tch-input" style={{ maxWidth: 170 }} value={s.teacher_id || ''}
                     onChange={(e) => assign(s.id, e.target.value)} disabled={busy}>
-              <option value="">— викладач —</option>
+              <option value="">– викладач –</option>
               {teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
@@ -922,7 +922,7 @@ function SchoolManager() {
   );
 }
 
-// Статистика власника школи — по кожному викладачу.
+// Статистика власника школи – по кожному викладачу.
 function SchoolStats() {
   const [data, setData] = useState(null);
   useEffect(() => { getSchoolOverview().then((r) => setData(r.data)).catch(() => setData(null)); }, []);
@@ -967,7 +967,7 @@ function Kpi({ value, label, warn }) {
   );
 }
 
-// Оплата сервісу власником. У школі — селектор кількості викладацьких місць
+// Оплата сервісу власником. У школі – селектор кількості викладацьких місць
 // (передоплата): база $19 покриває власника, кожне місце +$5.
 function TeacherBilling() {
   const [b, setB] = useState(null);
@@ -1008,14 +1008,14 @@ function TeacherBilling() {
   const active = b.active;
   const statusLine = active
     ? `${b.auto_renew ? 'Автопродовження' : 'Активна'} · до ${fmt(b.expires_at)}${typeof b.days_left === 'number' ? ` (${b.days_left} дн.)` : ''}`
-    : b.status === 'past_due' ? 'Прострочено — сервіс може призупинитись'
+    : b.status === 'past_due' ? 'Прострочено – сервіс може призупинитись'
     : b.status === 'trial' ? 'Пробний період' : 'Неактивна';
   const statusCls = active ? '' : b.status === 'past_due' ? 'bad' : 'muted';
   const seats = b.seats || 0;
   const breakdown = b.is_school
     ? (seats > 0
         ? `$${b.base_usd} база (ви) + $${b.per_extra_usd} × ${seats} = $${b.price_usd}`
-        : `$${b.base_usd} база — ви як викладач`)
+        : `$${b.base_usd} база – ви як викладач`)
     : null;
 
   return (
@@ -1057,7 +1057,7 @@ function TeacherStats({ students, onReload }) {
   const { role, ownerAsTeacher } = useRole();
   const { is_school } = useTenant();
   // Соло-репетитор (не-шкільний тенант) завжди платить за себе. У школі оплату
-  // бачить лише власник (адмін) — не звичайний викладач і не власник у режимі
+  // бачить лише власник (адмін) – не звичайний викладач і не власник у режимі
   // викладача (за доданих викладачів платить адміністратор).
   const showBilling = is_school ? (role === 'owner' && !ownerAsTeacher) : true;
   const [sel, setSel] = useState(new Set());
@@ -1094,7 +1094,7 @@ function TeacherStats({ students, onReload }) {
 
       <div className="tch-card">
         <h3 className="tch-h3">Статистика по учнях</h3>
-        <p className="tch-muted sm">Оберіть учнів — нижче зʼявиться їхній детальний прогрес.</p>
+        <p className="tch-muted sm">Оберіть учнів – нижче зʼявиться їхній детальний прогрес.</p>
         <StudentPicker students={students} selected={sel} onToggle={toggle} />
       </div>
 
@@ -1109,7 +1109,7 @@ function TeacherStats({ students, onReload }) {
 }
 
 export default function TeacherPage() {
-  // Активна вкладка — з URL (?tab=), щоб нижня викладацька навігація й
+  // Активна вкладка – з URL (?tab=), щоб нижня викладацька навігація й
   // внутрішні пігулки були одним джерелом істини.
   const [sp, setSp] = useSearchParams();
   const { setStudentPreview, role, ownerAsTeacher, setOwnerAsTeacher, isTeacher, roleLoaded } = useRole();
@@ -1217,7 +1217,7 @@ export default function TeacherPage() {
             {decks === null && <p className="tch-muted">Завантаження…</p>}
             {decks && decks.length === 0 && (
               <div className="tch-card">
-                <p className="tch-muted">Ще немає колод. Створіть першу — вставте
+                <p className="tch-muted">Ще немає колод. Створіть першу – вставте
                   список «слово - переклад» і призначте учням.</p>
               </div>
             )}

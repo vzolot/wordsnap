@@ -1,7 +1,7 @@
 import { isSpeechSupported, speak } from '../utils/speak';
 
 function SpeakButton({ text, lang, size = 'md', className = '' }) {
-  // Перевіряємо підтримку на РЕНДЕРІ (не раз при імпорті модуля) — інакше якщо
+  // Перевіряємо підтримку на РЕНДЕРІ (не раз при імпорті модуля) – інакше якщо
   // speechSynthesis ще не готовий на момент завантаження бандла, кнопка
   // зникала б назавжди.
   if (!text || !isSpeechSupported()) return null;

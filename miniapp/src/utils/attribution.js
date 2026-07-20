@@ -1,7 +1,7 @@
 // Attribution: визначаємо звідки прийшов юзер для коректної валідації каналів.
 //
 // Telegram передає startapp param як `tg.initDataUnsafe.start_param`.
-// Конвенція тегу — `<source>_<campaign>`, де campaign може мати `_` всередині:
+// Конвенція тегу – `<source>_<campaign>`, де campaign може мати `_` всередині:
 //   igads_val_2605       → source=igads     campaign=val_2605
 //   threads_post_42      → source=threads   campaign=post_42
 //   referral_<code>      → source=referral  campaign=<code>
@@ -29,12 +29,12 @@ export function getAttribution() {
     if (raw) stored = JSON.parse(raw);
   } catch { /* corrupt → ignore */ }
 
-  // 2. Поточний start_param (last-touch — може відрізнятись від first)
+  // 2. Поточний start_param (last-touch – може відрізнятись від first)
   const tg = typeof window !== 'undefined' ? window.Telegram?.WebApp : null;
   const currentRaw = tg?.initDataUnsafe?.start_param || null;
   const current = parseStartParam(currentRaw);
 
-  // 3. Якщо first-touch ще нема — фіксуємо поточний (включно з 'organic')
+  // 3. Якщо first-touch ще нема – фіксуємо поточний (включно з 'organic')
   if (!stored) {
     const firstTouch = {
       source: current.source,
@@ -47,12 +47,12 @@ export function getAttribution() {
   }
 
   return {
-    // First-touch — НЕ перетирається, для cohort-аналізу
+    // First-touch – НЕ перетирається, для cohort-аналізу
     acquisition_source: stored.source,
     acquisition_campaign: stored.campaign,
     acquisition_raw: stored.raw,
     acquisition_first_seen_at: stored.first_seen_at,
-    // Last-touch — поточний візит, для debug і для save_survey
+    // Last-touch – поточний візит, для debug і для save_survey
     last_touch_source: current.source,
     last_touch_campaign: current.campaign,
     last_touch_raw: current.raw,

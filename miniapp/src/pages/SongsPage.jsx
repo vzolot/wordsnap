@@ -180,7 +180,7 @@ function SongDetail({ pack, targetLang, onBack, t }) {
         },
       }));
       setStatusMap(s => ({ ...s, [word]: 'added' }));
-      // Оптимістично оновлюємо stats — щоб used_today інкрементувався одразу
+      // Оптимістично оновлюємо stats – щоб used_today інкрементувався одразу
       const cachedStats = readCache('stats', { ignoreTtl: true });
       if (cachedStats) {
         writeCache('stats', {

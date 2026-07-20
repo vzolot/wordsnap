@@ -38,7 +38,7 @@
   --r-f:   999px;
 }
 
-/* Dark theme — applied via JS based on Telegram colorScheme */
+/* Dark theme – applied via JS based on Telegram colorScheme */
 [data-theme="dark"] {
   --bg:        #0F0F14;
   --bg-card:   #1A1A22;
@@ -302,7 +302,7 @@
   flex-shrink: 0;
   overflow: hidden;
 }
-/* White-label лого-картинка бренду — заповнює 32×32 чіп, обрізаючись по кутах. */
+/* White-label лого-картинка бренду – заповнює 32×32 чіп, обрізаючись по кутах. */
 .app-bar-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .app-bar-titles { line-height: 1; }
 .app-bar-title { font-size: 14px; font-weight: 700; color: var(--text-1); }
@@ -883,7 +883,7 @@
 .pro-cta:active { transform: scale(0.98); }
 .pro-cta:disabled { opacity: 0.6; cursor: default; }
 
-/* ── Telegram Stars — secondary one-time payment ─────────────── */
+/* ── Telegram Stars – secondary one-time payment ─────────────── */
 .pro-stars-block {
   margin-top: 12px;
   text-align: center;
@@ -922,7 +922,7 @@
 .pro-stars-msg.ok { color: #34D399; }
 .pro-stars-msg.err { color: #F87171; }
 
-/* ── TON Connect — third payment lane, currently Phase 1 (handshake only) */
+/* ── TON Connect – third payment lane, currently Phase 1 (handshake only) */
 .pro-ton-block {
   margin-top: 18px;
   text-align: center;
@@ -1349,7 +1349,7 @@
   overflow: hidden;
 }
 
-/* Top bar — бренд + skip */
+/* Top bar – бренд + skip */
 .welcome-top {
   display: flex;
   align-items: center;
@@ -1393,7 +1393,7 @@
   cursor: pointer;
 }
 
-/* Hero — фото з чіпами, або spacer */
+/* Hero – фото з чіпами, або spacer */
 .welcome-hero {
   position: relative;
   width: 100%;
@@ -1413,7 +1413,7 @@
 }
 .welcome-hero-spacer { flex: 1; }
 
-/* Емодзі-бейдж для рольового онбордингу (викладач/власник/учень школи) —
+/* Емодзі-бейдж для рольового онбордингу (викладач/власник/учень школи) –
  * коли для слайду немає ілюстрації, показуємо велику іконку у градієнт-колі. */
 /* Іконкові слайди: hero росте як і решта (SRS/фото), тож CTA завжди на одному
  * рівні (притиснута донизу). Довгий контент прокручується в .welcome-content. */
@@ -1436,7 +1436,7 @@
   -webkit-user-drag: none;
 }
 
-/* SRS-roadmap для слайду "Закріплюємо надовго" — 5 рівновіддалених точок,
+/* SRS-roadmap для слайду "Закріплюємо надовго" – 5 рівновіддалених точок,
  * з'єднаних однією лінією. Усе в межах екрану, без overflow. */
 .welcome-hero-srs {
   display: flex;
@@ -1461,7 +1461,7 @@
   align-items: center;
   position: relative;
 }
-/* Лінія йде від центру попередньої точки до центру цієї — намалюй її від
+/* Лінія йде від центру попередньої точки до центру цієї – намалюй її від
  * краю до краю флекс-комірки. */
 .welcome-srs-track {
   position: absolute;
@@ -1505,7 +1505,7 @@
   white-space: nowrap;
 }
 
-/* Lang-picker слайди — прозорі, фон Welcome-градієнта проступає крізь */
+/* Lang-picker слайди – прозорі, фон Welcome-градієнта проступає крізь */
 .welcome-hero-picker {
   background: transparent;
   padding: 16px 8px;
@@ -1583,7 +1583,7 @@
   color: #0b0b10;
 }
 
-/* Content — display headline + body */
+/* Content – display headline + body */
 .welcome-content {
   padding: 18px 0 0;
   flex: 0 1 auto;          /* може стискатись */
@@ -1608,7 +1608,7 @@
   margin: 0;
 }
 
-/* Bottom — dots + CTA. Завжди видимий: не стискається. */
+/* Bottom – dots + CTA. Завжди видимий: не стискається. */
 .welcome-bottom {
   padding: 18px 0 8px;
   flex: 0 0 auto;
@@ -2532,7 +2532,7 @@
   outline: none;
   -webkit-tap-highlight-color: transparent;
 }
-/* :hover скоупимо тільки на дeвайси з курсором — iOS Safari інакше "залипає"
+/* :hover скоупимо тільки на дeвайси з курсором – iOS Safari інакше "залипає"
    у hover-стані після тапу і нова картка показує підсвічену кнопку на тій
    самій позиції. */
 @media (hover: hover) and (pointer: fine) {
