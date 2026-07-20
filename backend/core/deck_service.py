@@ -522,6 +522,16 @@ async def list_teacher_decks(tenant_id: int, owner_user_id: int | None = None) -
             )).scalar() or 0
             if d.assign_to_all:
                 addr = {"type": "all", "count": None}
+            elif d.group_id:
+                # Групова колода (school): «учнів» = члени групи, а не прямі
+                # DeckAssignment (їх для групових колод немає).
+                from .models import GroupMember
+                gc = (await session.execute(
+                    select(func.count(GroupMember.user_id)).where(
+                        GroupMember.group_id == d.group_id
+                    )
+                )).scalar() or 0
+                addr = {"type": "group", "count": int(gc)}
             else:
                 ac = (await session.execute(
                     select(func.count(DeckAssignment.id)).where(
