@@ -140,10 +140,14 @@ async def cmd_start(message: Message):
             if _is_demo:
                 # Демо: спершу даємо обрати мову застосунку, далі (в callback)
                 # — покрокова інструкція «як тестити» + кнопка кабінету.
-                picker = InlineKeyboardMarkup(inline_keyboard=[[
-                    InlineKeyboardButton(text="🇺🇦 Українська", callback_data="demolang:uk"),
-                    InlineKeyboardButton(text="🇬🇧 English", callback_data="demolang:en"),
-                ]])
+                picker = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🇺🇦 Українська", callback_data="demolang:uk"),
+                     InlineKeyboardButton(text="🇬🇧 English", callback_data="demolang:en")],
+                    [InlineKeyboardButton(text="🇪🇸 Español", callback_data="demolang:es"),
+                     InlineKeyboardButton(text="🇵🇱 Polski", callback_data="demolang:pl")],
+                    [InlineKeyboardButton(text="🇩🇪 Deutsch", callback_data="demolang:de"),
+                     InlineKeyboardButton(text="🇫🇷 Français", callback_data="demolang:fr")],
+                ])
                 await message.answer(
                     f"👋 <b>{brand}</b>\n\nОберіть мову застосунку · Choose the app language:",
                     reply_markup=picker,
@@ -323,47 +327,132 @@ async def cmd_start(message: Message):
 
 
 ## ─── Демо: вибір мови застосунку + покрокова інструкція ──────────────────
-_OPEN_APP_LABEL = {"uk": "📱 Відкрити застосунок", "en": "📱 Open the app"}
+_OPEN_APP_LABEL = {
+    "uk": "📱 Відкрити застосунок", "en": "📱 Open the app",
+    "es": "📱 Abrir la app", "pl": "📱 Otwórz aplikację",
+    "de": "📱 App öffnen", "fr": "📱 Ouvrir l’app",
+}
+_DEMO_LANGS = ("uk", "en", "es", "pl", "de", "fr")
 _DEMO_STEPS = {
     ("uk", "teacher"): (
         "✅ <b>Мову встановлено!</b>\n\n"
         "<b>Як протестувати демо (2 хв):</b>\n"
         "1️⃣ Відкрийте застосунок кнопкою нижче.\n"
-        "2️⃣ Вкладка «Учні» — наповнені картки учнів і їхній прогрес.\n"
-        "3️⃣ «Колоди» — додайте слова вручну або сфотографуйте сторінку підручника.\n"
-        "4️⃣ «Календар» — відкрийте вільні години й перегляньте заплановані уроки.\n"
-        "5️⃣ «Статистика» — прогрес кожного учня + слабкі/сильні слова.\n\n"
-        "Це демо на реальних даних — усе працює як у справжньому застосунку 👇"
+        "2️⃣ Вкладка «Учні» – наповнені картки учнів і їхній прогрес.\n"
+        "3️⃣ «Колоди» – додайте слова вручну або сфотографуйте сторінку підручника.\n"
+        "4️⃣ «Календар» – відкрийте вільні години й перегляньте заплановані уроки.\n"
+        "5️⃣ «Статистика» – прогрес кожного учня + слабкі/сильні слова.\n\n"
+        "Це демо на реальних даних – усе працює як у справжньому застосунку 👇"
     ),
     ("uk", "admin"): (
         "✅ <b>Мову встановлено!</b>\n\n"
         "<b>Як протестувати демо школи (2 хв):</b>\n"
         "1️⃣ Відкрийте застосунок кнопкою нижче.\n"
-        "2️⃣ «Школа» — викладачі, запрошення, розподіл учнів.\n"
-        "3️⃣ «Статистика» — показники по кожному викладачу.\n"
-        "4️⃣ «Календар» — оберіть викладача й перегляньте його розклад.\n"
+        "2️⃣ «Школа» – викладачі, запрошення, розподіл учнів.\n"
+        "3️⃣ «Статистика» – показники по кожному викладачу.\n"
+        "4️⃣ «Календар» – оберіть викладача й перегляньте його розклад.\n"
         "5️⃣ Кнопка «Як викладач» вгорі — побачите бік викладача.\n\n"
-        "Це демо на реальних даних — уся школа вже наповнена 👇"
+        "Це демо на реальних даних – уся школа вже наповнена 👇"
     ),
     ("en", "teacher"): (
         "✅ <b>Language set!</b>\n\n"
         "<b>How to test the demo (2 min):</b>\n"
         "1️⃣ Open the app with the button below.\n"
         "2️⃣ “Students” tab — real student cards and their progress.\n"
-        "3️⃣ “Decks” — add words manually or snap a textbook page.\n"
-        "4️⃣ “Calendar” — open free slots and view booked lessons.\n"
-        "5️⃣ “Stats” — each student’s progress + weak/strong words.\n\n"
-        "It’s a demo on real data — everything works like the real app 👇"
+        "3️⃣ “Decks” – add words manually or snap a textbook page.\n"
+        "4️⃣ “Calendar” – open free slots and view booked lessons.\n"
+        "5️⃣ “Stats” – each student’s progress + weak/strong words.\n\n"
+        "It’s a demo on real data – everything works like the real app 👇"
     ),
     ("en", "admin"): (
         "✅ <b>Language set!</b>\n\n"
         "<b>How to test the school demo (2 min):</b>\n"
         "1️⃣ Open the app with the button below.\n"
-        "2️⃣ “School” — teachers, invites, assigning students.\n"
-        "3️⃣ “Stats” — per-teacher metrics.\n"
-        "4️⃣ “Calendar” — pick a teacher and view their schedule.\n"
+        "2️⃣ “School” – teachers, invites, assigning students.\n"
+        "3️⃣ “Stats” – per-teacher metrics.\n"
+        "4️⃣ “Calendar” – pick a teacher and view their schedule.\n"
         "5️⃣ “As teacher” button on top — see the teacher side.\n\n"
-        "It’s a demo on real data — the whole school is populated 👇"
+        "It’s a demo on real data – the whole school is populated 👇"
+    ),
+    ("es", "teacher"): (
+        "✅ <b>¡Idioma configurado!</b>\n\n"
+        "<b>Cómo probar la demo (2 min):</b>\n"
+        "1️⃣ Abre la app con el botón de abajo.\n"
+        "2️⃣ «Alumnos» – fichas reales de alumnos y su progreso.\n"
+        "3️⃣ «Mazos» – añade palabras a mano o fotografía una página del libro.\n"
+        "4️⃣ «Calendario» – abre horas libres y mira las clases reservadas.\n"
+        "5️⃣ «Estadísticas» – progreso de cada alumno + palabras débiles/fuertes.\n\n"
+        "Es una demo con datos reales – todo funciona como la app real 👇"
+    ),
+    ("es", "admin"): (
+        "✅ <b>¡Idioma configurado!</b>\n\n"
+        "<b>Cómo probar la demo de la escuela (2 min):</b>\n"
+        "1️⃣ Abre la app con el botón de abajo.\n"
+        "2️⃣ «Escuela» – profesores, invitaciones, asignación de alumnos.\n"
+        "3️⃣ «Estadísticas» – métricas por profesor.\n"
+        "4️⃣ «Calendario» – elige un profesor y mira su horario.\n"
+        "5️⃣ Botón «Como profesor» arriba – ve el lado del profesor.\n\n"
+        "Es una demo con datos reales – toda la escuela está poblada 👇"
+    ),
+    ("pl", "teacher"): (
+        "✅ <b>Język ustawiony!</b>\n\n"
+        "<b>Jak przetestować demo (2 min):</b>\n"
+        "1️⃣ Otwórz aplikację przyciskiem poniżej.\n"
+        "2️⃣ „Uczniowie” – prawdziwe karty uczniów i ich postępy.\n"
+        "3️⃣ „Talie” – dodaj słowa ręcznie lub zrób zdjęcie strony podręcznika.\n"
+        "4️⃣ „Kalendarz” – otwórz wolne godziny i zobacz zarezerwowane lekcje.\n"
+        "5️⃣ „Statystyki” – postępy każdego ucznia + słabe/mocne słowa.\n\n"
+        "To demo na prawdziwych danych – wszystko działa jak w prawdziwej aplikacji 👇"
+    ),
+    ("pl", "admin"): (
+        "✅ <b>Język ustawiony!</b>\n\n"
+        "<b>Jak przetestować demo szkoły (2 min):</b>\n"
+        "1️⃣ Otwórz aplikację przyciskiem poniżej.\n"
+        "2️⃣ „Szkoła” – nauczyciele, zaproszenia, przypisywanie uczniów.\n"
+        "3️⃣ „Statystyki” – metryki dla każdego nauczyciela.\n"
+        "4️⃣ „Kalendarz” – wybierz nauczyciela i zobacz jego grafik.\n"
+        "5️⃣ Przycisk „Jako nauczyciel” u góry – zobacz stronę nauczyciela.\n\n"
+        "To demo na prawdziwych danych – cała szkoła jest wypełniona 👇"
+    ),
+    ("de", "teacher"): (
+        "✅ <b>Sprache eingestellt!</b>\n\n"
+        "<b>So testest du die Demo (2 Min.):</b>\n"
+        "1️⃣ Öffne die App mit dem Button unten.\n"
+        "2️⃣ „Schüler“ – echte Schülerkarten und ihr Fortschritt.\n"
+        "3️⃣ „Decks“ – Wörter manuell hinzufügen oder eine Buchseite fotografieren.\n"
+        "4️⃣ „Kalender“ – freie Zeiten öffnen und gebuchte Stunden ansehen.\n"
+        "5️⃣ „Statistik“ – Fortschritt jedes Schülers + schwache/starke Wörter.\n\n"
+        "Es ist eine Demo mit echten Daten – alles funktioniert wie in der echten App 👇"
+    ),
+    ("de", "admin"): (
+        "✅ <b>Sprache eingestellt!</b>\n\n"
+        "<b>So testest du die Schul-Demo (2 Min.):</b>\n"
+        "1️⃣ Öffne die App mit dem Button unten.\n"
+        "2️⃣ „Schule“ – Lehrkräfte, Einladungen, Schüler zuweisen.\n"
+        "3️⃣ „Statistik“ – Kennzahlen pro Lehrkraft.\n"
+        "4️⃣ „Kalender“ – Lehrkraft wählen und deren Zeitplan ansehen.\n"
+        "5️⃣ Button „Als Lehrkraft“ oben – die Lehrer-Seite ansehen.\n\n"
+        "Es ist eine Demo mit echten Daten – die ganze Schule ist gefüllt 👇"
+    ),
+    ("fr", "teacher"): (
+        "✅ <b>Langue définie !</b>\n\n"
+        "<b>Comment tester la démo (2 min) :</b>\n"
+        "1️⃣ Ouvrez l’app avec le bouton ci-dessous.\n"
+        "2️⃣ « Élèves » – vraies fiches d’élèves et leur progression.\n"
+        "3️⃣ « Paquets » – ajoutez des mots à la main ou photographiez une page de manuel.\n"
+        "4️⃣ « Calendrier » – ouvrez des créneaux libres et voyez les cours réservés.\n"
+        "5️⃣ « Statistiques » – progression de chaque élève + mots faibles/forts.\n\n"
+        "C’est une démo sur données réelles – tout fonctionne comme la vraie app 👇"
+    ),
+    ("fr", "admin"): (
+        "✅ <b>Langue définie !</b>\n\n"
+        "<b>Comment tester la démo de l’école (2 min) :</b>\n"
+        "1️⃣ Ouvrez l’app avec le bouton ci-dessous.\n"
+        "2️⃣ « École » – enseignants, invitations, attribution des élèves.\n"
+        "3️⃣ « Statistiques » – indicateurs par enseignant.\n"
+        "4️⃣ « Calendrier » – choisissez un enseignant et voyez son planning.\n"
+        "5️⃣ Bouton « En tant qu’enseignant » en haut – voyez le côté enseignant.\n\n"
+        "C’est une démo sur données réelles – toute l’école est remplie 👇"
     ),
 }
 
@@ -371,7 +460,7 @@ _DEMO_STEPS = {
 @dp.callback_query(F.data.startswith("demolang:"))
 async def demo_language(callback: CallbackQuery):
     lang = callback.data.split(":", 1)[1]
-    if lang not in ("uk", "en"):
+    if lang not in _DEMO_LANGS:
         await callback.answer()
         return
     tid = tenant_id_for_bot(callback.bot)
