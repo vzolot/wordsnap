@@ -10,3 +10,9 @@ node_modules/
 .DS_Store
 *.swp
 *.swo
+
+# dotenvx: commit encrypted .env; never keys/plaintext
+!.env
+.env.keys
+.env.local
+.env.*.local
