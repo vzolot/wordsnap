@@ -89,6 +89,24 @@ async def cmd_start(message: Message):
         tenant_id=tid,
     )
 
+    # Website attribution: лендинг wordsnap.app веде на `t.me/<bot>?start=web`.
+    # Фіксуємо джерело у `users.acquisition_payload` (first-touch) — так рахуємо
+    # РЕАЛЬНІ відкриття додатку з сайту (воронка клік→відкриття, клік ловить
+    # Vercel Analytics). Пишемо ДО демо/owner-гілки нижче (вона робить ранній
+    # return), не змінюючи жодного онбординг-флоу — це лише мітка атрибуції.
+    if payload and payload.startswith("web") and not user.acquisition_payload:
+        from sqlalchemy import update as sa_update
+        from core.db import SessionLocal
+        from core.models import User as UserModel
+        async with SessionLocal() as session:
+            await session.execute(
+                sa_update(UserModel).where(UserModel.id == user.id).values(
+                    acquisition_payload=payload[:64]
+                )
+            )
+            await session.commit()
+        user.acquisition_payload = payload[:64]
+
     # Інвайт-посилання школи: t_<token> → стати викладачем; s_<token> → учень
     # кріпиться до групи викладача. Обробляємо ДО гілки пропуску онбордингу
     # нижче — щоб редемпшн t_ підхопився і привітав як викладача.
