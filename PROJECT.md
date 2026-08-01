@@ -51,6 +51,30 @@ Three review modes feed the same SM-2 scheduler:
 - Free-tier daily limit is 0 (post-trial blocks adds entirely) — by design, but creates `paywall_hit` spike. Watch the funnel.
 - Sentry / PostHog keys must be set in Railway and Vercel envs (already done).
 
+### Changelog — 2026-08-01 (B2B paid launch, funnel attribution, guide pages)
+
+- **New static routes on `wordsnap.app` (landing repo `public/`):**
+  - `/guide` — step-by-step tutor-cabinet guide, 13 real uk screenshots of «Полька з
+    Мартою» (t2). `public/guide/index.html` (self-contained, embedded fonts + base64 shots).
+  - `/guide-school` — school-cabinet guide, 9 real uk screenshots of «Мовна школа» (t3).
+    `public/guide-school/index.html`. Covers school-only screens: teachers, students→teacher,
+    per-teacher schedules, deck→group, per-teacher stats, admin⇄teacher toggle.
+  - Links on the landing: header «Гайд викладача» + «Гайд школи», demo section «Детальний
+    гайд», schools section «Гайд для школи», footer. Generators live in scratchpad
+    (`tutor_guide_gen.py` / `school_guide_gen.py`). Landing deploys manually (`vercel --prod`).
+- **Funnel attribution (landing → app-open).** Demo CTAs deep-link `t.me/<bot>?start=web`
+  (organic) or `?start=ad_<utm_campaign>` (paid) — `landing App.jsx startTag()` reads
+  `utm_campaign`. `bot/main.py cmd_start` records `users.acquisition_payload` first-touch for
+  `web`/`ad_*` (branch added before the demo-tenant early-return). Vercel custom events
+  `demo_marta`/`demo_school` track clicks (Pro-plan only; Hobby drops them → DB is the
+  conversion source of truth). Query: `SELECT tenant_id,count(*) FROM users WHERE
+  acquisition_payload IN ('web','ad_b2b2607') GROUP BY tenant_id`.
+- **New local scheduler (not Railway):** launchd `com.vzolot.ad-report` fires daily 10:00
+  → `~/projects/.scheduled/run_ad_report.sh` + `ad_report_tg.py` — pulls Meta insights for
+  both B2B campaigns + the DB funnel and DMs the operator in Telegram. (Local because it
+  needs both threads-bot and wordsnap dotenvx creds.)
+- **B2B paid ads went live — see §5 «B2B paid ads (white-label)».**
+
 ### Changelog — 2026-07-20 (Demo polish, teacher-cabinet i18n, landing SEO, B2B campaign)
 
 Big session across the ecosystem — mini-app + backend (`wordsnap`), marketing
@@ -537,6 +561,33 @@ The `ANTHROPIC_API_KEY` powers the threads/personal bots' generation; the **Clau
 
 **Reality check:** **~$145/mo fixed burn** (since 2026-06-08 Supabase Pro upgrade) vs $4.47 MRR — deeply pre-profitability. Dominated by the $100 Claude Max dev sub; stripping that, actual WordSnap runtime infra is **~$45/mo + API cents** ($35 Supabase Pro + ~$10 Railway/Vercel). The real lever now is acquisition — but paid is now confirmed dead across 5 tests on 2 platforms & 3 destination types (Meta+TikTok, t.me deeplink + /demo gated + /land frictionless, all 0 signups — §5), so the lever is **influencer/affiliate (Rue, Sheku — warm audiences) + organic (threads-bot)** plus the just-shipped tApps Center distribution surface (Phase 1, §5), not more paid spend and not cost-cutting.
 
+### B2B paid ads (white-label) — 2026-08-01
+
+The "paid is dead" verdict above is about **consumer** acquisition (Meta+TikTok, 5 tests,
+$96, 0 signups). This is a **separate, first B2B effort**: selling white-label branded apps to
+tutors/schools (higher intent, higher ticket — $50-100 setup + $19/mo). Targets @vzolottop IG +
+the `wordsnap.app` B2B landing, NOT the consumer app. Same ad account (`act_26992688363704873`,
+system user `wsadsbot`). Built via `wordsnap-threads-bot/scripts/ads_pipeline.py` + raw Graph API.
+
+- **Traffic → landing** — campaign `120252667766730057` (OUTCOME_TRAFFIC, $10/day, UA+PL+DE,
+  age 24-55, interests Language education `6003058546532` + Teaching English as a foreign
+  language `6003365316651`, 3 static creatives, link `wordsnap.app/?utm_campaign=b2b2607`).
+  ~2 days: ~$16.50, CTR ~2.5-3%, CPC ~$0.09, 175 landing-page-views, but **0 bot-opens**
+  (`acquisition_payload='ad_b2b2607'`=0) + 92% bounce. Same top-of-funnel-works / bottom-dies
+  pattern as consumer (IG-browser → Telegram handoff, 89% mobile). **PAUSED 2026-08-01.**
+- **Direct → Instagram Direct** — campaign `120252705916350057` (OUTCOME_ENGAGEMENT,
+  optimization CONVERSATIONS, destination_type INSTAGRAM_DIRECT, CTA INSTAGRAM_MESSAGE, $10/day,
+  same targeting). Click opens the @vzolottop IG DM (no Telegram jump); ice-breakers «Для
+  репетитора / Для школи» set in Business Suite; +1 vertical video creative (Playwright→ffmpeg
+  frames + ElevenLabs music). ~1 day: ~$4.65, CTR 4.09%, CPC $0.17, **1 conversation started —
+  first real B2B lead (a tutor DM'd about the offer).** **ACTIVE.**
+- **Verdict: Direct > Traffic.** 1 conversation @ $4.65 beats 0 conversions @ $16.50. The
+  Messages/IG-Direct model sidesteps the IG-browser→Telegram handoff that killed every prior
+  paid test, and produces live DM conversations — the first paid channel to show B2B life.
+- **Lead-form ads tried & dropped** for Direct (needed page-scoped System-User token +
+  Page must accept Lead-Gen ToS + `leads_retrieval`; too much friction vs Direct's native DMs).
+- Full detail + gotchas: `wordsnap-threads-bot/docs/ADS_CAMPAIGN_PLAN.md` (2026-08-01 entry).
+
 ---
 
 ## 6. Tech architecture (compact)
@@ -788,8 +839,9 @@ role='teacher'` → smoke test. Full checklist: `docs/operator_new_tenant_ua.md`
 
 ## 8. Where this document lives
 
-**Path:** `/Users/zvuid/Documents/projects/wordsnap/PROJECT.md`
-(Repo root, alongside `backend/`, `miniapp/`, `scripts/`.)
+**Path:** `/Users/zvuid/projects/wordsnap/PROJECT.md`
+(Repo root, alongside `backend/`, `miniapp/`, `scripts/`. NOTE: the working repo is
+`~/projects/wordsnap`, not `~/Documents/projects/wordsnap` — the latter is a stale stub.)
 
 Keep this file updated when:
 - New page / route is added
