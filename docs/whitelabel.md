@@ -670,3 +670,34 @@ redeploy → мультибот підхопив (3 боти: WordSnap + Мар�
 у нього зʼявиться вкладка «Школа» (`add_teacher`/групи через `group_service`).
 Ролі школи: owner (адмін, додає викладачів) → teacher (бачить лише своїх учнів
 через групи) → student. Оплата — той самий teacher-billing ($19/міс з власника).
+
+## Атрибуція воронки + гайд-сторінки на сайті (2026-08-01)
+
+**Landing→app трекінг (наскрізна воронка).** Лендинг wordsnap.app веде на боти
+демо-тенантів з deep-link `?start=web` (органіка) або `?start=ad_<utm_campaign>`
+(платний трафік — `landing src/App.jsx` `startTag()` читає `utm_campaign`). Бекенд
+`bot/main.py` `cmd_start` пише `users.acquisition_payload` (first-touch) для
+`web`/`ad_*` — так рахуємо РЕАЛЬНІ відкриття додатку з сайту, не лише кліки. Кліки
+по CTA — Vercel Analytics custom-події `demo_marta`/`demo_school` (працюють лише на
+Pro-плані; на Hobby не пишуться, тому джерело правди по конверсії = БД). Вимір:
+Vercel Events (кліки) × `SELECT tenant_id, count(*) FROM users WHERE
+acquisition_payload IN ('web','ad_b2b2607') GROUP BY tenant_id`. Лендинг деплоїться
+руками `vercel --prod` (НЕ git-connected); бекенд — git push → Railway.
+
+**Дві гайд-сторінки (реальні україномовні скріни white-label-застосунків):**
+- **`/guide`** — репетитор, 13 екранів «Полька з Мартою» (t2): запуск, Учні/Колоди/
+  Календар/Статистика/деталі учня, погляд учня (головна/слова/уроки/рейтинг/налаштування),
+  SRS, «Ви vs застосунок», FAQ, ціни ($50 запуск −50% + $19/міс), демо-кнопки.
+- **`/guide-school`** — школа, 9 екранів «Мовна школа» (t3): викладачі, учні→викладач,
+  розклад викладачів, колоди→Групі, статистика по викладачах, Адміністратор⇄Викладач,
+  деталі учня, налаштування. Ціни ($100 запуск + $19/міс база + $5/викладач).
+- Джерело: landing repo `public/guide/index.html` + `public/guide-school/index.html`
+  (self-contained: вбудовані шрифти Unbounded/Golos + скріни base64). Генератори —
+  scratchpad `tutor_guide_gen.py` / `school_guide_gen.py`. Кнопки на сайті: хедер
+  «Гайд» + «Гайд школи», демо-секція «Детальний гайд», секція «Школам» «Гайд для школи»,
+  футер.
+- **ГОТЧА:** автозйомка міні-аппа через Playwright з підписаним initData
+  АВТЕНТИФІКУЄТЬСЯ (API повертає дані tenant-2), але викладацький shell у headless не
+  рендериться наповненим (race role/tenant → показує WordSnap default + 0 учнів). Тому
+  реальні скріни знімаються на телефоні. macOS Desktop заблокований TCC для shell —
+  скріни клали в доступну папку (`~/projects/Scrins`, `Scrins 2`).
