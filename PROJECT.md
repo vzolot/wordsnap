@@ -51,6 +51,49 @@ Three review modes feed the same SM-2 scheduler:
 - Free-tier daily limit is 0 (post-trial blocks adds entirely) — by design, but creates `paywall_hit` spike. Watch the funnel.
 - Sentry / PostHog keys must be set in Railway and Vercel envs (already done).
 
+### Changelog — 2026-08-04 (Direct restart on Kyiv+Warsaw, new creatives, school offer doc)
+
+- **All 2607 ad sets stopped.** Both Direct ad sets (narrow PL/DE/UA and the 16-country
+  broad one) plus their 8 ads → `PAUSED`. They had spent $51.37 for 4 conversations, all of
+  them on/before 2 Aug; the last two full days produced **0 conversations on ~$26**.
+- **Two findings from reading the live creatives** (they correct earlier notes in §5):
+  - The winning creative `img2` is **day1-1, the offer statement** («Власний застосунок для
+    ваших учнів»), *not* a problem-first hook. The problem hook is `img1` («Учні забувають
+    більшість слів уже за тиждень») and it converted **0**. Earlier sessions had this
+    backwards, which would have pointed new creative work the wrong way.
+  - **All four ads carried identical body copy.** Only the image ever varied, so the ad text
+    was never under test — a whole lever sat unused for the entire first run.
+- **New creatives `day8-1…4`** in `wordsnap-landing/creatives/` (`posts.js` + `render.mjs`,
+  commit `090d085`): `offer` (winner format refreshed), `demo` (free custom demo — the
+  micro-commitment ask), `proof` («Польська з Мартою» as a live example), `promo` (−50%
+  launch price). **Each ad now has its own body text.** `promo` and `proof` had never run as
+  ads before.
+- **New ad set `WordSnap · B2B · Direct 0408 — Київ+Варшава`** (`120252789908480057`) in the
+  same Direct campaign: cities **Kyiv + Warsaw, 20 km radius each**, age 24-55, same two
+  interests, Instagram, CONVERSATIONS → INSTAGRAM_DIRECT, $10/day. Audience **~362-426K**
+  (vs ~1 000 on the burnt narrow set and ~1M on the broad one). No locale filter: in Kyiv it
+  would cut most of the audience (ru/en device locales), in Warsaw the Ukrainian copy
+  self-selects. Gotcha: `promoted_object` is **immutable after creation** — it must go in the
+  create call, `create_adset()` in `meta_ads_api.py` does not expose it, so the ad set was
+  POSTed raw.
+- **First 9 hours (to 22:20 EEST):** $5.22, 1316 impressions, 17 clicks, CTR 1.29%, **0
+  conversations**. Too early to read per-creative (200-500 impressions each). Decision point
+  set for the next evening at full daily spend / ~3000 impressions.
+- **Standing problem, unchanged:** no conversation has ever reached the bot
+  (`acquisition_payload`: `web`=0, `ad_b2b2607`=0). The 4 leads from 1-2 Aug went cold. Paid
+  volume is not the bottleneck; the DM → demo step is.
+- **New sales doc `docs/school_offer_ua.md`** — outreach message for a language school we
+  already know: friendly prose, no tables, prices pointed at the site, and the offer of a
+  **free branded app + one free month, no strings**. The ask is deliberately tiny — name and
+  logo only. Teachers are added by the school itself in-app (`add_teacher` + invite link) and
+  each teacher builds their own decks, so we need neither teacher contacts nor a seed word
+  list. Prices in it mirror `wordsnap-landing/src/i18n.js` (`pricing`); the −50% promo expires
+  31 Aug, so both must be updated together.
+- **Daily 10:00 ad report did not fire on 4 Aug** (`~/projects/.scheduled/ad_report.log` ends
+  3 Aug) — almost certainly the iMac asleep. launchd job not investigated yet.
+- **salone-engine paused** the same day (Railway deployment removed) to cut Anthropic spend —
+  see that repo's `AGENTS.md`.
+
 ### Changelog — 2026-08-01 (B2B paid launch, funnel attribution, guide pages)
 
 - **New static routes on `wordsnap.app` (landing repo `public/`):**
@@ -587,6 +630,21 @@ system user `wsadsbot`). Built via `wordsnap-threads-bot/scripts/ads_pipeline.py
 - **Lead-form ads tried & dropped** for Direct (needed page-scoped System-User token +
   Page must accept Lead-Gen ToS + `leads_retrieval`; too much friction vs Direct's native DMs).
 - Full detail + gotchas: `wordsnap-threads-bot/docs/ADS_CAMPAIGN_PLAN.md` (2026-08-01 entry).
+
+**Update 2026-08-04 — the 2607 ad sets are dead, Direct restarted on cities.** The optimism
+above did not hold past 2 Aug. Final tally for the 2607 ad sets: **$51.37 → 4 conversations**
+(all by 2 Aug, ~$12.84 each), then two full days of **0 conversations on ~$26**. Frequency on
+the narrow set hit 1.65 — the ~1 000-person pool was simply exhausted — and the 16-country
+broad set added on 2 Aug spent $16.60 for 0 conversations at a *worse* CTR (1.75% vs 2.39%),
+so widening the pool did not buy cheaper conversations. Both are `PAUSED`; the campaign now
+runs one ad set on **Kyiv + Warsaw only** with four new, individually-written creatives (see
+the 2026-08-04 changelog). Two corrections to the record: the winning creative was the **offer
+statement** (`img2` = day1-1), not the problem hook (`img1`, 0 conversations), and **all four
+ads shared one body text**, so copy was never actually tested. The deeper issue is unchanged
+and is not an ads problem: **0 leads have ever reached the bot** (`web`=0, `ad_b2b2607`=0) and
+the 4 DM conversations went cold — the DM → demo step is where the funnel dies. The sales
+answer being tried for that is `docs/school_offer_ua.md`: free branded app + one free month,
+with the smallest possible ask.
 
 ---
 
