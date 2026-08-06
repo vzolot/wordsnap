@@ -608,8 +608,9 @@ The `ANTHROPIC_API_KEY` powers the threads/personal bots' generation; the **Clau
 
 The "paid is dead" verdict above is about **consumer** acquisition (Meta+TikTok, 5 tests,
 $96, 0 signups). This is a **separate, first B2B effort**: selling white-label branded apps to
-tutors/schools (higher intent, higher ticket — $50-100 setup + $19/mo). Targets @vzolottop IG +
-the `wordsnap.app` B2B landing, NOT the consumer app. Same ad account (`act_26992688363704873`,
+tutors/schools (higher intent, higher ticket — $50-100 setup + $19/mo). Leads arrive in the
+**@wordsnapapp** IG inbox (see the 2026-08-06 correction below) and on the `wordsnap.app` B2B
+landing, NOT the consumer app. Same ad account (`act_26992688363704873`,
 system user `wsadsbot`). Built via `wordsnap-threads-bot/scripts/ads_pipeline.py` + raw Graph API.
 
 - **Traffic → landing** — campaign `120252667766730057` (OUTCOME_TRAFFIC, $10/day, UA+PL+DE,
@@ -620,10 +621,17 @@ system user `wsadsbot`). Built via `wordsnap-threads-bot/scripts/ads_pipeline.py
   pattern as consumer (IG-browser → Telegram handoff, 89% mobile). **PAUSED 2026-08-01.**
 - **Direct → Instagram Direct** — campaign `120252705916350057` (OUTCOME_ENGAGEMENT,
   optimization CONVERSATIONS, destination_type INSTAGRAM_DIRECT, CTA INSTAGRAM_MESSAGE, $10/day,
-  same targeting). Click opens the @vzolottop IG DM (no Telegram jump); ice-breakers «Для
-  репетитора / Для школи» set in Business Suite; +1 vertical video creative (Playwright→ffmpeg
-  frames + ElevenLabs music). ~1 day: ~$4.65, CTR 4.09%, CPC $0.17, **1 conversation started —
-  first real B2B lead (a tutor DM'd about the offer).** **ACTIVE.**
+  same targeting). Click opens an IG DM (no Telegram jump); +1 vertical video creative
+  (Playwright→ffmpeg frames + ElevenLabs music). ~1 day: ~$4.65, CTR 4.09%, CPC $0.17,
+  **1 conversation started — first real B2B lead (a tutor DM'd about the offer).** **ACTIVE.**
+  ⚠️ **Correction (2026-08-06): the DMs land in @wordsnapapp, not @vzolottop.** Every creative
+  carries `instagram_user_id=17841408392302831` = the brand account, so that is where every lead
+  has always arrived (confirmed by tapping a live ad). The cards print «@vzolottop» in the
+  corner and the copy is founder-voiced, which is a cosmetic mismatch only — Vova answers in
+  @wordsnapapp and wants it kept that way; fix the handle on the next creative batch, not by
+  rebuilding live ads. The Ukrainian ice-breakers «Для репетитора / Для школи» were set on the
+  *other* account, so ads show Meta's English default instead: «Hello, can I get more info on
+  this?». The Ukrainian auto-greeting on @wordsnapapp does fire.
 - **Verdict: Direct > Traffic.** 1 conversation @ $4.65 beats 0 conversions @ $16.50. The
   Messages/IG-Direct model sidesteps the IG-browser→Telegram handoff that killed every prior
   paid test, and produces live DM conversations — the first paid channel to show B2B life.
