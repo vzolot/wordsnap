@@ -1,6 +1,6 @@
 """Streak-save reminder.
 
-Раз на хвилину перевіряє кожного юзера: якщо у нього локальний час 22:00,
+Раз на 5 хвилин перевіряє кожного юзера: якщо у нього локальна година 22,
 streak >= 3 і за сьогодні (UTC) ще нуль reviews — шлемо нагадування у бот.
 Антиспам: last_streak_save_date — одне push на день локального часу.
 """
@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 # Локальна година коли пушимо. Перед північчю, коли streak ще можна врятувати.
 SEND_HOUR_LOCAL = 22
+# Вікно годинне, тож 5-хвилинного кроку досить; кожен прохід це select по
+# всіх учнях з нагадуваннями, і щохвилинний крок марно палив egress Supabase.
+LOOP_INTERVAL_SEC = 300
 
 
 def _user_local_hour(user: User) -> int | None:
@@ -105,4 +108,4 @@ async def streak_save_loop(bot: Bot) -> None:
             await check_and_send_streak_saves(bot)
         except Exception as e:
             logger.error(f"streak_save loop error: {e}")
-        await asyncio.sleep(60)
+        await asyncio.sleep(LOOP_INTERVAL_SEC)

@@ -1,7 +1,7 @@
 """
 Word-of-the-Day push (раз на локальний день у `user.reminder_time`).
 
-Раз на хвилину перевіряємо кожного юзера з reminders_enabled=True. Шлемо
+Раз на 5 хвилин перевіряємо кожного юзера з reminders_enabled=True. Шлемо
 ОДНЕ слово якщо:
   - локальна година зараз == user.reminder_time.hour (вікно 1 година)
   - last_daily_push_date != сьогодні (локальне) — не задвоює
@@ -30,6 +30,10 @@ from core.word_service import mark_word_reminded
 from bot.keyboards.review_keyboards import show_translation_keyboard
 
 logger = logging.getLogger(__name__)
+
+# Вікна тут годинні, тож хвилинний крок зайвий: кожен прохід це select по всіх
+# учнях з нагадуваннями, і він ішов у Supabase egress 1 440 разів на добу.
+LOOP_INTERVAL_SEC = 300
 
 
 async def _count_due_words(user_id: int) -> int:
@@ -255,4 +259,4 @@ async def reminder_loop(bot: Bot) -> None:
             await check_and_send_daily_pushes(bot)
         except Exception as e:
             logger.error(f"daily_push loop error: {e}")
-        await asyncio.sleep(60)
+        await asyncio.sleep(LOOP_INTERVAL_SEC)

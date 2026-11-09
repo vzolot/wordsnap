@@ -144,11 +144,15 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_active_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    # Зв'язок: один юзер → багато слів
+    # Зв'язок: один юзер → багато слів. У коді ніде не читається, тому не
+    # вантажимо: з lazy="selectin" кожен select(User) тягнув за собою ВСІ слова
+    # юзера (приклади, поради, картинки), і планувальники, що щохвилини
+    # перебирають учнів, давали ~2,8 ГБ egress на день через pooler.
+    # Слова разом з юзером видаляє сама БД (ondelete=CASCADE на words.user_id).
     words: Mapped[list["Word"]] = relationship(
         back_populates="user",
-        cascade="all, delete-orphan",
-        lazy="selectin"
+        lazy="noload",
+        passive_deletes=True,
     )
 
 
