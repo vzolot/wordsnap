@@ -1,0 +1,46 @@
+name: db-backup
+
+# Щоденний дамп головної бази WordSnap (Supabase, PG17) у зашифрований артефакт.
+# Репозиторій публічний, тому дамп іде в артефакт лише під симетричним
+# шифруванням gpg; ключ у секреті WORDSNAP_BACKUP_PASSPHRASE (копія в .env
+# через dotenvx). Відновлення: docs/BACKUP.md.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Install pg_dump 17 (Supabase runs PG17)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common >/dev/null
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
+          sudo apt-get install -y -qq postgresql-client-17 >/dev/null
+          pg_dump --version
+
+      - name: Dump and encrypt
+        env:
+          DB_URL: ${{ secrets.WORDSNAP_BACKUP_DB_URL }}
+          PASSPHRASE: ${{ secrets.WORDSNAP_BACKUP_PASSPHRASE }}
+        run: |
+          test -n "$DB_URL" || { echo "WORDSNAP_BACKUP_DB_URL не заданий"; exit 1; }
+          test -n "$PASSPHRASE" || { echo "WORDSNAP_BACKUP_PASSPHRASE не заданий"; exit 1; }
+          stamp=$(date -u +%Y%m%d-%H%M)
+          out="wordsnap-$stamp.dump.gpg"
+          pg_dump "$DB_URL" --schema=public --no-owner --no-privileges -Fc \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 \
+                  --passphrase "$PASSPHRASE" --pinentry-mode loopback -o "$out"
+          ls -la "$out"
+          echo "ARTIFACT=$out" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT }}
+          retention-days: 90
+          if-no-files-found: error
