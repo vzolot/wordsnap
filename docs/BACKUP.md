@@ -20,13 +20,20 @@ Txn pooler на порту 6543 для `pg_dump` не годиться, потр
 
 ## Зняти дамп вручну
 
-Actions → db-backup → Run workflow. Або локально (потрібен `pg_dump` 17+,
-`brew install libpq`):
+Actions → db-backup → Run workflow. Або локально (потрібен `pg_dump` 17+:
+`brew install libpq`, бінарники в `/opt/homebrew/opt/libpq/bin`, системний
+`pg_restore` 16 формат від pg_dump 17 не читає):
 
 ```sh
 cd ~/projects/wordsnap
 dotenvx run -- sh -c 'pg_dump "$(printf %s "$DATABASE_URL" | sed -E "s#postgresql\+asyncpg://#postgresql://#; s#:6543/#:5432/#")" --schema=public --no-owner --no-privileges -Fc -f wordsnap-local.dump'
 ```
+
+## Перевірка 10.11.2026
+
+Перший робочий дамп: 742 КБ зашифрованих, 826 КБ чистих, 24 таблиці з даними
+(users, words, reviews, payment_history, subscriptions, tenants, decks…).
+Розшифрування ключем з `.env` і читання `pg_restore --list` перевірені.
 
 ## Відновити
 
@@ -40,7 +47,7 @@ dotenvx run -- sh -c 'gpg --batch --decrypt --passphrase "$BACKUP_PASSPHRASE" --
 3. Залити в порожню базу (або в новий проєкт Supabase):
 
 ```sh
-pg_restore --no-owner --no-privileges --clean --if-exists -d "$TARGET_DB_URL" wordsnap.dump
+/opt/homebrew/opt/libpq/bin/pg_restore --no-owner --no-privileges --clean --if-exists -d "$TARGET_DB_URL" wordsnap.dump
 ```
 
 Після відновлення запустити бекенд: `core/auto_migrate.py` на старті дотягне
