@@ -28,14 +28,21 @@ jobs:
           DB_URL: ${{ secrets.WORDSNAP_BACKUP_DB_URL }}
           PASSPHRASE: ${{ secrets.WORDSNAP_BACKUP_PASSPHRASE }}
         run: |
+          set -o pipefail
           test -n "$DB_URL" || { echo "WORDSNAP_BACKUP_DB_URL не заданий"; exit 1; }
           test -n "$PASSPHRASE" || { echo "WORDSNAP_BACKUP_PASSPHRASE не заданий"; exit 1; }
+          # libpq не знає параметрів на кшталт ?pgbouncer=true, що їх додає
+          # asyncpg-URL із .env, тому хвіст запиту відкидаємо.
+          DB_URL="${DB_URL%%\?*}"
           stamp=$(date -u +%Y%m%d-%H%M)
           out="wordsnap-$stamp.dump.gpg"
           pg_dump "$DB_URL" --schema=public --no-owner --no-privileges -Fc \
             | gpg --batch --yes --symmetric --cipher-algo AES256 \
                   --passphrase "$PASSPHRASE" --pinentry-mode loopback -o "$out"
-          ls -la "$out"
+          size=$(stat -c %s "$out")
+          echo "dump: $out, $size bytes"
+          # Порожній дамп означає, що pg_dump упав або база пуста; не вважаємо це успіхом.
+          test "$size" -gt 10240 || { echo "Дамп підозріло малий ($size байт)"; exit 1; }
           echo "ARTIFACT=$out" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
