@@ -14,6 +14,7 @@
     "@sentry/react": "^8.55.2",
     "@telegram-apps/analytics": "^1.6.4",
     "@twa-dev/sdk": "^8.0.2",
+    "@vercel/analytics": "^2.0.1",
     "axios": "^1.15.2",
     "posthog-js": "^1.372.8",
     "react": "^19.2.5",

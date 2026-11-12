@@ -8,8 +8,21 @@ import '@fontsource/unbounded/cyrillic-800.css'
 import './index.css'
 import App from './App.jsx'
 import { initSentry, SentryErrorBoundary } from './sentry.js'
+import { Analytics } from '@vercel/analytics/react'
 
 initSentry();
+
+// Vercel Web Analytics (вкладка Analytics у Vercel). Скрипт за замовчуванням шле
+// весь location.href, а Telegram кладе в #tgWebAppData імʼя, id і підписаний
+// initData, яким бекенд перевіряє запити. Тому лишаємо тільки origin і шлях.
+const keepPathOnly = (event) => {
+  try {
+    const url = new URL(event.url);
+    return { ...event, url: url.origin + url.pathname };
+  } catch {
+    return null;
+  }
+};
 
 // Telegram Mini Apps Analytics SDK – обовʼязковий для tApps Center listing.
 // Токен видається @DataChief_bot після реєстрації мініапи; зберігаємо у
@@ -39,5 +52,6 @@ createRoot(document.getElementById('root')).render(
     <SentryErrorBoundary fallback={<Fallback />}>
       <App />
     </SentryErrorBoundary>
+    <Analytics beforeSend={keepPathOnly} />
   </StrictMode>,
 )
